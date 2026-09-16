@@ -1,0 +1,81 @@
+// 장미셸 바스키아 SEOUL 전시 — 소개서 11~14p 기준
+export const project = {
+  eyebrow: 'PORTFOLIO · EXHIBITION',
+  title: '장미셸 바스키아 <br />SEOUL 전시',
+  meta: [
+    ['클라이언트', '숨프로젝트'],
+    ['장소', '동대문디자인플라자 (DDP)'],
+    ['과제', '세계적 아티스트 바스키아의 서울 전시 · 시공·미디어아트·아트샵 디자인 등 종합 수행'],
+    ['수행 범위', '전시 시공 · 미디어아트 · 외부 그래픽 · 아트샵 기획·3D 제작'],
+  ],
+  tech: '<b>preVue</b>로 전시 동선과 작품 배치를 3D로 시뮬레이션하고, 미디어아트 콘텐츠를 자체 제작해 전시 경험을 강화했습니다.',
+};
+
+// pos: 카메라 위치, target: 바라보는 점, anchor: 3D 핀 위치 (단위 m)
+// sim/real: public/images/basquiat/ 안의 이미지 이름
+export const views = [
+  {
+    id: 'overview',
+    label: '전체 조감',
+    pos: [34, 36, 46],
+    target: [0, 0, -1],
+    fov: 42,
+    orbit: true,
+  },
+  {
+    id: 'entrance',
+    label: '전시 입구',
+    pos: [-12.5, 1.7, 25],
+    target: [-15, 2.3, 13.5],
+    fov: 54,
+    orbit: false,
+    anchor: [-15.9, 5.3, 14.2],
+    sim: 'sim-entrance',
+    real: 'real-poster',
+    desc: '로비에서 입구 사인 월과 포스터 패널을 마주하는 시점. 외부 그래픽의 크기와 가독성을 확인합니다.',
+  },
+  {
+    id: 'intro',
+    label: '인트로 월',
+    pos: [-11, 1.65, 12.6],
+    target: [-17, 2.1, 8.5],
+    fov: 58,
+    orbit: false,
+    anchor: [-15.5, 5, 9.2],
+    real: 'real-intro',
+    desc: '입구를 지나 처음 만나는 인트로 월. 그래픽과 첫 작품의 배치, 조명 위치를 살펴봅니다.',
+  },
+  {
+    id: 'gallery',
+    label: '메인 갤러리',
+    pos: [-5.5, 1.65, 11],
+    target: [2, 1.9, -1],
+    fov: 60,
+    orbit: false,
+    anchor: [0, 5, 4],
+    real: 'real-gallery',
+    desc: '가벽과 작품, 좌대의 배치를 관람객 눈높이에서 확인하는 시점입니다.',
+  },
+  {
+    id: 'media',
+    label: '미디어아트',
+    pos: [16, 1.6, 3.2],
+    target: [16, 2, -4.5],
+    fov: 60,
+    orbit: false,
+    anchor: [16, 5, -0.5],
+    real: 'real-media',
+    desc: '미디어아트 룸 안에서 스크린을 바라보는 시점. 관람 거리와 화면 크기를 가늠합니다.',
+  },
+  {
+    id: 'shop',
+    label: '아트샵',
+    pos: [9.6, 1.65, 14],
+    target: [19, 1.6, 7.5],
+    fov: 58,
+    orbit: false,
+    anchor: [16, 4.6, 10.5],
+    sim: 'sim-shop',
+    desc: '전시 동선 끝의 아트샵. 굿즈 벽면과 카운터 배치, 동선 폭을 확인합니다.',
+  },
+];

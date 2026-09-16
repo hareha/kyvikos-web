@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KYVIKOS — Tech-driven Creative</title>
+    <meta
+      name="description"
+      content="큐비크스는 디지털 트윈 preVue, AI, XR 기술로 전시·이벤트·행사 공간을 설계하고 구현합니다."
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+  </head>
+  <body data-mode="wire">
+    <div id="loader">
+      <div class="loader-inner">
+        <span class="loader-brand">KYVIKOS</span>
+        <span class="loader-sub">preVue · Digital Twin</span>
+        <div class="loader-bar"><i></i></div>
+      </div>
+    </div>
+
+    <canvas id="scene"></canvas>
+    <div id="hotspots"></div>
+
+    <header class="topbar">
+      <a class="logo" href="#">KYVIKOS<small>TECH-DRIVEN CREATIVE</small></a>
+      <nav>
+        <a href="#">회사소개</a>
+        <a href="#">서비스</a>
+        <a href="#" class="current">포트폴리오</a>
+        <a href="#">문의</a>
+      </nav>
+    </header>
+
+    <section class="project panel" id="project">
+      <button class="project-toggle" aria-expanded="true" aria-label="프로젝트 정보 접기/펼치기">
+        <span class="eyebrow" id="project-eyebrow"></span>
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+      </button>
+      <h1 id="project-title"></h1>
+      <div class="project-detail">
+        <dl id="project-meta"></dl>
+        <p class="tech" id="project-tech"></p>
+        <div class="venues">
+          <span class="venues-label">다른 공간 둘러보기</span>
+          <div id="venues"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card panel" id="card" hidden>
+      <div class="card-media">
+        <img alt="" />
+        <div class="card-tabs">
+          <button data-source="sim">3D 시뮬레이션</button>
+          <button data-source="real">실제 현장</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <span class="eyebrow">VIEWPOINT</span>
+        <h3 class="card-title"></h3>
+        <p class="card-desc"></p>
+      </div>
+      <button class="card-close" aria-label="닫기">×</button>
+    </aside>
+
+    <div class="dock">
+      <div class="mode panel" role="group" aria-label="보기 모드">
+        <i class="mode-thumb"></i>
+        <button data-mode="wire" aria-pressed="true">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18M4 7.5l8 4.5 8-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>
+          와이어프레임
+        </button>
+        <button data-mode="built" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" fill="currentColor" /></svg>
+          실제 구현
+        </button>
+      </div>
+      <div class="views panel" id="views"></div>
+    </div>
+
+    <div class="hint" id="hint">드래그해서 둘러보고, 핀을 눌러 시점을 이동해 보세요</div>
+    <div class="lightbox" id="lightbox" hidden><img alt="" /></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

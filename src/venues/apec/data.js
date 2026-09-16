@@ -1,0 +1,85 @@
+// APEC CEO Summit 특별만찬 — 소개서 15~18p 기준
+export const project = {
+  eyebrow: 'PORTFOLIO · 2025',
+  title: 'APEC CEO Summit <br />특별만찬',
+  meta: [
+    ['클라이언트', '대한상공회의소 · 주식회사 스피언스'],
+    ['장소', '경주 황룡원'],
+    ['과제', '국제 정상급 행사의 레이아웃·시스템·운영 전 과정. 보안과 품질의 최고 수준 요구'],
+    ['수행 범위', '레이아웃 기획 · 3D 시뮬레이션 · 시스템 설치·운영 · 콘텐츠 제작 · 행사 운영'],
+  ],
+  tech: '<b>preVue</b>로 행사장 전체를 3D로 구현해 동선·좌석·무대 배치를 사전 검증하고, 시스템 설치와 기술 운영까지 수행했습니다.',
+};
+
+// pos: 카메라 위치, target: 바라보는 점, anchor: 3D 핀 위치 (단위 m)
+// orbit: true면 대상 주위를 회전, false면 제자리에서 둘러보기(1인칭)
+// sim/real: public/images/apec/ 안의 이미지 이름
+export const views = [
+  {
+    id: 'overview',
+    label: '전체 조감',
+    pos: [-70, 50, 72],
+    target: [-2, 6, -8],
+    fov: 42,
+    orbit: true,
+  },
+  {
+    id: 'drone',
+    label: '드론뷰',
+    pos: [34, 38, 44],
+    target: [-4, 0, -6],
+    fov: 45,
+    orbit: true,
+    anchor: [24, 24, 30],
+    sim: 'sim-front',
+    real: 'real-drone',
+    desc: '원형 테이블, 히터, 석재 동선의 배치를 상공에서 한눈에 확인하는 시점입니다.',
+  },
+  {
+    id: 'terrace',
+    label: '귀빈동 테라스',
+    pos: [-26, 14, 36],
+    target: [0, 6, -12],
+    fov: 50,
+    orbit: true,
+    anchor: [-26, 11.5, 33],
+    sim: 'sim-aerial',
+    real: 'real-terrace',
+    desc: '중도타워와 무대가 한 화면에 담기는 구도. 조명과 LED 연출을 이 시점에서 맞춰봅니다.',
+  },
+  {
+    id: 'stage',
+    label: '무대 위',
+    pos: [6, 3.1, -15.4],
+    target: [3, 1.2, 12],
+    fov: 62,
+    orbit: false,
+    anchor: [6, 3.6, -14.6],
+    real: 'real-show',
+    desc: '연사가 서는 포디움 시점. 객석 전체가 시야에 들어오는지 확인합니다.',
+  },
+  {
+    id: 'vip',
+    label: '관객석',
+    pos: [-2.2, 1.45, -0.9],
+    target: [6, 4.2, -19],
+    fov: 56,
+    orbit: false,
+    anchor: [-3, 2.4, -3],
+    sim: 'sim-table',
+    real: 'real-table',
+    desc: '앞줄 테이블에 앉았을 때 무대와 LED 스크린이 어떻게 보이는지 미리 봅니다.',
+  },
+  {
+    id: 'foh',
+    label: '콘솔 부스',
+    pos: [6, 2.5, 29],
+    target: [6, 3, -14],
+    fov: 50,
+    orbit: false,
+    anchor: [6, 2.3, 25.2],
+    sim: 'sim-ground',
+    real: 'real-foh',
+    desc: '음향·조명·영상 콘솔 위치. 무대와 스크린을 가림 없이 볼 수 있는 자리를 잡습니다.',
+  },
+];

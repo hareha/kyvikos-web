@@ -1,0 +1,83 @@
+// LOCAL POWER 2025 홍콩 패션 in 서울 — 소개서 19~22p 기준
+export const project = {
+  eyebrow: 'PORTFOLIO · 2025',
+  title: 'LOCAL POWER 2025 <br />홍콩 패션 in 서울',
+  meta: [
+    ['클라이언트', '중화인민공화국 홍콩 특별행정구 (홍콩 정부)'],
+    ['장소', '성수동 세원정밀 창고'],
+    ['과제', '홍콩 정부 주최 패션쇼·전시를 서울에서 개최 · 패션쇼+전시+네트워킹 공간 통합 구성'],
+    ['수행 범위', '패션쇼·전시 기획 · 시공 · 제작 · 운영 일체'],
+  ],
+  tech: '<b>preVue</b>로 패션쇼 무대·전시·네트워킹 공간을 3D로 사전 시뮬레이션하고, 시뮬레이션을 기반으로 공간 효율을 최적화했습니다.',
+};
+
+// pos: 카메라 위치, target: 바라보는 점, anchor: 3D 핀 위치 (단위 m)
+// 좌표: +x 전시장·중정 쪽, -x 런웨이 백드롭 쪽, +z 거리(가림막) 쪽
+export const views = [
+  {
+    id: 'overview',
+    label: '전체 조감',
+    pos: [32, 62, 58],
+    target: [5, 0, 0],
+    fov: 42,
+    orbit: true,
+  },
+  {
+    id: 'runway',
+    label: '런웨이',
+    pos: [-2.2, 2.4, 0.4],
+    target: [-29, 2.3, 0],
+    fov: 58,
+    orbit: false,
+    anchor: [-2.2, 3.4, 0],
+    sim: 'sim-runway',
+    real: 'real-runway',
+    desc: '포토 라이저에서 런웨이 끝 백드롭까지 바라보는 시점. 객석 배치와 트러스 조명, LED 백드롭의 시야를 확인합니다.',
+  },
+  {
+    id: 'showtop',
+    label: '쇼장 전경',
+    pos: [-1.5, 5.3, 8.8],
+    target: [-19, 0, -1],
+    fov: 58,
+    orbit: true,
+    anchor: [-14, 7.2, 0],
+    sim: 'sim-showtop',
+    real: 'real-runway',
+    desc: '패션쇼 구역 전체를 위에서 내려다보는 시점. 런웨이 길이와 좌석 열, 트러스 위치를 한눈에 봅니다.',
+  },
+  {
+    id: 'exhibit',
+    label: '전시 존',
+    pos: [16, 1.65, 8.5],
+    target: [5, 1.7, -8],
+    fov: 60,
+    orbit: false,
+    anchor: [10.5, 5.6, -1.5],
+    real: 'real-exhibit',
+    desc: '전시장 입구 쪽에서 본 시점. 원형 커튼 기둥과 벽면 전시대, 라이트박스의 배치를 확인합니다.',
+  },
+  {
+    id: 'curtain',
+    label: '커튼 쇼케이스',
+    pos: [19.5, 2.4, 13],
+    target: [20, 1.7, 2.5],
+    fov: 52,
+    orbit: true,
+    anchor: [20, 5.4, 2.4],
+    real: 'real-curtain',
+    desc: '물결 형태 커튼 앞 마네킹 전시대. 관람 동선에서 의상이 어떻게 보이는지 미리 봅니다.',
+  },
+  {
+    id: 'entrance',
+    label: '입구·네트워킹',
+    pos: [26, 24, 36],
+    target: [37, 0.5, 2],
+    fov: 46,
+    orbit: true,
+    anchor: [39, 5.2, 2],
+    sim: 'sim-aerial',
+    real: 'real-entrance',
+    desc: '거리 쪽 가림막과 입구, 네트워킹 중정의 구성을 함께 보는 시점입니다.',
+  },
+];
