@@ -33,24 +33,32 @@ const imageUrl = (name) => `${import.meta.env.BASE_URL}images/${venue.id}/${name
 const canvas = $('#scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+/** 캔버스는 '3D 투어' 섹션 안에 들어 있으므로 창이 아니라 캔버스 크기에 맞춘다 */
+const stageSize = () => ({
+  w: canvas.clientWidth || window.innerWidth,
+  h: canvas.clientHeight || window.innerHeight,
+});
 
 const scene = new THREE.Scene();
 scene.background = WIRE_BG.clone();
 scene.fog = new THREE.FogExp2('#000000', 0);
 
-const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 3000);
+const camera = new THREE.PerspectiveCamera(42, stageSize().w / stageSize().h, 0.1, 3000);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.dampingFactor = 0.06;
 controls.autoRotateSpeed = 0.35;
 controls.enabled = false;
+// 휠은 페이지 스크롤에 양보하고, 세로 스와이프도 페이지가 가져간다
+controls.enableZoom = false;
+canvas.style.touchAction = 'pan-y';
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 0.55, 0.3, 0.55);
+const bloom = new UnrealBloomPass(new THREE.Vector2(stageSize().w / 2, stageSize().h / 2), 0.55, 0.3, 0.55);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -188,7 +196,6 @@ function settle(view) {
   if (view.orbit) {
     controls.target.set(...view.target);
     Object.assign(controls, {
-      enableZoom: true,
       enablePan: true,
       rotateSpeed: 0.55,
       minDistance: 4,
@@ -199,7 +206,6 @@ function settle(view) {
   } else {
     controls.target.copy(camera.position).addScaledVector(dir, 0.05);
     Object.assign(controls, {
-      enableZoom: false,
       enablePan: false,
       rotateSpeed: -0.28,
       minDistance: 0.05,
@@ -277,8 +283,7 @@ function buildHotspots() {
 
 const projected = new THREE.Vector3();
 function updateHotspots() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const { w, h } = stageSize();
   for (const hs of hotspots) {
     projected.copy(hs.world).project(camera);
     const visible =
@@ -374,12 +379,15 @@ function initUi() {
     const hash = location.hash.slice(1);
     if (!isSectionHash(hash)) loadVenue(hash);
   });
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+  const resize = () => {
+    const { w, h } = stageSize();
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-  });
+    renderer.setSize(w, h, false);
+    composer.setSize(w, h);
+  };
+  resize();
+  new ResizeObserver(resize).observe(canvas);
 }
 
 // ── 루프 ─────────────────────────────────────────────────────

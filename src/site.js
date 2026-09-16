@@ -1,6 +1,6 @@
 import './site.css';
 
-const SECTIONS = ['about', 'services', 'portfolio', 'contact'];
+const SECTIONS = ['about', 'experience', 'services', 'portfolio', 'contact'];
 
 /** 소개서 35p 고객사 로고 */
 const CLIENTS = [
@@ -10,16 +10,22 @@ const CLIENTS = [
   '광복회', 'TV조선', '세방여행', 'LTC',
 ];
 
-/** 3D 메인 아래 페이지의 스크롤 동작 */
+const scrollToSection = (id, behavior = 'smooth') => {
+  // 3D 투어는 화면 전체로 보이도록 고정 영역 위치로 맞춘다
+  const el = id === 'experience' ? document.querySelector('#experience .stage') : document.getElementById(id);
+  el?.scrollIntoView({ behavior, block: 'start' });
+};
+
+/** 페이지 스크롤 동작 (3D는 '3D 투어' 섹션 안에 들어 있다) */
 export function initSite({ loadVenue, setRendering }) {
   renderClients();
   document.body.classList.add('anim');
 
   document.addEventListener('click', (e) => {
-    const anchor = e.target.closest('a[data-scroll]');
+    const anchor = e.target.closest('[data-scroll]');
     if (anchor) {
       e.preventDefault();
-      document.getElementById(anchor.getAttribute('href').slice(1))?.scrollIntoView({ behavior: 'smooth' });
+      scrollToSection(anchor.getAttribute('href').slice(1));
       return;
     }
     if (e.target.closest('[data-scroll-top]')) {
@@ -29,20 +35,20 @@ export function initSite({ loadVenue, setRendering }) {
     }
     const card = e.target.closest('[data-venue-card]');
     if (card) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
       loadVenue(card.dataset.venueCard);
+      scrollToSection('experience');
     }
   });
 
-  // 3D가 화면에서 벗어나면 렌더링을 멈춰 배터리·발열을 아낀다
-  const hero = document.getElementById('hero');
-  new IntersectionObserver(
-    ([entry]) => {
-      document.body.classList.toggle('scrolled', entry.intersectionRatio < 0.45);
-      setRendering(entry.intersectionRatio > 0.01);
-    },
-    { threshold: [0, 0.01, 0.45, 1] },
-  ).observe(hero);
+  // 3D가 화면 밖이면 렌더링을 멈춰 배터리·발열을 아낀다
+  new IntersectionObserver(([entry]) => setRendering(entry.isIntersecting), { threshold: 0 }).observe(
+    document.getElementById('experience'),
+  );
+
+  // 첫 화면을 벗어나면 헤더에 배경을 깐다
+  const onScroll = () => document.body.classList.toggle('scrolled', window.scrollY > 80);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
   const riseObserver = new IntersectionObserver(
     (entries) => {
@@ -72,6 +78,12 @@ export function initSite({ loadVenue, setRendering }) {
   for (const id of SECTIONS) {
     const el = document.getElementById(id);
     if (el) spy.observe(el);
+  }
+
+  // 공간 링크(#apec 등)로 들어오면 3D 투어부터 보여준다
+  const hash = location.hash.slice(1);
+  if (hash && !isSectionHash(hash)) {
+    requestAnimationFrame(() => scrollToSection('experience', 'instant'));
   }
 }
 
