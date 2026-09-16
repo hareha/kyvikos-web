@@ -7,7 +7,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import gsap from 'gsap';
-import { reveal, disposeTree, std } from './scene/kit.js';
+import { reveal, disposeTree, std, viewInverse } from './scene/kit.js';
 import { createSky, createStars, createEnvTexture, createGrainPass } from './scene/environment.js';
 import { venues } from './venues/registry.js';
 import { initSite, isSectionHash } from './site.js';
@@ -33,10 +33,13 @@ const imageUrl = (name) => `${import.meta.env.BASE_URL}images/${venue.id}/${name
 const canvas = $('#scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 const MOBILE = window.innerWidth < 768;
+/** ?safe=1 — 후처리·환경광을 모두 끄는 최소 그래픽 모드 (호환성 문제 진단·회피용) */
+const SAFE_MODE = new URLSearchParams(location.search).has('safe');
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, MOBILE ? 1.5 : 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-// 모바일에서는 그림자를 끈다 (성능, 그리고 일부 기기에서 화면이 어두워지는 문제 회피)
-renderer.shadowMap.enabled = !MOBILE;
+// 그림자는 기본 비활성. 일부 GPU에서 그림자를 켜면 셰이더가 한계에 걸려
+// 벽·바닥 같은 일반 재질이 전부 검게 렌더링되는 문제가 있었다.
+renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 // 장면이 정지해 있으므로 그림자는 필요할 때 한 번만 굽는다
 renderer.shadowMap.autoUpdate = false;
@@ -184,13 +187,15 @@ function applyEnv(env) {
   renderer.toneMappingExposure = env.exposure;
 
   scene.environment?.dispose();
-  scene.environment = createEnvTexture(
-    renderer,
-    env.sky
-      ? { zenith: env.sky.zenith, horizon: env.sky.horizon }
-      : // 실내: 천장에서 바닥으로 떨어지는 중성 회색 — 벽면이 검게 죽지 않게 한다
-        { zenith: '#4a5464', horizon: '#333b47', ground: '#171a20' },
-  );
+  scene.environment = SAFE_MODE
+    ? null
+    : createEnvTexture(
+        renderer,
+        env.sky
+          ? { zenith: env.sky.zenith, horizon: env.sky.horizon }
+          : // 실내: 천장에서 바닥으로 떨어지는 중성 회색 — 벽면이 검게 죽지 않게 한다
+            { zenith: '#4a5464', horizon: '#333b47', ground: '#171a20' },
+      );
   scene.environmentIntensity = 0;
 }
 
@@ -212,16 +217,18 @@ function checkFrameQuality() {
   let sum = 0;
   for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3;
   const avg = sum / (px.length / 4);
-  diag(`밝기 검사: ${avg.toFixed(1)} (${venue?.id})`);
+  console.info(`[kyvikos] 밝기 검사 ${avg.toFixed(1)} (${venue?.id})`);
   if (avg > 2.5 || qualityLowered) return;
 
   qualityLowered = true;
-  diag('화면이 거의 검은색 → 그림자·환경광을 끄고 재시도');
+  console.warn('[kyvikos] 화면이 거의 검은색 → 그림자·환경광을 끄고 재시도합니다');
   renderer.shadowMap.enabled = false;
   for (const { light } of venue.lights) if (light.shadow) light.castShadow = false;
   scene.environment = null;
   venue.root.traverse((o) => {
-    if (o.isMesh) o.castShadow = o.receiveShadow = false;
+    if (!o.isMesh) return;
+    o.castShadow = o.receiveShadow = false;
+    for (const mat of [].concat(o.material)) mat.needsUpdate = true; // 셰이더 재컴파일
   });
 }
 function setupShadows(root, lights, env) {
@@ -555,11 +562,17 @@ function applyRevealState() {
 function frame() {
   try {
     applyRevealState();
+    viewInverse.value.copy(camera.matrixWorld);
     grain.uniforms.uTime.value = performance.now() * 0.001;
     sky.position.copy(camera.position);
     if (controls.enabled) controls.update();
     updateHotspots();
-    composer.render();
+    if (SAFE_MODE) {
+      renderer.setRenderTarget(null);
+      renderer.render(scene, camera);
+    } else {
+      composer.render();
+    }
     if (qualityCheck === 'pending') {
       qualityCheck = 'done';
       checkFrameQuality();

@@ -10,10 +10,37 @@ export const reveal = { value: -2 };
 
 const SCAN_COLOR = 'vec3(0.45, 0.85, 1.0)';
 
-/** 솔리드 재질: 전환선 위쪽은 버리고, 전환선 부근은 스캔 라인처럼 빛나게 */
+/** 카메라의 matrixWorld — 뷰 좌표를 월드 좌표로 되돌릴 때 쓴다 (main.js가 매 프레임 갱신) */
+export const viewInverse = { value: new THREE.Matrix4() };
+
+/**
+ * 솔리드 재질: 전환선 위쪽은 버리고, 전환선 부근은 스캔 라인처럼 빛나게.
+ *
+ * 표준 재질은 three가 이미 넘겨주는 vViewPosition 으로 월드 높이를 역산한다.
+ * varying 을 새로 추가하면 GPU 한계(varying 개수)에 걸려 셰이더 링크가 실패하고
+ * 화면이 전부 검게 나오는 기기가 있어서, 추가 varying 없이 처리한다.
+ */
 export function revealable(material) {
+  const hasViewPosition = Boolean(material.isMeshStandardMaterial || material.isMeshPhysicalMaterial);
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uReveal = reveal;
+    if (hasViewPosition) {
+      shader.uniforms.uViewInv = viewInverse;
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uReveal;\nuniform mat4 uViewInv;')
+        .replace(
+          '#include <clipping_planes_fragment>',
+          '#include <clipping_planes_fragment>\n\tfloat revealY = (uViewInv * vec4(-vViewPosition, 1.0)).y;\n\tif (revealY > uReveal) discard;',
+        )
+        .replace(
+          '#include <dithering_fragment>',
+          `#include <dithering_fragment>
+\tfloat scan = 1.0 - smoothstep(0.0, 0.9, uReveal - revealY);
+\tgl_FragColor.rgb += ${SCAN_COLOR} * scan * 1.6;`,
+        );
+      return;
+    }
+    // Basic/Points 등 vViewPosition 이 없는 재질만 월드 좌표를 따로 넘긴다
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRevealPos;')
       .replace(
@@ -25,14 +52,9 @@ export function revealable(material) {
       .replace(
         '#include <clipping_planes_fragment>',
         '#include <clipping_planes_fragment>\n\tif (vRevealPos.y > uReveal) discard;',
-      )
-      .replace(
-        '#include <dithering_fragment>',
-        `#include <dithering_fragment>
-\tfloat scan = 1.0 - smoothstep(0.0, 0.9, uReveal - vRevealPos.y);
-\tgl_FragColor.rgb += ${SCAN_COLOR} * scan * 1.6;`,
       );
   };
+  material.customProgramCacheKey = () => (hasViewPosition ? 'reveal-view' : 'reveal-world');
   return material;
 }
 
