@@ -26,12 +26,12 @@
     <div id="hotspots"></div>
 
     <header class="topbar">
-      <a class="logo" href="#">KYVIKOS<small>TECH-DRIVEN CREATIVE</small></a>
+      <a class="logo" href="#" data-scroll-top>KYVIKOS<small>TECH-DRIVEN CREATIVE</small></a>
       <nav>
-        <a href="#">회사소개</a>
-        <a href="#">서비스</a>
-        <a href="#" class="current">포트폴리오</a>
-        <a href="#">문의</a>
+        <a href="#about" data-scroll>회사소개</a>
+        <a href="#services" data-scroll>서비스</a>
+        <a href="#portfolio" data-scroll>포트폴리오</a>
+        <a href="#contact" data-scroll>문의</a>
       </nav>
     </header>
 
@@ -83,7 +83,248 @@
     </div>
 
     <div class="hint" id="hint">드래그해서 둘러보고, 핀을 눌러 시점을 이동해 보세요</div>
+    <a class="scroll-cue" href="#about" data-scroll aria-label="아래로 스크롤">SCROLL<i></i></a>
     <div class="lightbox" id="lightbox" hidden><img alt="" /></div>
+
+    <!-- 3D 메인 영역의 스크롤 기준 -->
+    <div id="hero"></div>
+
+    <main id="content">
+      <!-- ── 회사소개 ───────────────────────── -->
+      <section id="about" class="section">
+        <div class="wrap">
+          <p class="eyebrow rise">ABOUT</p>
+          <h2 class="rise">기술로 설계하고,<br />경험으로 증명하며, 가치로 완성합니다.</h2>
+          <p class="lead-en rise">Tech-driven Design, Proven Experience, Creating Value.</p>
+          <p class="lead rise">
+            큐비크스는 모든 프로젝트에 3D 시뮬레이션, AI, XR 기술을 과감하게 투입합니다.
+            기술로 경험의 품질을 바꾸는 기업입니다.
+          </p>
+          <dl class="facts rise">
+            <div><dt>회사명</dt><dd>주식회사 큐비크스<span>Kyvikos Co., Ltd.</span></dd></div>
+            <div><dt>설립</dt><dd>2023년</dd></div>
+            <div><dt>주소</dt><dd>서울시 종로구 자하문로7길 43, 4층 (누하동)</dd></div>
+            <div><dt>주요 서비스</dt><dd>행사·이벤트·전시 / IT 솔루션·디지털 기술 / 미디어·콘텐츠 제작</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ── 서비스 ───────────────────────── -->
+      <section id="services" class="section alt">
+        <div class="wrap">
+          <p class="eyebrow rise">SERVICES</p>
+          <h2 class="rise">사업 부문</h2>
+          <p class="lead rise">
+            전시, IT, 콘텐츠 영역의 경계를 허무는 큐비크스만의 통합 솔루션으로
+            독보적인 기술력과 크리에이티브를 융합하여 고객의 브랜드 가치를 극대화합니다.
+          </p>
+
+          <div class="cards three rise">
+            <article class="card-box">
+              <span class="tag">Experience</span>
+              <h3>전시 · 이벤트 · 행사</h3>
+              <p>기획부터 운영까지, 고객사 맞춤형 통합 솔루션</p>
+            </article>
+            <article class="card-box">
+              <span class="tag">Innovation</span>
+              <h3>IT 개발</h3>
+              <p>지속적 R&amp;D로 완성하는 IT 비즈니스 파트너</p>
+            </article>
+            <article class="card-box">
+              <span class="tag">Creative</span>
+              <h3>콘텐츠 제작</h3>
+              <p>모션·3D 기술 기반의 멀티 플랫폼 콘텐츠 제작</p>
+            </article>
+          </div>
+
+          <h3 class="sub-title rise">부가 서비스</h3>
+
+          <article class="feature rise">
+            <div class="feature-text">
+              <span class="tag">preVue</span>
+              <h3>디지털 트윈으로 미리 보는 이벤트 공간</h3>
+              <p>
+                실측 공간과 전시 오브제를 3D로 옮겨, 레이아웃·조명·동선을 시뮬레이션 단계에서 확정합니다.
+                현장 수정이 줄고, 클라이언트는 완성된 모습을 미리 확인할 수 있습니다.
+              </p>
+              <button class="btn" data-scroll-top>메인 화면에서 직접 둘러보기</button>
+            </div>
+            <div class="feature-visual prevue">
+              <div class="prevue-grid"></div>
+              <span>WIREFRAME → BUILT</span>
+            </div>
+          </article>
+
+          <article class="feature reverse rise">
+            <div class="feature-text">
+              <span class="tag">&amp;BOX</span>
+              <h3>이동 가능한 몰입형 공간</h3>
+              <p>
+                3~4면 LED와 첨단 기술로 완성한 맞춤형 이동식 몰입 공간입니다.
+                빠른 설치부터 ESG, 안전까지 갖춰 최적의 전시를 구현합니다.
+              </p>
+              <ul class="specs">
+                <li><b>공간구조</b>4면 LED + R150</li>
+                <li><b>콘텐츠</b>맞춤형 콘텐츠 제작</li>
+                <li><b>센서·오디오</b>LiDAR · 다채널 음향</li>
+                <li><b>포터블</b>모듈화로 빠른 설치</li>
+                <li><b>ESG</b>폐기물 없는 ZERO</li>
+                <li><b>안전</b>HVAC · 비상문</li>
+              </ul>
+            </div>
+            <div class="feature-visual">
+              <img src="./images/site/andbox-1.jpg" alt="&BOX 이동식 몰입 공간 3D 이미지" loading="lazy" />
+            </div>
+          </article>
+
+          <div class="cards two rise">
+            <article class="card-box">
+              <span class="tag">GREEN CHAIN</span>
+              <h3>ESG 이벤트 서비스</h3>
+              <p>행사 전 과정에 친환경 기준을 적용하는 ESG 이벤트 솔루션입니다.</p>
+            </article>
+            <article class="card-box">
+              <span class="tag">PROJECT 9.99</span>
+              <h3>온 국민이 만드는 9.99초의 기적</h3>
+              <p>대한민국 100m 육상 기록 9.99초를 염원하는 대규모 이벤트 프로젝트입니다.</p>
+              <ul class="bullets">
+                <li>도심 한복판에서 펼쳐지는 1:1 100m 육상 라이벌전</li>
+                <li>연간 화제성을 잇는 온·오프 통합 콘텐츠</li>
+                <li>집객 효과를 높이는 아티스트 공연</li>
+                <li>엘리트 선수부터 일반인까지 폭넓은 참여</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 포트폴리오 ───────────────────────── -->
+      <section id="portfolio" class="section">
+        <div class="wrap">
+          <p class="eyebrow rise">PORTFOLIO</p>
+          <h2 class="rise">3D로 둘러보는 주요 실적</h2>
+          <p class="lead rise">카드를 누르면 메인 화면에서 해당 공간을 3D로 둘러볼 수 있습니다.</p>
+
+          <div class="venue-cards rise">
+            <button class="venue-card" data-venue-card="apec">
+              <img src="./images/apec/real-drone.jpg" alt="APEC CEO Summit 특별만찬" loading="lazy" />
+              <div>
+                <span class="tag">경주 황룡원</span>
+                <h3>APEC CEO Summit 특별만찬</h3>
+                <p>대한상공회의소 · 주식회사 스피언스</p>
+              </div>
+            </button>
+            <button class="venue-card" data-venue-card="hyundai">
+              <img src="./images/hyundai/sim-atrium.jpg" alt="현대자동차 1억대 생산기념 전시" loading="lazy" />
+              <div>
+                <span class="tag">현대 모터스튜디오 도산</span>
+                <h3>현대자동차 1억대 생산기념 전시</h3>
+                <p>현대자동차</p>
+              </div>
+            </button>
+            <button class="venue-card" data-venue-card="basquiat">
+              <img src="./images/basquiat/real-gallery.jpg" alt="장미셸 바스키아 SEOUL 전시" loading="lazy" />
+              <div>
+                <span class="tag">동대문디자인플라자</span>
+                <h3>장미셸 바스키아 SEOUL 전시</h3>
+                <p>숨프로젝트</p>
+              </div>
+            </button>
+            <button class="venue-card" data-venue-card="localpower">
+              <img src="./images/localpower/real-runway.jpg" alt="LOCAL POWER 2025 홍콩 패션 in 서울" loading="lazy" />
+              <div>
+                <span class="tag">성수동 세원정밀 창고</span>
+                <h3>LOCAL POWER 2025 홍콩 패션 in 서울</h3>
+                <p>홍콩 특별행정구 정부</p>
+              </div>
+            </button>
+          </div>
+
+          <h3 class="sub-title rise">그 외 실적</h3>
+          <div class="work-lists rise">
+            <div>
+              <h4>정부 · 공공기관</h4>
+              <ul>
+                <li>광복회 · 국가보훈부 주요 기념행사 다수</li>
+                <li>광복 80주년 대한민국 임시정부수립 보훈단체 합동기념식</li>
+              </ul>
+            </div>
+            <div>
+              <h4>행사 · 이벤트 · 전시</h4>
+              <ul>
+                <li>비노파라다이스 하정우 와인 출시 행사</li>
+                <li>HS효성 연세대학교 아카라카 축제 부스 운영</li>
+                <li>성동구청 XR EVENT</li>
+              </ul>
+            </div>
+            <div>
+              <h4>IT 개발 · SI</h4>
+              <ul>
+                <li>달 토지 개척 서비스 PlusUltra</li>
+                <li>동국산업 홈페이지 리뉴얼</li>
+                <li>노블레스 몰 리뉴얼</li>
+                <li>한국어 교육 플랫폼 유니콘한국어 앱</li>
+                <li>KPOP LIVE 댄스 아카데미</li>
+                <li>주식회사 효성 임직원몰</li>
+                <li>세방여행 아웃바운드 몰</li>
+                <li>AR 기술을 활용한 움직이는 표지</li>
+              </ul>
+            </div>
+            <div>
+              <h4>미디어 · 콘텐츠</h4>
+              <ul>
+                <li>YG TREASURE · WINNER · IKON 콘서트 BG</li>
+                <li>TV조선 대학가요제 VJ</li>
+                <li>UNIX 헤어드라이어 프로모션 영상</li>
+                <li>동국산업 3D 홍보 영상</li>
+                <li>피레이워터 홍보 영상</li>
+                <li>비노파라다이스 숏폼 콘텐츠</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3 class="sub-title rise">주요 고객사</h3>
+          <div class="clients rise" id="clients"></div>
+        </div>
+      </section>
+
+      <!-- ── 문의 ───────────────────────── -->
+      <section id="contact" class="section alt">
+        <div class="wrap">
+          <p class="eyebrow rise">CONTACT</p>
+          <h2 class="rise">프로젝트를 상담해 보세요</h2>
+          <div class="contact-grid rise">
+            <a class="contact-item" href="mailto:minck@kyvikos.com">
+              <span>이메일</span>
+              <strong>minck@kyvikos.com</strong>
+              <em>info@kyvikos.com</em>
+            </a>
+            <a class="contact-item" href="tel:01090822190">
+              <span>전화</span>
+              <strong>010-9082-2190</strong>
+              <em>민철기 이사</em>
+            </a>
+            <div class="contact-item">
+              <span>주소</span>
+              <strong>서울시 종로구 자하문로7길 43, 4층</strong>
+              <em>(누하동)</em>
+            </div>
+            <a class="contact-item" href="https://www.kyvikos.com" target="_blank" rel="noopener">
+              <span>웹사이트</span>
+              <strong>www.kyvikos.com</strong>
+              <em>Kyvikos Co., Ltd.</em>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <div class="wrap">
+          <span>© 2026 주식회사 큐비크스</span>
+          <button data-scroll-top>맨 위로 ↑</button>
+        </div>
+      </footer>
+    </main>
 
     <script type="module" src="/src/main.js"></script>
   </body>

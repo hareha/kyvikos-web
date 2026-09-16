@@ -10,6 +10,7 @@ import gsap from 'gsap';
 import { reveal, disposeTree } from './scene/kit.js';
 import { createSky, createStars } from './scene/environment.js';
 import { venues } from './venues/registry.js';
+import { initSite, isSectionHash } from './site.js';
 
 RectAreaLightUniformsLib.init();
 
@@ -369,7 +370,10 @@ function initUi() {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') $('#lightbox').hidden = true;
   });
-  window.addEventListener('hashchange', () => loadVenue(location.hash.slice(1)));
+  window.addEventListener('hashchange', () => {
+    const hash = location.hash.slice(1);
+    if (!isSectionHash(hash)) loadVenue(hash);
+  });
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -379,7 +383,7 @@ function initUi() {
 }
 
 // ── 루프 ─────────────────────────────────────────────────────
-renderer.setAnimationLoop(() => {
+function frame() {
   if (venue) {
     const { env } = venue;
     const k = smoothstep(reveal.value, 0, Math.min(30, env.height * 0.6));
@@ -398,10 +402,20 @@ renderer.setAnimationLoop(() => {
   if (controls.enabled) controls.update();
   updateHotspots();
   composer.render();
-});
+}
+
+let rendering = false;
+/** 3D가 화면 밖이면 렌더링 정지 */
+function setRendering(on) {
+  if (on === rendering) return;
+  rendering = on;
+  renderer.setAnimationLoop(on ? frame : null);
+}
+setRendering(true);
 
 // ── 시작 ─────────────────────────────────────────────────────
 initUi();
+initSite({ loadVenue, setRendering });
 Promise.race([document.fonts.ready, wait(1500)]).then(async () => {
   await loadVenue(location.hash.slice(1));
   setTimeout(() => hint.classList.add('show'), 3400);
