@@ -7,7 +7,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import gsap from 'gsap';
-import { reveal, disposeTree } from './scene/kit.js';
+import { reveal, disposeTree, std } from './scene/kit.js';
 import { createSky, createStars, createEnvTexture, createGrainPass } from './scene/environment.js';
 import { venues } from './venues/registry.js';
 import { initSite, isSectionHash } from './site.js';
@@ -111,6 +111,13 @@ async function loadVenue(id) {
   const { root, lights } = mod.build();
   scene.add(root);
   const env = { ...ENV_DEFAULTS, ...mod.env };
+  if (!env.sky) {
+    // 실내 공간은 스포트라이트 위주라 벽·천장·바닥이 검게 죽는다. 부드러운 채움광을 더한다.
+    const fill = new THREE.AmbientLight('#b9c6dd', 1);
+    root.add(fill);
+    lights.push({ light: fill, base: env.fill ?? 2 });
+    addGroundPlane(root);
+  }
   venue = {
     id: entry.id,
     project: mod.project,
@@ -146,6 +153,21 @@ async function loadVenue(id) {
   goTo(overview.id, { duration: 3.2 });
 }
 
+/** 실내 공간이 허공에 떠 보이지 않도록 건물 바깥까지 깔리는 바닥 */
+function addGroundPlane(root) {
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(Math.max(size.x, size.z) * 3, Math.max(size.x, size.z) * 3),
+    std('#101318', 1),
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.set(center.x, box.min.y - 0.35, center.z);
+  ground.receiveShadow = true;
+  root.add(ground);
+}
+
 function applyEnv(env) {
   sky.visible = Boolean(env.sky);
   if (env.sky) {
@@ -164,13 +186,44 @@ function applyEnv(env) {
   scene.environment?.dispose();
   scene.environment = createEnvTexture(
     renderer,
-    env.sky ? { zenith: env.sky.zenith, horizon: env.sky.horizon } : { zenith: env.builtBg, horizon: env.builtBg, ground: '#000000' },
+    env.sky
+      ? { zenith: env.sky.zenith, horizon: env.sky.horizon }
+      : // 실내: 천장에서 바닥으로 떨어지는 중성 회색 — 벽면이 검게 죽지 않게 한다
+        { zenith: '#4a5464', horizon: '#333b47', ground: '#171a20' },
   );
   scene.environmentIntensity = 0;
 }
 
 /** 정지된 장면이라 그림자는 '실제 구현'이 완성된 순간 한 번만 굽는다 */
 let shadowsBaked = false;
+/** 그림자·환경광이 GPU에서 실패해 화면이 까맣게 나오는 경우를 자동으로 되돌리기 위한 상태 */
+let qualityCheck = 'idle'; // idle | pending | done
+let qualityLowered = false;
+
+/** 완성 화면이 사실상 검은색이면(셰이더 한계 등) 고급 효과를 끄고 다시 그린다 */
+function checkFrameQuality() {
+  const gl = renderer.getContext();
+  const w = gl.drawingBufferWidth;
+  const h = gl.drawingBufferHeight;
+  const sw = Math.min(160, w);
+  const sh = Math.min(120, h);
+  const px = new Uint8Array(sw * sh * 4);
+  gl.readPixels(((w - sw) / 2) | 0, ((h - sh) / 2) | 0, sw, sh, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  let sum = 0;
+  for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3;
+  const avg = sum / (px.length / 4);
+  diag(`밝기 검사: ${avg.toFixed(1)} (${venue?.id})`);
+  if (avg > 2.5 || qualityLowered) return;
+
+  qualityLowered = true;
+  diag('화면이 거의 검은색 → 그림자·환경광을 끄고 재시도');
+  renderer.shadowMap.enabled = false;
+  for (const { light } of venue.lights) if (light.shadow) light.castShadow = false;
+  scene.environment = null;
+  venue.root.traverse((o) => {
+    if (o.isMesh) o.castShadow = o.receiveShadow = false;
+  });
+}
 function setupShadows(root, lights, env) {
   shadowsBaked = false;
   root.traverse((o) => {
@@ -487,12 +540,13 @@ function applyRevealState() {
   bloom.strength = lerp(0.55, 0.7, k);
   bloom.threshold = lerp(0.55, 0.85, k);
   bloom.radius = lerp(0.3, 0.5, k);
-  scene.environmentIntensity = k * (env.envIntensity ?? 0.6);
+  scene.environmentIntensity = k * (env.envIntensity ?? (env.sky ? 0.6 : 1.6));
 
   // 완성된 뒤에 한 번만 그림자를 굽는다 (전환 중에는 형태가 계속 바뀌므로)
   if (k > 0.995 && !shadowsBaked) {
     shadowsBaked = true;
     renderer.shadowMap.needsUpdate = true;
+    if (qualityCheck === 'idle') qualityCheck = 'pending';
   } else if (k < 0.9 && shadowsBaked) {
     shadowsBaked = false;
   }
@@ -506,6 +560,10 @@ function frame() {
     if (controls.enabled) controls.update();
     updateHotspots();
     composer.render();
+    if (qualityCheck === 'pending') {
+      qualityCheck = 'done';
+      checkFrameQuality();
+    }
   } catch (error) {
     // 한 프레임이 실패해도 루프가 멈추지 않도록 (멈추면 조명이 꺼진 화면으로 남는다)
     console.error('[kyvikos] 렌더 오류', error);
