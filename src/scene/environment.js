@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 /** 밤하늘 돔: 와이어프레임에서는 거의 검정, 실제 구현에서는 지평선 빛 + 달 */
 export function createSky() {
@@ -38,6 +39,64 @@ export function createSky() {
   mesh.frustumCulled = false;
   mesh.renderOrder = -1;
   return mesh;
+}
+
+/**
+ * 환경광 맵: 하늘/바닥 색을 담은 그라데이션을 IBL로 구워
+ * 금속·유리·젖은 바닥에 은은한 반사를 만든다.
+ */
+export function createEnvTexture(renderer, { zenith = '#02040b', horizon = '#1b2644', ground = '#0a0c12' } = {}) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 16;
+  canvas.height = 128;
+  const g = canvas.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, 0, canvas.height);
+  grd.addColorStop(0, zenith);
+  grd.addColorStop(0.46, horizon);
+  grd.addColorStop(0.54, ground);
+  grd.addColorStop(1, '#000000');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, canvas.width, canvas.height);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const target = pmrem.fromEquirectangular(tex);
+  pmrem.dispose();
+  tex.dispose();
+  return target.texture;
+}
+
+/** 비네팅 + 미세한 필름 그레인 (사진처럼 보이게) */
+export function createGrainPass() {
+  return new ShaderPass({
+    uniforms: {
+      tDiffuse: { value: null },
+      uTime: { value: 0 },
+      uGrain: { value: 0.03 },
+      uVignette: { value: 1 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D tDiffuse;
+      uniform float uTime, uGrain, uVignette;
+      varying vec2 vUv;
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main() {
+        vec4 c = texture2D(tDiffuse, vUv);
+        float d = length(vUv - 0.5) * uVignette;
+        c.rgb *= mix(1.0, 0.68, smoothstep(0.35, 0.82, d));
+        c.rgb += (hash(vUv * 1024.0 + uTime) - 0.5) * uGrain;
+        gl_FragColor = c;
+      }`,
+  });
 }
 
 export function createStars() {

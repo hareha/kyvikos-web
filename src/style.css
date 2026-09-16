@@ -428,6 +428,37 @@ body[data-mode='built'] .mode-thumb {
   color: var(--accent);
 }
 
+/* ── 확대 / 축소 ─────────────────── */
+.zoom {
+  position: absolute;
+  right: 24px;
+  bottom: 26px;
+  z-index: 6;
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--line);
+}
+.zoom button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-size: 18px;
+  line-height: 1;
+  color: #c3cfdd;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.zoom button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent);
+}
+
 /* ── 시점 카드 ─────────────────── */
 .card {
   position: absolute;
@@ -594,6 +625,10 @@ body[data-mode='built'] .mode-thumb {
   }
   .hint {
     bottom: 132px;
+  }
+  .zoom {
+    right: 12px;
+    bottom: 120px;
   }
   .hs-label {
     display: none;

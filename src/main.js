@@ -8,7 +8,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import gsap from 'gsap';
 import { reveal, disposeTree } from './scene/kit.js';
-import { createSky, createStars } from './scene/environment.js';
+import { createSky, createStars, createEnvTexture, createGrainPass } from './scene/environment.js';
 import { venues } from './venues/registry.js';
 import { initSite, isSectionHash } from './site.js';
 
@@ -32,8 +32,13 @@ const imageUrl = (name) => `${import.meta.env.BASE_URL}images/${venue.id}/${name
 // ── 렌더러 / 씬 ───────────────────────────────────────────────
 const canvas = $('#scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2));
+const MOBILE = window.innerWidth < 768;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, MOBILE ? 1.5 : 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// 장면이 정지해 있으므로 그림자는 필요할 때 한 번만 굽는다
+renderer.shadowMap.autoUpdate = false;
 
 /** 캔버스는 '3D 투어' 섹션 안에 들어 있으므로 창이 아니라 캔버스 크기에 맞춘다 */
 const stageSize = () => ({
@@ -56,10 +61,19 @@ controls.enabled = false;
 controls.enableZoom = false;
 canvas.style.touchAction = 'pan-y';
 
-const composer = new EffectComposer(renderer);
+// MSAA(멀티샘플) 렌더 타깃 — 후처리를 쓰면 기본 안티에일리어싱이 꺼지므로 직접 지정
+const composer = new EffectComposer(
+  renderer,
+  new THREE.WebGLRenderTarget(stageSize().w, stageSize().h, {
+    type: THREE.HalfFloatType,
+    samples: MOBILE ? 0 : 4,
+  }),
+);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(stageSize().w / 2, stageSize().h / 2), 0.55, 0.3, 0.55);
 composer.addPass(bloom);
+const grain = createGrainPass();
+composer.addPass(grain);
 composer.addPass(new OutputPass());
 
 const sky = createSky();
@@ -107,6 +121,7 @@ async function loadVenue(id) {
     builtBg: new THREE.Color(env.builtBg),
   };
   applyEnv(env);
+  setupShadows(root, lights, env);
   gsap.killTweensOf(reveal);
   reveal.value = state.mode === 'built' ? builtLevel() : REVEAL_WIRE;
 
@@ -143,6 +158,51 @@ function applyEnv(env) {
   }
   stars.visible = env.stars;
   renderer.toneMappingExposure = env.exposure;
+
+  scene.environment?.dispose();
+  scene.environment = createEnvTexture(
+    renderer,
+    env.sky ? { zenith: env.sky.zenith, horizon: env.sky.horizon } : { zenith: env.builtBg, horizon: env.builtBg, ground: '#000000' },
+  );
+  scene.environmentIntensity = 0;
+}
+
+/** 정지된 장면이라 그림자는 '실제 구현'이 완성된 순간 한 번만 굽는다 */
+let shadowsBaked = false;
+function setupShadows(root, lights, env) {
+  shadowsBaked = false;
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true;
+    o.receiveShadow = true;
+  });
+
+  const radius = env.shadowRadius ?? Math.max(24, env.height * 0.9);
+  // 그림자 맵은 2장까지만 — 더 늘리면 셰이더가 한계에 걸려 장면이 어두워진다
+  const mainSpot = lights
+    .filter(({ light }) => light.isSpotLight)
+    .sort((a, b) => b.base - a.base)[0]?.light;
+
+  for (const { light } of lights) {
+    if (light.isDirectionalLight) {
+      light.castShadow = true;
+      light.shadow.mapSize.set(2048, 2048);
+      light.shadow.bias = -0.0006;
+      light.shadow.normalBias = 0.05;
+      const c = light.shadow.camera;
+      Object.assign(c, { left: -radius, right: radius, top: radius, bottom: -radius, near: 1, far: radius * 8 });
+      c.updateProjectionMatrix();
+    } else if (light === mainSpot) {
+      light.castShadow = true;
+      light.shadow.mapSize.set(2048, 2048);
+      light.shadow.bias = -0.0006;
+      light.shadow.normalBias = 0.05;
+      light.shadow.camera.near = 1;
+      light.shadow.camera.far = radius * 6;
+    } else if (light.shadow) {
+      light.castShadow = false;
+    }
+  }
 }
 
 // ── 카메라 이동 ───────────────────────────────────────────────
@@ -237,6 +297,26 @@ function setMode(mode) {
     });
   }
   refreshCard();
+}
+
+/** 확대 / 축소 — 궤도 시점은 거리로, 1인칭 시점은 화각으로 */
+function zoom(direction) {
+  const view = venue?.viewById[state.view];
+  if (!view || state.flying) return;
+  if (view.orbit) {
+    const offset = camera.position.clone().sub(controls.target);
+    const distance = clamp(offset.length() * (direction > 0 ? 0.78 : 1.28), controls.minDistance, controls.maxDistance);
+    const to = controls.target.clone().add(offset.setLength(distance));
+    gsap.to(camera.position, { x: to.x, y: to.y, z: to.z, duration: 0.5, ease: 'power2.out', overwrite: true });
+  } else {
+    gsap.to(camera, {
+      fov: clamp(camera.fov + (direction > 0 ? -8 : 8), 24, 78),
+      duration: 0.45,
+      ease: 'power2.out',
+      overwrite: true,
+      onUpdate: () => camera.updateProjectionMatrix(),
+    });
+  }
 }
 
 // ── UI ──────────────────────────────────────────────────────
@@ -349,6 +429,10 @@ function initUi() {
   document.querySelectorAll('.mode button').forEach((btn) => {
     btn.addEventListener('click', () => setMode(btn.dataset.mode));
   });
+  $('.zoom').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-zoom]');
+    if (btn) zoom(btn.dataset.zoom === 'in' ? 1 : -1);
+  });
 
   card.querySelector('.card-tabs').addEventListener('click', (e) => {
     const btn = e.target.closest('button');
@@ -404,7 +488,17 @@ function frame() {
     bloom.strength = lerp(0.55, 0.7, k);
     bloom.threshold = lerp(0.55, 0.85, k);
     bloom.radius = lerp(0.3, 0.5, k);
+    scene.environmentIntensity = k * (env.envIntensity ?? 0.6);
+
+    // 완성된 뒤에 한 번만 그림자를 굽는다 (전환 중에는 형태가 계속 바뀌므로)
+    if (k > 0.995 && !shadowsBaked) {
+      shadowsBaked = true;
+      renderer.shadowMap.needsUpdate = true;
+    } else if (k < 0.9 && shadowsBaked) {
+      shadowsBaked = false;
+    }
   }
+  grain.uniforms.uTime.value = performance.now() * 0.001;
   sky.position.copy(camera.position);
 
   if (controls.enabled) controls.update();
@@ -435,9 +529,17 @@ window.__kyvikos = {
   goTo,
   setMode,
   loadVenue,
+  zoom,
+  setRendering,
   camera,
   controls,
   reveal,
+  renderer,
+  scene,
+  composer,
+  bloom,
+  grain,
+  gsap,
   get venue() {
     return venue;
   },

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Builder, G, T, truss, beam, std, glow, revealable, mountainRing, seeded } from '../../scene/kit.js';
+import { Builder, G, T, truss, beam, std, glow, revealable, mountainRing, seeded, mottleTexture } from '../../scene/kit.js';
 import { ledTexture, bannerTexture, windowTexture, totemTexture } from './textures.js';
 
 /*
@@ -14,16 +14,16 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 export function build() {
   const tex = { led: ledTexture(), banner: bannerTexture(), windows: windowTexture(), totem: totemTexture() };
   const M = {
-    plaza: std('#15171b', 0.95),
-    lawn: std('#44612f', 0.95),
-    stone: std('#8d9096', 0.85),
-    stoneDark: std('#55585e', 0.9),
+    plaza: std('#15171b', 0.95, 0, { map: mottleTexture('#15171b', '#232830', { repeat: 160, seed: 9 }) }),
+    lawn: std('#44612f', 0.95, 0, { map: mottleTexture('#3f5a2b', '#587a3a', { repeat: 26, seed: 4 }) }),
+    stone: std('#8d9096', 0.85, 0, { map: mottleTexture('#8d9096', '#a6aab1', { repeat: 2, seed: 6 }) }),
+    stoneDark: std('#55585e', 0.9, 0, { map: mottleTexture('#55585e', '#6a6e75', { repeat: 2, seed: 7 }) }),
     mountain: std('#10141c', 1),
     deck: std('#1b2342', 0.45, 0.1),
     metal: std('#c3c9d2', 0.35, 0.85),
     dark: std('#16181d', 0.6, 0.3),
     white: std('#eef0f3', 0.5),
-    cloth: std('#f3f2ee', 0.85),
+    cloth: std('#f3f2ee', 0.85, 0, { map: mottleTexture('#f3f2ee', '#dedcd4', { repeat: 1.6, alpha: 0.3, seed: 12 }) }),
     chair: std('#121215', 0.45, 0.4),
     gold: std('#b8914c', 0.35, 0.9),
     flower: std('#e3e6ef', 0.9),
@@ -144,7 +144,7 @@ function cityLights() {
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   const mat = revealable(
-    new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, toneMapped: false, depthWrite: false }),
+    new THREE.PointsMaterial({ size: 1.5, sizeAttenuation: false, vertexColors: true, toneMapped: false, depthWrite: false }),
   );
   const points = new THREE.Points(geo, mat);
   points.frustumCulled = false;

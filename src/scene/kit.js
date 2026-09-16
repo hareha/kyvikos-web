@@ -107,6 +107,44 @@ export function seeded(seed) {
   return () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 }
 
+const rgba = (hex, a) => {
+  const c = new THREE.Color(hex);
+  return `rgba(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)}, ${a})`;
+};
+
+/**
+ * 얼룩덜룩한 표면 텍스처 — 잔디, 아스팔트, 석재처럼 단색이면 플라스틱처럼 보이는 면에 사용.
+ * repeat 은 면 크기에 맞춰 넉넉히 준다.
+ */
+export function mottleTexture(base, variant, { size = 256, blobs = 260, alpha = 0.5, repeat = 1, seed = 3 } = {}) {
+  const r = seeded(seed);
+  const tex = canvasTexture(size, size, (g) => {
+    g.fillStyle = base;
+    g.fillRect(0, 0, size, size);
+    for (let i = 0; i < blobs; i++) {
+      const x = r() * size;
+      const y = r() * size;
+      const rad = size * (0.015 + r() * 0.07);
+      const color = r() < 0.5 ? variant : base;
+      const grd = g.createRadialGradient(x, y, 0, x, y, rad);
+      grd.addColorStop(0, rgba(color, alpha * (0.35 + r() * 0.65)));
+      grd.addColorStop(1, rgba(color, 0));
+      g.fillStyle = grd;
+      g.beginPath();
+      g.arc(x, y, rad, 0, Math.PI * 2);
+      g.fill();
+    }
+    for (let i = 0; i < size * size * 0.06; i++) {
+      g.fillStyle = `rgba(0,0,0,${r() * 0.07})`;
+      g.fillRect(r() * size, r() * size, 1, 1);
+    }
+  });
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(repeat, repeat);
+  return tex;
+}
+
 // ── 지오메트리 ────────────────────────────────────────────────
 const geoms = new Map();
 const memo = (key, make) => {
