@@ -75,8 +75,8 @@ export function createGrainPass() {
     uniforms: {
       tDiffuse: { value: null },
       uTime: { value: 0 },
-      uGrain: { value: 0.03 },
-      uVignette: { value: 1 },
+      uGrain: { value: 0 }, // 필름 그레인은 어두운 면에서 노이즈로 보여 끔
+      uVignette: { value: 0.8 },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -92,7 +92,7 @@ export function createGrainPass() {
       void main() {
         vec4 c = texture2D(tDiffuse, vUv);
         float d = length(vUv - 0.5) * uVignette;
-        c.rgb *= mix(1.0, 0.68, smoothstep(0.35, 0.82, d));
+        c.rgb *= mix(1.0, 0.82, smoothstep(0.42, 0.9, d));
         c.rgb += (hash(vUv * 1024.0 + uTime) - 0.5) * uGrain;
         gl_FragColor = c;
       }`,

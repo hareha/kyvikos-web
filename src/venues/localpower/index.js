@@ -9,4 +9,5 @@ export const env = {
   builtBg: '#07080c',
   fog: 0.006,
   exposure: 1.1,
+  fill: 2.6,
 };

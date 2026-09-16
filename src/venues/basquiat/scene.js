@@ -67,9 +67,9 @@ export function build() {
   };
   const printed = (map, k = 0.35) => std('#ffffff', 0.85, 0, { map, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: k });
   const M = {
-    carpet: std('#2a2c30', 1),
+    carpet: std('#4c4f56', 1),
     lobby: std('#8f949b', 0.6),
-    shell: std('#34373d', 0.95),
+    shell: std('#4a4d55', 0.95),
     skirting: std('#1c1e22', 0.9),
     white: std('#eceae5', 0.9),
     grey: std('#d3d1cb', 0.9),

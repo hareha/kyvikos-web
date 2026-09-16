@@ -29,10 +29,10 @@ export function build() {
     diner: lightboxTexture(1),
   };
   const M = {
-    ground: std('#17181b', 0.95),
+    ground: std('#26282d', 0.95),
     street: std('#222327', 0.9),
     walk: std('#4a4a4c', 0.9),
-    slab: std('#4b4843', 0.85),
+    slab: std('#615d57', 0.85),
     court: std('#5e5b56', 0.9),
     neighbor: std('#34363b', 0.9),
     shell: std('#cfc9bf', 0.92, 0, { side: THREE.BackSide }),
