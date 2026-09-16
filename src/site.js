@@ -13,6 +13,7 @@ const CLIENTS = [
 /** 3D 메인 아래 페이지의 스크롤 동작 */
 export function initSite({ loadVenue, setRendering }) {
   renderClients();
+  document.body.classList.add('anim');
 
   document.addEventListener('click', (e) => {
     const anchor = e.target.closest('a[data-scroll]');

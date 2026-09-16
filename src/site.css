@@ -120,18 +120,19 @@ body.scrolled .topbar {
   color: var(--accent);
 }
 
-/* 등장 애니메이션 */
-.rise {
+/* 등장 애니메이션 — body.anim 은 스크립트가 붙인다.
+   스크립트가 실패해도 본문은 그대로 보이도록 기본값은 '보임' */
+body.anim .rise {
   opacity: 0;
   transform: translateY(18px);
   transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.3, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
-.rise.in {
+body.anim .rise.in {
   opacity: 1;
   transform: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .rise { opacity: 1; transform: none; transition: none; }
+  body.anim .rise { opacity: 1; transform: none; transition: none; }
   .scroll-cue i { animation: none; }
 }
 
