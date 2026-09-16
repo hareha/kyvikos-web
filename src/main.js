@@ -35,7 +35,8 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPrefere
 const MOBILE = window.innerWidth < 768;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, MOBILE ? 1.5 : 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.shadowMap.enabled = true;
+// 모바일에서는 그림자를 끈다 (성능, 그리고 일부 기기에서 화면이 어두워지는 문제 회피)
+renderer.shadowMap.enabled = !MOBILE;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 // 장면이 정지해 있으므로 그림자는 필요할 때 한 번만 굽는다
 renderer.shadowMap.autoUpdate = false;
@@ -124,6 +125,7 @@ async function loadVenue(id) {
   setupShadows(root, lights, env);
   gsap.killTweensOf(reveal);
   reveal.value = state.mode === 'built' ? builtLevel() : REVEAL_WIRE;
+  applyRevealState();
 
   renderProject();
   renderViews();
@@ -178,13 +180,10 @@ function setupShadows(root, lights, env) {
   });
 
   const radius = env.shadowRadius ?? Math.max(24, env.height * 0.9);
-  // 그림자 맵은 2장까지만 — 더 늘리면 셰이더가 한계에 걸려 장면이 어두워진다
-  const mainSpot = lights
-    .filter(({ light }) => light.isSpotLight)
-    .sort((a, b) => b.base - a.base)[0]?.light;
-
+  // 그림자는 주광(디렉셔널) 1개만. 여러 개를 켜면 일부 GPU에서 셰이더 한계에 걸려
+  // 표면이 전부 검게 렌더링되는 문제가 있어 보수적으로 제한한다.
   for (const { light } of lights) {
-    if (light.isDirectionalLight) {
+    if (light.isDirectionalLight && renderer.shadowMap.enabled) {
       light.castShadow = true;
       light.shadow.mapSize.set(2048, 2048);
       light.shadow.bias = -0.0006;
@@ -192,13 +191,6 @@ function setupShadows(root, lights, env) {
       const c = light.shadow.camera;
       Object.assign(c, { left: -radius, right: radius, top: radius, bottom: -radius, near: 1, far: radius * 8 });
       c.updateProjectionMatrix();
-    } else if (light === mainSpot) {
-      light.castShadow = true;
-      light.shadow.mapSize.set(2048, 2048);
-      light.shadow.bias = -0.0006;
-      light.shadow.normalBias = 0.05;
-      light.shadow.camera.near = 1;
-      light.shadow.camera.far = radius * 6;
     } else if (light.shadow) {
       light.castShadow = false;
     }
@@ -294,6 +286,9 @@ function setMode(mode) {
       duration: mode === 'built' ? 3 : 2,
       ease: mode === 'built' ? 'power1.inOut' : 'power2.inOut',
       overwrite: true,
+      // 렌더 루프와 별개로 조명·배경을 따라가게 한다
+      onUpdate: applyRevealState,
+      onComplete: applyRevealState,
     });
   }
   refreshCard();
@@ -475,35 +470,46 @@ function initUi() {
 }
 
 // ── 루프 ─────────────────────────────────────────────────────
-function frame() {
-  if (venue) {
-    const { env } = venue;
-    const k = smoothstep(reveal.value, 0, Math.min(30, env.height * 0.6));
-    for (const { light, base } of venue.lights) light.intensity = base * k;
-    sky.material.uniforms.uBuilt.value = k;
-    scene.background.lerpColors(WIRE_BG, venue.builtBg, env.sky ? 0 : k);
-    scene.fog.density = env.fog * k;
-    grid.material.opacity = 0.35 * (1 - smoothstep(reveal.value, -1, 4));
-    grid.visible = grid.material.opacity > 0.001;
-    bloom.strength = lerp(0.55, 0.7, k);
-    bloom.threshold = lerp(0.55, 0.85, k);
-    bloom.radius = lerp(0.3, 0.5, k);
-    scene.environmentIntensity = k * (env.envIntensity ?? 0.6);
+/**
+ * 전환 진행도(reveal)에 맞춰 조명·배경·후처리 값을 맞춘다.
+ * 렌더 루프가 멈춰 있어도 값이 어긋나지 않도록 루프 밖에서도 호출한다.
+ */
+function applyRevealState() {
+  if (!venue) return;
+  const { env } = venue;
+  const k = smoothstep(reveal.value, 0, Math.min(30, env.height * 0.6));
+  for (const { light, base } of venue.lights) light.intensity = base * k;
+  sky.material.uniforms.uBuilt.value = k;
+  scene.background.lerpColors(WIRE_BG, venue.builtBg, env.sky ? 0 : k);
+  scene.fog.density = env.fog * k;
+  grid.material.opacity = 0.35 * (1 - smoothstep(reveal.value, -1, 4));
+  grid.visible = grid.material.opacity > 0.001;
+  bloom.strength = lerp(0.55, 0.7, k);
+  bloom.threshold = lerp(0.55, 0.85, k);
+  bloom.radius = lerp(0.3, 0.5, k);
+  scene.environmentIntensity = k * (env.envIntensity ?? 0.6);
 
-    // 완성된 뒤에 한 번만 그림자를 굽는다 (전환 중에는 형태가 계속 바뀌므로)
-    if (k > 0.995 && !shadowsBaked) {
-      shadowsBaked = true;
-      renderer.shadowMap.needsUpdate = true;
-    } else if (k < 0.9 && shadowsBaked) {
-      shadowsBaked = false;
-    }
+  // 완성된 뒤에 한 번만 그림자를 굽는다 (전환 중에는 형태가 계속 바뀌므로)
+  if (k > 0.995 && !shadowsBaked) {
+    shadowsBaked = true;
+    renderer.shadowMap.needsUpdate = true;
+  } else if (k < 0.9 && shadowsBaked) {
+    shadowsBaked = false;
   }
-  grain.uniforms.uTime.value = performance.now() * 0.001;
-  sky.position.copy(camera.position);
+}
 
-  if (controls.enabled) controls.update();
-  updateHotspots();
-  composer.render();
+function frame() {
+  try {
+    applyRevealState();
+    grain.uniforms.uTime.value = performance.now() * 0.001;
+    sky.position.copy(camera.position);
+    if (controls.enabled) controls.update();
+    updateHotspots();
+    composer.render();
+  } catch (error) {
+    // 한 프레임이 실패해도 루프가 멈추지 않도록 (멈추면 조명이 꺼진 화면으로 남는다)
+    console.error('[kyvikos] 렌더 오류', error);
+  }
 }
 
 let rendering = false;
@@ -531,6 +537,7 @@ window.__kyvikos = {
   loadVenue,
   zoom,
   setRendering,
+  frame,
   camera,
   controls,
   reveal,
