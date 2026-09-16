@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Builder, G, T, truss, member, beam, std, glow, revealable } from '../../scene/kit.js';
+import { pbr, placeModel } from '../../scene/assets.js';
 import { ledTexture, panelTexture, hoardingTexture, sponsorTexture, exhibitionTexture, lightboxTexture } from './textures.js';
 
 /*
@@ -29,27 +30,29 @@ export function build() {
     diner: lightboxTexture(1),
   };
   const M = {
-    ground: std('#26282d', 0.95),
-    street: std('#222327', 0.9),
-    walk: std('#4a4a4c', 0.9),
-    slab: std('#615d57', 0.85),
-    court: std('#5e5b56', 0.9),
-    neighbor: std('#34363b', 0.9),
-    shell: std('#cfc9bf', 0.92, 0, { side: THREE.BackSide }),
-    roofIn: std('#2e2a26', 0.9, 0, { side: THREE.BackSide }),
+    // 실사 재질 (Poly Haven CC0)
+    ground: pbr('asphalt_02', { color: '#7a7d83', tile: 5 }),
+    street: pbr('asphalt_02', { color: '#5c5f65', tile: 5 }),
+    walk: pbr('rock_tile_floor_02', { color: '#b0b3b8', tile: 1.4 }),
+    slab: pbr('brushed_concrete', { color: '#d2d0cc', tile: 4, roughness: 0.55 }),
+    court: pbr('concrete_floor_01', { color: '#e0dcd5', tile: 5 }),
+    neighbor: pbr('brick_wall_005', { color: '#8e8c8a', tile: 3 }),
+    // 성수 창고: 흰 도장이 된 벽돌 벽 + 골강판 지붕
+    shell: pbr('brick_wall_005', { color: '#f3eee8', tile: 2.4, roughness: 0.92, side: THREE.BackSide }),
+    roofIn: pbr('corrugated_iron_02', { color: '#77726b', tile: 2, roughness: 0.7, side: THREE.BackSide }),
     steel: std('#2a2c30', 0.55, 0.6),
     black: std('#0c0c0f', 0.6, 0.2),
     runwayTop: std('#0a0a0d', 0.18, 0.4),
     white: std('#ecebe8', 0.6),
     plinth: std('#f2f1ee', 0.45),
     curtain: std('#bdbcb8', 0.95, 0, { side: THREE.DoubleSide }),
-    bench: std('#bcbab5', 0.85),
+    bench: pbr('cotton_jersey', { color: '#a9a7a2', tile: 0.6, roughness: 1 }),
     edge: glow('#ffffff', 1.2),
     truss: std('#1b1c20', 0.45, 0.7),
     silver: std('#b9bec6', 0.35, 0.85),
     paper: std('#f5efe6', 0.7),
-    carpet: std('#a8161b', 0.95),
-    wood: std('#6b4a30', 0.8),
+    carpet: pbr('cotton_jersey', { color: '#c41c22', tile: 0.6, roughness: 1 }),
+    wood: pbr('dark_wooden_planks', { color: '#c29060', tile: 1 }),
     foliage: std('#2c4a26', 1),
     trunk: std('#3a2b20', 1),
     skin: std('#e9e7e3', 0.4),
@@ -87,6 +90,19 @@ export function build() {
 
   const root = b.build();
   const lights = addLights(root);
+
+  // 실제 소품 모델
+  // 전시장 천장의 산업용 펜던트 조명 (모델 원점 = 매다는 지점)
+  const pendants = [];
+  for (let x = 4; x <= 28; x += 8) for (const z of [-4.5, 4.5]) pendants.push(T(x, EAVE - 0.9, z, PI / 2));
+  placeModel(root, 'caged_hanging_light', pendants, { roughness: 0.5 });
+  // 중정 텐트 아래 · 담장 옆 야외 테이블 세트
+  placeModel(
+    root,
+    'outdoor_table_chair_set_01',
+    [T(35.5, 0.08, -4.4, 0.3), T(43.5, 0.08, -4.4, -0.4), T(38.5, 0.08, 10, 1.4), T(44.2, 0.08, 9.8, 2.2)],
+    { roughness: 0.7 },
+  );
   return { root, lights };
 }
 

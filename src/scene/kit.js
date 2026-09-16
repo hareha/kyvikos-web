@@ -313,6 +313,37 @@ function edges(geo) {
   return e;
 }
 
+/**
+ * 월드 좌표 기준 박스 투영 UV. 삼각형마다 면 방향의 주축을 골라 투영하므로
+ * 벽·바닥 크기와 상관없이 텍스처가 같은 밀도로 깔린다. tile = 텍스처 한 장의 크기(m).
+ */
+const _a = new THREE.Vector3();
+const _b = new THREE.Vector3();
+const _c = new THREE.Vector3();
+const _n = new THREE.Vector3();
+function worldUV(geometry, tile) {
+  const pos = geometry.attributes.position;
+  const uv = geometry.attributes.uv;
+  for (let i = 0; i < pos.count; i += 3) {
+    _a.fromBufferAttribute(pos, i);
+    _b.fromBufferAttribute(pos, i + 1);
+    _c.fromBufferAttribute(pos, i + 2);
+    _n.subVectors(_c, _b).cross(_a.clone().sub(_b));
+    const nx = Math.abs(_n.x);
+    const ny = Math.abs(_n.y);
+    const nz = Math.abs(_n.z);
+    for (let k = 0; k < 3; k++) {
+      const x = pos.getX(i + k);
+      const y = pos.getY(i + k);
+      const z = pos.getZ(i + k);
+      if (ny >= nx && ny >= nz) uv.setXY(i + k, x / tile, z / tile);
+      else if (nx >= nz) uv.setXY(i + k, z / tile, y / tile);
+      else uv.setXY(i + k, x / tile, y / tile);
+    }
+  }
+  uv.needsUpdate = true;
+}
+
 export class Builder {
   constructor() {
     this.stack = [new THREE.Matrix4()];
@@ -365,6 +396,7 @@ export class Builder {
     const root = new THREE.Group();
     for (const [mat, items] of this.solids) {
       const merged = mergeGeometries(items.map(([geo, world]) => flat(geo).clone().applyMatrix4(world)));
+      if (mat.userData.worldUV) worldUV(merged, mat.userData.worldUV);
       root.add(new THREE.Mesh(merged, mat));
     }
     const v = new THREE.Vector3();

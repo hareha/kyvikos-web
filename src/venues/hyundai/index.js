@@ -9,4 +9,6 @@ export const env = {
   builtBg: '#07090d',
   fog: 0.006,
   exposure: 1,
+  hdri: 'art_studio',
+  envIntensity: 0.6,
 };

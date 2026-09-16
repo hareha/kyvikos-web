@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Builder, G, T, truss, beam, std, glow, revealable, mountainRing, seeded, mottleTexture } from '../../scene/kit.js';
+import { Builder, G, T, truss, beam, std, glow, revealable, mountainRing, seeded } from '../../scene/kit.js';
+import { pbr, placeModel, hideProxy } from '../../scene/assets.js';
 import { ledTexture, bannerTexture, windowTexture, totemTexture } from './textures.js';
 
 /*
@@ -14,26 +15,27 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 export function build() {
   const tex = { led: ledTexture(), banner: bannerTexture(), windows: windowTexture(), totem: totemTexture() };
   const M = {
-    plaza: std('#15171b', 0.95, 0, { map: mottleTexture('#15171b', '#232830', { repeat: 160, seed: 9 }) }),
-    lawn: std('#44612f', 0.95, 0, { map: mottleTexture('#3f5a2b', '#587a3a', { repeat: 26, seed: 4 }) }),
-    stone: std('#8d9096', 0.85, 0, { map: mottleTexture('#8d9096', '#a6aab1', { repeat: 2, seed: 6 }) }),
-    stoneDark: std('#55585e', 0.9, 0, { map: mottleTexture('#55585e', '#6a6e75', { repeat: 2, seed: 7 }) }),
+    // 실사 재질 (Poly Haven CC0). tile = 텍스처 한 장이 덮는 크기(m)
+    plaza: pbr('asphalt_02', { color: '#6f737a', tile: 5 }),
+    lawn: pbr('leafy_grass', { color: '#b9d68c', tile: 2.5 }),
+    stone: pbr('rock_tile_floor_02', { color: '#d4d7dc', tile: 1.4, roughness: 0.85 }),
+    stoneDark: pbr('rock_tile_floor_02', { color: '#8e939a', tile: 1.4, roughness: 0.85 }),
     mountain: std('#10141c', 1),
-    deck: std('#1b2342', 0.45, 0.1),
-    metal: std('#c3c9d2', 0.35, 0.85),
+    deck: pbr('cotton_jersey', { color: '#2a3566', tile: 0.8 }),
+    metal: std('#b4bac3', 0.5, 0.55),
     dark: std('#16181d', 0.6, 0.3),
     white: std('#eef0f3', 0.5),
-    cloth: std('#f3f2ee', 0.85, 0, { map: mottleTexture('#f3f2ee', '#dedcd4', { repeat: 1.6, alpha: 0.3, seed: 12 }) }),
-    chair: std('#121215', 0.45, 0.4),
+    cloth: pbr('cotton_jersey', { color: '#ffffff', tile: 0.6, roughness: 1 }),
+    chair: std('#121215', 0.45, 0.4), // 의자 모델이 로드되기 전 임시 형태
     gold: std('#b8914c', 0.35, 0.9),
     flower: std('#e3e6ef', 0.9),
     tent: std('#e8ebf0', 0.7, 0, { transparent: true, opacity: 0.88, side: THREE.DoubleSide }),
     glass: std('#2a3342', 0.15, 0.6, { transparent: true, opacity: 0.55 }),
     navy: std('#131a3a', 0.5, 0.2),
-    wood: std('#3d2618', 0.8),
-    woodRed: std('#6a2a1c', 0.8),
-    tile: std('#262a31', 0.7, 0.2, { side: THREE.DoubleSide }),
-    plaster: std('#d9d5cb', 0.9),
+    wood: pbr('dark_wooden_planks', { color: '#9a6a48', tile: 1.5, roughness: 0.8 }),
+    woodRed: pbr('dark_wooden_planks', { color: '#c0503a', tile: 1.5, roughness: 0.8 }),
+    tile: pbr('ceramic_roof_01', { color: '#6a7078', tile: 1.6, roughness: 0.7, side: THREE.DoubleSide }),
+    plaster: pbr('beige_wall_001', { color: '#f4f1ea', tile: 3 }),
     foliage: std('#1d3321', 1),
     pine: std('#1a2c1c', 1),
     trunk: std('#3a2b20', 1),
@@ -57,6 +59,7 @@ export function build() {
         side: THREE.DoubleSide,
       }),
     ),
+    chairSpots: [],
   };
 
   const b = new Builder();
@@ -85,6 +88,16 @@ export function build() {
   const root = b.build();
   root.add(cityLights());
   const lights = addLights(root);
+
+  // 연회 의자: 상자 형태로 먼저 보여주고, 실제 모델이 로드되면 교체
+  placeModel(root, 'dining_chair_02', M.chairSpots, {
+    color: '#9a9a9a',
+    roughness: 0.55,
+    onReady: () => {
+      hideProxy(root, M.chair);
+      hideProxy(root, M.gold);
+    },
+  });
   return { root, lights };
 }
 
@@ -352,6 +365,8 @@ function table(b, M, x, z) {
         b.add(G.box(0.46, 0.46, 0.46), M.chair, T(0, 0.23, 0));
         b.add(G.box(0.46, 0.64, 0.07), M.chair, T(0, 0.78, 0.2));
         b.add(G.box(0.48, 0.05, 0.09), M.gold, T(0, 1.1, 0.2), { outline: false });
+        // 모델은 +z를 정면으로 보므로 테이블 쪽(-z)을 보게 뒤집는다
+        M.chairSpots.push(b.current.clone().multiply(T(0, 0, 0, PI)));
       });
     }
   });

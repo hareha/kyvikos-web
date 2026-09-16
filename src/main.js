@@ -9,6 +9,7 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 import gsap from 'gsap';
 import { reveal, disposeTree, std, viewInverse } from './scene/kit.js';
 import { createSky, createStars, createEnvTexture, createGrainPass } from './scene/environment.js';
+import { loadHdri, whenAssetsLoaded } from './scene/assets.js';
 import { venues } from './venues/registry.js';
 import { initSite, isSectionHash } from './site.js';
 
@@ -151,6 +152,8 @@ async function loadVenue(id) {
   camera.updateProjectionMatrix();
   state.view = null;
 
+  // 텍스처·모델이 도착한 뒤에 보여준다 (그 전에는 재질이 검게 그려짐)
+  await whenAssetsLoaded();
   loader.classList.add('done');
   state.loading = false;
   goTo(overview.id, { duration: 3.2 });
@@ -186,51 +189,33 @@ function applyEnv(env) {
   stars.visible = env.stars;
   renderer.toneMappingExposure = env.exposure;
 
-  scene.environment?.dispose();
-  scene.environment = SAFE_MODE
-    ? null
-    : createEnvTexture(
-        renderer,
-        env.sky
-          ? { zenith: env.sky.zenith, horizon: env.sky.horizon }
-          : // 실내: 천장에서 바닥으로 떨어지는 중성 회색 — 벽면이 검게 죽지 않게 한다
-            { zenith: '#4a5464', horizon: '#333b47', ground: '#171a20' },
-      );
+  gradientEnv?.dispose();
+  gradientEnv = null;
+  scene.environment = null;
   scene.environmentIntensity = 0;
+  if (SAFE_MODE) return;
+
+  // 우선 그라데이션 환경광을 쓰고, HDRI가 있으면 로드되는 대로 교체한다
+  gradientEnv = createEnvTexture(
+    renderer,
+    env.sky
+      ? { zenith: env.sky.zenith, horizon: env.sky.horizon }
+      : // 실내: 천장에서 바닥으로 떨어지는 중성 회색 — 벽면이 검게 죽지 않게 한다
+        { zenith: '#4a5464', horizon: '#333b47', ground: '#171a20' },
+  );
+  scene.environment = gradientEnv;
+  if (env.hdri) {
+    loadHdri(renderer, env.hdri)
+      .then((texture) => {
+        if (venue?.env === env) scene.environment = texture;
+      })
+      .catch((error) => console.warn('[kyvikos] HDRI 로드 실패', error));
+  }
 }
+let gradientEnv = null;
 
 /** 정지된 장면이라 그림자는 '실제 구현'이 완성된 순간 한 번만 굽는다 */
 let shadowsBaked = false;
-/** 그림자·환경광이 GPU에서 실패해 화면이 까맣게 나오는 경우를 자동으로 되돌리기 위한 상태 */
-let qualityCheck = 'idle'; // idle | pending | done
-let qualityLowered = false;
-
-/** 완성 화면이 사실상 검은색이면(셰이더 한계 등) 고급 효과를 끄고 다시 그린다 */
-function checkFrameQuality() {
-  const gl = renderer.getContext();
-  const w = gl.drawingBufferWidth;
-  const h = gl.drawingBufferHeight;
-  const sw = Math.min(160, w);
-  const sh = Math.min(120, h);
-  const px = new Uint8Array(sw * sh * 4);
-  gl.readPixels(((w - sw) / 2) | 0, ((h - sh) / 2) | 0, sw, sh, gl.RGBA, gl.UNSIGNED_BYTE, px);
-  let sum = 0;
-  for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3;
-  const avg = sum / (px.length / 4);
-  console.info(`[kyvikos] 밝기 검사 ${avg.toFixed(1)} (${venue?.id})`);
-  if (avg > 2.5 || qualityLowered) return;
-
-  qualityLowered = true;
-  console.warn('[kyvikos] 화면이 거의 검은색 → 그림자·환경광을 끄고 재시도합니다');
-  renderer.shadowMap.enabled = false;
-  for (const { light } of venue.lights) if (light.shadow) light.castShadow = false;
-  scene.environment = null;
-  venue.root.traverse((o) => {
-    if (!o.isMesh) return;
-    o.castShadow = o.receiveShadow = false;
-    for (const mat of [].concat(o.material)) mat.needsUpdate = true; // 셰이더 재컴파일
-  });
-}
 function setupShadows(root, lights, env) {
   shadowsBaked = false;
   root.traverse((o) => {
@@ -553,7 +538,6 @@ function applyRevealState() {
   if (k > 0.995 && !shadowsBaked) {
     shadowsBaked = true;
     renderer.shadowMap.needsUpdate = true;
-    if (qualityCheck === 'idle') qualityCheck = 'pending';
   } else if (k < 0.9 && shadowsBaked) {
     shadowsBaked = false;
   }
@@ -572,10 +556,6 @@ function frame() {
       renderer.render(scene, camera);
     } else {
       composer.render();
-    }
-    if (qualityCheck === 'pending') {
-      qualityCheck = 'done';
-      checkFrameQuality();
     }
   } catch (error) {
     // 한 프레임이 실패해도 루프가 멈추지 않도록 (멈추면 조명이 꺼진 화면으로 남는다)

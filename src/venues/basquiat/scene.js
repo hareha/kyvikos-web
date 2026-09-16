@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Builder, G, T, member, std, glow, revealable } from '../../scene/kit.js';
+import { pbr, placeModel } from '../../scene/assets.js';
 import {
   artAtlas, introTexture, logoTexture, posterTexture, projectionTexture,
   screenTexture, shopWallTexture, photoWallTexture, totemTexture,
@@ -67,13 +68,14 @@ export function build() {
   };
   const printed = (map, k = 0.35) => std('#ffffff', 0.85, 0, { map, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: k });
   const M = {
-    carpet: std('#4c4f56', 1),
-    lobby: std('#8f949b', 0.6),
-    shell: std('#4a4d55', 0.95),
+    // 실사 재질 (Poly Haven CC0) — DDP 전시홀의 콘크리트 바닥과 도장 벽
+    carpet: pbr('brushed_concrete', { color: '#8e9197', tile: 4, roughness: 0.55 }),
+    lobby: pbr('marble_01', { color: '#e2e3e5', tile: 2.5, roughness: 0.35 }),
+    shell: pbr('painted_plaster_wall', { color: '#a3a6ac', tile: 3 }),
     skirting: std('#1c1e22', 0.9),
-    white: std('#eceae5', 0.9),
-    grey: std('#d3d1cb', 0.9),
-    navy: std('#1f2a44', 0.9),
+    white: pbr('painted_plaster_wall', { color: '#f4f2ed', tile: 3 }),
+    grey: pbr('painted_plaster_wall', { color: '#dbd9d3', tile: 3 }),
+    navy: pbr('painted_plaster_wall', { color: '#34466e', tile: 3 }),
     black: std('#141416', 0.8),
     dark: std('#0c0c0d', 0.5, 0.3),
     maroon: std('#7a1f27', 0.7),
@@ -123,6 +125,10 @@ export function build() {
 
   const root = b.build();
   const lights = addLights(root, spots);
+  // 로비 화분
+  placeModel(root, 'potted_plant_02', [T(-19, 0.1, 16, 0.6, 0, 0, 1.3, 1.3, 1.3), T(-6, 0.1, 17, 2, 0, 0, 1.3, 1.3, 1.3)], {
+    roughness: 0.7,
+  });
   return { root, lights };
 }
 

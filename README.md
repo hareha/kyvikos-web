@@ -34,6 +34,11 @@ public/images/<id>/    시점 카드 이미지 (sim-* 3D 렌더 / real-* 실제 
 
 공간 모듈 작성 규약은 [src/venues/README.md](src/venues/README.md) 참고.
 
+## 실사 에셋
+
+텍스처·3D 모델·HDRI는 [Poly Haven](https://polyhaven.com)의 CC0(퍼블릭 도메인) 에셋입니다.
+`npm run assets` 로 다시 받아 최적화할 수 있습니다 (원본은 `assets-src/`, 결과물은 `public/assets/`).
+
 ## 참고
 
 - 3D 모델은 원본 3D 파일 없이 **사진과 렌더를 보고 재구성한 근사 모델**입니다. 치수는 실측이 아닙니다.

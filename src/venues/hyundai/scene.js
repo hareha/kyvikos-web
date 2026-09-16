@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Builder, G, T, member, std, glow } from '../../scene/kit.js';
+import { pbr, placeModel } from '../../scene/assets.js';
 import {
   muralTexture,
   gateHeaderTexture,
@@ -52,13 +53,14 @@ export function build() {
     p90: partitionTexture('1990, Ulsan Plant'),
   };
   const M = {
-    ground: std('#121418', 0.95),
-    floor: std('#6c6f74', 0.35, 0.05),
-    floorUp: std('#6f7277', 0.4, 0.05),
+    // 실사 재질 (Poly Haven CC0) — 전시장 특유의 매끈한 노출 콘크리트
+    ground: pbr('asphalt_02', { color: '#5c5f65', tile: 5 }),
+    floor: pbr('brushed_concrete', { color: '#b4b7bd', tile: 4, roughness: 0.4 }),
+    floorUp: pbr('brushed_concrete', { color: '#c0c2c7', tile: 4, roughness: 0.45 }),
     slabEdge: std('#2a2d33', 0.7, 0.2),
-    concrete: std('#34373c', 0.9),
-    wallDark: std('#141518', 0.6, 0.2),
-    wallWhite: std('#d9d8d3', 0.85),
+    concrete: pbr('brushed_concrete', { color: '#8a8d93', tile: 3, roughness: 0.85 }),
+    wallDark: pbr('painted_plaster_wall', { color: '#3a3c41', tile: 3, roughness: 0.7 }),
+    wallWhite: pbr('painted_plaster_wall', { color: '#f1f0eb', tile: 3 }),
     column: std('#5b5f66', 0.45, 0.7),
     steel: std('#c9ced6', 0.3, 0.85),
     mullion: std('#23262c', 0.5, 0.6),
@@ -86,8 +88,8 @@ export function build() {
     sign: std('#ffffff', 0.8, 0, { map: tex.sign }),
     p92: std('#ffffff', 0.9, 0, { map: tex.p92, side: THREE.DoubleSide }),
     p90: std('#ffffff', 0.9, 0, { map: tex.p90, side: THREE.DoubleSide }),
-    mat: std('#55585c', 0.95),
-    pallet: std('#a07a4a', 0.9),
+    mat: pbr('cotton_jersey', { color: '#6e7176', tile: 0.8, roughness: 1 }),
+    pallet: pbr('dark_wooden_planks', { color: '#e3b27a', tile: 1 }),
     carton: std('#c9a878', 0.9),
     desk: std('#b9b4a8', 0.7),
     rope: std('#8a1c24', 0.7),
@@ -115,6 +117,10 @@ export function build() {
 
   const root = b.build();
   const lights = addLights(root);
+  // 1층 로비 화분
+  placeModel(root, 'potted_plant_02', [T(-17.5, 0, 12, 0.4, 0, 0, 1.4, 1.4, 1.4), T(17.5, 0, 12.2, 2.2, 0, 0, 1.4, 1.4, 1.4)], {
+    roughness: 0.7,
+  });
   return { root, lights };
 }
 

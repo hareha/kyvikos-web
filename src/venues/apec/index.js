@@ -7,4 +7,6 @@ export const env = {
   stars: true,
   fog: 0.0026,
   exposure: 1,
+  hdri: 'moonless_golf',
+  envIntensity: 1.5,
 };
