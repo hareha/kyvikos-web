@@ -1,0 +1,69 @@
+{
+  "groups": {
+    "floor": {
+      "scale": 7.2376830940661385,
+      "size": 4096,
+      "mean": 0.3555636405944824,
+      "file": "localpower_floor.webp"
+    },
+    "shell": {
+      "scale": 3.7242387170377182,
+      "size": 4096,
+      "mean": 0.2652512490749359,
+      "file": "localpower_shell.webp"
+    },
+    "show": {
+      "scale": 6.6447553686473935,
+      "size": 4096,
+      "mean": 0.35455596446990967,
+      "file": "localpower_show.webp"
+    },
+    "expo": {
+      "scale": 6.818378425162792,
+      "size": 4096,
+      "mean": 0.7717655301094055,
+      "file": "localpower_expo.webp"
+    }
+  },
+  "materials": {
+    "lpFloor": "floor",
+    "lpSteel": "expo",
+    "lpStreet": "floor",
+    "lpBlack": "show",
+    "lpHoarding": "floor",
+    "lpSponsor": "floor",
+    "lpExhibition": "floor",
+    "lpSilver": "expo",
+    "lpCarpet": "floor",
+    "lpCourt": "floor",
+    "lpWhite": "expo",
+    "tentAlu": "floor",
+    "tentWhite": "floor",
+    "lpWood": "floor",
+    "lpShell": "shell",
+    "lpRoof": "shell",
+    "lpBench": "show",
+    "lpRunwayTop": "show",
+    "lpPaper": "show",
+    "lpSkin": "expo",
+    "lpPlinth": "expo",
+    "lpCurtain": "expo"
+  },
+  "objects": {
+    "floor": "floor",
+    "outer": "floor",
+    "court": "floor",
+    "shell": "shell",
+    "show": "show",
+    "expo": "expo"
+  },
+  "graphics": [
+    "lp_exhibitionTexture.png",
+    "lp_hoardingTexture.png",
+    "lp_ledTexture.png",
+    "lp_lightboxTexture.png",
+    "lp_panelTexture.png",
+    "lp_r_lightbox.png",
+    "lp_sponsorTexture.png"
+  ]
+}
