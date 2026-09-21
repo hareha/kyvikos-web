@@ -1,39 +1,39 @@
 {
   "groups": {
     "ground": {
-      "scale": 8.115980780642968,
+      "scale": 8.113717955091726,
       "size": 4096,
-      "mean": 0.4604755640029907,
+      "mean": 0.4608767330646515,
       "file": "apec_stage_ground.webp"
     },
     "objects": {
-      "scale": 5.8283816213193145,
+      "scale": 5.825576536033465,
       "size": 4096,
-      "mean": 0.20624816417694092,
+      "mean": 0.20743167400360107,
       "file": "apec_stage_objects.webp"
     },
     "pagoda": {
-      "scale": 1.6437315066223652,
+      "scale": 1.6454998857301326,
       "size": 4096,
-      "mean": 0.08270173519849777,
+      "mean": 0.0826098844408989,
       "file": "apec_stage_pagoda.webp"
     },
     "halls": {
-      "scale": 1.9818428936211985,
+      "scale": 1.4213408756515387,
       "size": 4096,
-      "mean": 0.04515077546238899,
+      "mean": 0.024069814011454582,
       "file": "apec_stage_halls.webp"
     },
     "yeonsu_ne": {
-      "scale": 2.6358990176864294,
+      "scale": 2.659300306568978,
       "size": 4096,
-      "mean": 0.056736353784799576,
+      "mean": 0.055908795446157455,
       "file": "apec_stage_yeonsu_ne.webp"
     },
     "yeonsu_nw": {
-      "scale": 5.374888013238515,
+      "scale": 5.309451170589639,
       "size": 4096,
-      "mean": 0.08338064700365067,
+      "mean": 0.08056778460741043,
       "file": "apec_stage_yeonsu_nw.webp"
     }
   },
@@ -79,7 +79,7 @@
     "shrub": "yeonsu_nw",
     "pineBark": "halls",
     "pineBarkRed": "halls",
-    "treeLeaf": "halls",
+    "treeBark": "halls",
     "graniteClad": "yeonsu_nw",
     "terraceStone": "yeonsu_nw",
     "steelRail": "yeonsu_nw",

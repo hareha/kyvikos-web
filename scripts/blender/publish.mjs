@@ -48,7 +48,7 @@ const shots = path.join(ROOT, 'assets-src/shots');
 for (const file of [
   'apec_real_led.png', 'apec_real_fascia.png', 'apec_real_sign.png', 'apec_windows.png',
   'apec_rail.png', 'apec_hanji.png', 'apec_fret.png', 'apec_stage_floor.png', 'apec_pine_needles.png',
-  'apec_room_a.png', 'apec_room_b.png', 'apec_room_c.png', 'apec_ui_light.png', 'apec_ui_audio.png', 'apec_ui_video.png',
+  'apec_leaves.png', 'apec_site_aerial.png', 'apec_room_a.png', 'apec_room_b.png', 'apec_room_c.png', 'apec_ui_light.png', 'apec_ui_audio.png', 'apec_ui_video.png',
 ]) {
   await sharp(path.join(shots, file)).webp({ quality: 90 }).toFile(path.join(OUT, 'graphics', file.replace('.png', '.webp')));
 }

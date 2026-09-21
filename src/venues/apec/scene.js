@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Builder, G, T, std, revealable, mountainRing, seeded } from '../../scene/kit.js';
+import { Builder, G, T, revealable } from '../../scene/kit.js';
 import { pbr } from '../../scene/assets.js';
 import { loadBakedScene } from '../../scene/baked.js';
 
@@ -16,83 +16,84 @@ const PI = Math.PI;
 
 export function build() {
   const M = {
-    plaza: pbr('asphalt_02', { color: '#6f737a', tile: 5 }),
     stone: pbr('rock_tile_floor_02', { color: '#d4d7dc', tile: 1.4, roughness: 0.85 }),
-    mountain: std('#10141c', 1),
-    foliage: std('#1d3321', 1),
-    trunk: std('#3a2b20', 1),
   };
 
   const b = new Builder();
   b.withLayer('context', () => {
-    site(b, M);
-    // 황룡원 둘레 숲 (남서쪽 산책로 너머 · 북서쪽 뒤)
-    for (let x = -40; x <= 60; x += 7) roundTree(b, M, x, -60 - (Math.abs(x) % 4), 1 + (Math.abs(x) % 3) * 0.1);
-    for (let z = -50; z <= 50; z += 8) roundTree(b, M, 76 + (Math.abs(z) % 3), z, 1.15);
+    // 잔디 경계석 (잔디 x -25~35, z -33~17 — 남동쪽은 타워 원형 동선)
+    for (const [x, z, w, d] of [[5, 17.2, 60.4, 0.4], [5, -33.2, 60.4, 0.4], [35.2, -8, 0.4, 50]]) {
+      b.add(G.box(w, 0.22, d), M.stone, T(x, 0.11, z), { outline: false });
+    }
+    b.polyline(plateOutline(0.02));
   });
 
   const root = b.build();
-  root.add(cityLights());
+  root.add(sitePlate());
   const lights = addLights(root);
 
-  // Blender 에서 베이크한 만찬장·중도타워·한옥
+  // Blender 에서 베이크한 만찬장·황룡원 시설·수목
   loadBakedScene(root, 'apec_stage', { context: ['ground', 'pagoda', 'halls', 'garden', 'yeonsu_ne', 'yeonsu_nw', 'pines', 'lanterns'] }).catch((error) =>
     console.warn('[kyvikos] 베이크 장면 로드 실패', error),
   );
   return { root, lights };
 }
 
-// ── 대지 / 원경 ───────────────────────────────────────────────
-function site(b, M) {
-  b.add(G.box(900, 0.2, 900), M.plaza, T(0, -0.1, 0), { outline: false });
-  // 잔디 경계석 (잔디 x -25~35, z -33~17 — 남동쪽은 타워 원형 동선)
-  for (const [x, z, w, d] of [[5, 17.2, 60.4, 0.4], [5, -33.2, 60.4, 0.4], [35.2, -8, 0.4, 50]]) {
-    b.add(G.box(w, 0.22, d), M.stone, T(x, 0.11, z), { outline: false });
-  }
-  // 경주 분지를 둘러싼 산 능선 (앞산 + 뒷산)
-  for (const opts of [
-    { radius: 300, depth: 70, height: 34, seed: 11 },
-    { radius: 420, depth: 90, height: 70, seed: 29 },
-  ]) {
-    const { geometry, ridge } = mountainRing(opts);
-    b.add(geometry, M.mountain, undefined, { outline: false });
-    b.polyline(ridge);
-  }
+// ── 부지 받침판 ────────────────────────────────────────────────
+// 건축 모형처럼 황룡원 부지만 잘라낸 판. 윗면은 위성사진(웹 좌표로 정렬, 야간 톤)을 깔아
+// 주변 도로·주차장·하천 산책로가 실제대로 보이고, 가장자리는 두께 있는 석재 옆면으로 마감한다.
+const PLATE = { x0: -98, x1: 112, z0: -100, z1: 104, r: 26, depth: 3 };
+const AERIAL = { x0: -105, x1: 115, z0: -112, z1: 108 };   // apec_site_aerial 이 덮는 범위
+
+function plateShape() {
+  const { x0, x1, z0, z1, r } = PLATE;
+  // 셰이프 좌표: (x, -z)
+  const s = new THREE.Shape();
+  s.moveTo(x0 + r, -z1);
+  s.lineTo(x1 - r, -z1);
+  s.quadraticCurveTo(x1, -z1, x1, -z1 + r);
+  s.lineTo(x1, -z0 - r);
+  s.quadraticCurveTo(x1, -z0, x1 - r, -z0);
+  s.lineTo(x0 + r, -z0);
+  s.quadraticCurveTo(x0, -z0, x0, -z0 - r);
+  s.lineTo(x0, -z1 + r);
+  s.quadraticCurveTo(x0, -z1, x0 + r, -z1);
+  return s;
 }
 
-/** 멀리 보이는 시내 불빛 (실제 구현 모드) */
-function cityLights() {
-  const r = seeded(5);
-  const n = 2400;
-  const pos = new Float32Array(n * 3);
-  const col = new Float32Array(n * 3);
-  const warm = new THREE.Color('#ffb466');
-  const cool = new THREE.Color('#cfe0ff');
-  for (let i = 0; i < n; i++) {
-    const a = r() * PI * 2;
-    const d = 90 + Math.pow(r(), 0.7) * 190;
-    pos.set([Math.cos(a) * d, 0.3 + r() * 0.6, Math.sin(a) * d], i * 3);
-    const c = r() < 0.75 ? warm : cool;
-    const k = 0.5 + r() * 0.8;
-    col.set([c.r * k, c.g * k, c.b * k], i * 3);
+function plateOutline(y) {
+  return plateShape()
+    .getSpacedPoints(160)
+    .map((p) => new THREE.Vector3(p.x, y, -p.y));
+}
+
+function sitePlate() {
+  const geo = new THREE.ExtrudeGeometry(plateShape(), { depth: PLATE.depth, bevelEnabled: false, curveSegments: 16 });
+  geo.rotateX(-PI / 2);
+  geo.translate(0, -PLATE.depth - 0.02, 0);
+  // 윗면 UV = 위성사진 범위
+  const pos = geo.attributes.position;
+  const nor = geo.attributes.normal;
+  const uv = geo.attributes.uv;
+  const w = AERIAL.x1 - AERIAL.x0;
+  const d = AERIAL.z1 - AERIAL.z0;
+  for (let i = 0; i < pos.count; i++) {
+    if (Math.abs(nor.getY(i)) > 0.9) uv.setXY(i, (pos.getX(i) - AERIAL.x0) / w, (pos.getZ(i) - AERIAL.z0) / d);
   }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const mat = revealable(
-    new THREE.PointsMaterial({ size: 1.5, sizeAttenuation: false, vertexColors: true, toneMapped: false, depthWrite: false }),
+  const map = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/graphics/apec_site_aerial.webp`);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 8;
+  const top = revealable(new THREE.MeshBasicMaterial({ map }));
+  const side = revealable(new THREE.MeshStandardMaterial({ color: '#15181f', roughness: 0.85 }));
+  const plate = new THREE.Mesh(geo, [top, side]);
+  // 윗 모서리의 가는 금빛 선 (모형 받침 마감)
+  const rim = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(plateOutline(0.0)),
+    revealable(new THREE.LineBasicMaterial({ color: '#8a7550', transparent: true, opacity: 0.8 })),
   );
-  const points = new THREE.Points(geo, mat);
-  points.frustumCulled = false;
-  return points;
-}
-
-// ── 숲 ─────────────────────────────────────────────────────
-function roundTree(b, M, x, z, s = 1) {
-  b.group(T(x, 0, z, x, 0, 0, s, s, s), () => {
-    b.add(G.cyl(0.25, 0.35, 3, 8), M.trunk, T(0, 1.5, 0), { outline: false });
-    b.add(G.ico(1, 1), M.foliage, T(0, 4.6, 0, 0, 0, 0, 2.8, 3.2, 2.8));
-  });
+  const group = new THREE.Group();
+  group.add(plate, rim);
+  return group;
 }
 
 // ── 실시간 광원 (베이크되지 않은 트러스·의자·유리·주변부용) ─────────

@@ -35,7 +35,7 @@ C_STATIC = bpy.data.collections['STATIC']
 C_EMIT = bpy.data.collections['EMISSIVE']
 C_LIGHT = bpy.data.collections['LIGHTS']
 C_CAM = bpy.data.collections['CAMERAS']
-for name in ('pagoda', 'halls', 'garden', 'yeonsu', 'yeonsu_ne', 'yeonsu_nw', 'pines', 'pine_needles', 'backstage', 'context_emissive', 'context_glass'):
+for name in ('pagoda', 'halls', 'garden', 'yeonsu', 'yeonsu_ne', 'yeonsu_nw', 'pines', 'pine_needles', 'tree_leaves', 'backstage', 'context_emissive', 'context_glass'):
     if name in bpy.data.objects:
         bpy.data.objects.remove(bpy.data.objects[name], do_unlink=True)
 for o in [o for o in C_LIGHT.objects if o.name.startswith(('pagoda_', 'hall_', 'site_'))]:
@@ -84,7 +84,8 @@ M = {
     'pineLeaf': mat('pineLeaf', 'leafy_grass', (0.16, 0.26, 0.12), 0.9, normal=1.4),
     'needles': mat('pineNeedles', image_base=f'{SHOTS}/apec_pine_needles.png', color=(0.55, 0.66, 0.52), rough=0.8, alpha=True),
     'pineBarkRed': mat('pineBarkRed', 'dark_wooden_planks', (0.72, 0.36, 0.22), 0.85),
-    'treeLeaf': mat('treeLeaf', 'leafy_grass', (0.22, 0.34, 0.16), 0.9, normal=1.2),
+    'leaves': mat('treeLeaves', image_base=f'{SHOTS}/apec_leaves.png', color=(0.62, 0.7, 0.58), rough=0.8, alpha=True),
+    'treeBark': mat('treeBark', 'dark_wooden_planks', (0.3, 0.26, 0.22), 0.9),
     'path': mat('pathStone', 'rock_tile_floor_02', (0.8, 0.79, 0.76), 0.8),
     'skylight': mat('skylight', None, (0.55, 0.75, 0.8), 0.05, transmission=1.0),
     # 무대 뒤 · 콘솔
@@ -570,13 +571,13 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3):
     bands = [(0.0, 0.8)] + [(k * fh - 0.45, k * fh + 0.85) for k in range(1, floors)] + [(h - 0.45, h + parapet)]
     for y0, y1 in bands:
         asm.add(box(L - 1.8, y1 - y0, DEPTH), f @ T(L / 2, (y0 + y1) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
-    # 칸 기둥 (모서리 기둥 사이)
-    for x in xs[1:-1]:
-        asm.add(box(0.8, h + parapet, DEPTH), f @ T(x, (h + parapet) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
     # 창: 기둥·띠 사이 구멍마다 안쪽 유리(방 불빛) + 창살
     for fl in range(floors):
         ya = 0.8 if fl == 0 else fl * fh + 0.85
         yb = (fl + 1) * fh - 0.45 if fl < floors - 1 else h - 0.45
+        # 칸 기둥은 띠와 띠 사이 구간에만 (띠와 같은 바깥면에서 겹치지 않게 → z-fighting 없음)
+        for x in xs[1:-1]:
+            asm.add(box(0.8, yb - ya, DEPTH), f @ T(x, (ya + yb) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
         for k in range(n):
             xa = xs[k] + (0.4 if k > 0 else 0)
             xb = xs[k + 1] - (0.4 if k < n - 1 else 0)
@@ -786,6 +787,7 @@ pines = Assembly('pines', C_STATIC)
 
 
 needles = Assembly('pine_needles', bpy.data.collections['DYNAMIC'])
+leaves = Assembly('tree_leaves', bpy.data.collections['DYNAMIC'])
 
 
 def needle_cluster(cx, cy, cz, sx, sy, rnd):
@@ -853,37 +855,48 @@ def pine(px, pz, s=1.0, seed=0):
 
 
 def tree(px, pz, s=1.0):
-    """정원의 활엽수: 줄기 + 둥근 잎 뭉치 여러 개"""
+    """활엽수 (느티·벚나무류): 줄기에서 갈라진 가지 끝마다 잎 카드 뭉치, 전체는 둥근 수관"""
     rnd = random.Random(int(px * 31 + pz * 17))
-    g, m = tube(V((px, 0, pz)), V((px, 3.2 * s, pz)), 0.22 * s, 10, caps=True)
-    pines.add(g, m, M['pineBark'], 0.8)
-    for _ in range(6):
-        c = V((px + rnd.uniform(-1.4, 1.4) * s, (3.6 + rnd.uniform(0, 2.2)) * s, pz + rnd.uniform(-1.4, 1.4) * s))
-        r = rnd.uniform(1.3, 2.0) * s
-
-        def blob(bm, r=r, q=rnd.random()):
-            bmesh.ops.create_icosphere(bm, subdivisions=2, radius=r)
-            rr = random.Random(q)
-            for v in bm.verts:
-                v.co *= 1 + rr.uniform(-0.12, 0.12)
-        pines.add(blob, T(c.x, c.y, c.z), M['treeLeaf'], 1.2)
+    top = V((px + rnd.uniform(-0.3, 0.3), 3.0 * s, pz + rnd.uniform(-0.3, 0.3)))
+    g, m = tube(V((px, 0, pz)), top, 0.22 * s, 10, caps=True)
+    pines.add(g, m, M['treeBark'], 0.8)
+    crown_r, crown_h = rnd.uniform(3.0, 4.2) * s, rnd.uniform(3.2, 4.4) * s
+    center = top + V((0, crown_h * 0.55, 0))
+    for b in range(5):
+        a = b / 5 * 2 * PI + rnd.uniform(-0.3, 0.3)
+        tip = center + V((math.cos(a) * crown_r * 0.55, rnd.uniform(-0.4, 0.8) * s, math.sin(a) * crown_r * 0.55))
+        g, m = tube(top, tip, 0.1 * s, 8, caps=True)
+        pines.add(g, m, M['treeBark'], 0.8)
+    for _ in range(int(26 * s)):
+        # 수관 겉면 가까이에 뭉치 (속은 비워 카드 수를 아낌)
+        u, v = rnd.uniform(0, 2 * PI), rnd.uniform(-0.55, 1.0)
+        rr = rnd.uniform(0.7, 1.0)
+        c = center + V((math.cos(u) * math.sqrt(1 - v * v) * crown_r * rr, v * crown_h * 0.5,
+                        math.sin(u) * math.sqrt(1 - v * v) * crown_r * rr))
+        size = rnd.uniform(1.8, 2.6) * s
+        for _k in range(3):
+            leaves.add(plane(size, size), T(c.x, c.y, c.z, rnd.uniform(0, 2 * PI), rnd.uniform(-1.2, 1.2), rnd.uniform(-0.6, 0.6)),
+                       M['leaves'], tile=None)
 
 
 # 잔디 위 소나무 (위성사진 · 테라스 사진의 큰 소나무)
 pine(22, 8, 1.35, seed=3)
 pine(14.5, 14.5, 0.8, seed=5)
-# 수공간 · 회랑 주변
-for (x, z, s) in ((-26, 30, 1.0), (-16, 33, 0.9), (-30, 42, 1.1), (-8, 46, 0.9), (20, 30, 0.8), (-22, 46, 1.0)):
-    pine(x, z, s)
-for (x, z, s) in ((-34, 36, 1.1), (-12, 28, 1.0), (-2, 50, 1.0), (-36, 48, 1.2), (-26, 52, 1.1)):
-    tree(x, z, s)
-# 무대 뒤 · 신평루 뒤 · 타워 남쪽
-for (x, z, s) in ((20, -31, 0.9), (-2, -38, 1.0), (1, -45, 1.0), (24, -44, 1.1), (30, -38, 1.0)):
-    pine(x, z, s)
-for (x, z, s) in ((-5, -52, 1.2), (8, -54, 1.1), (22, -53, 1.2), (36, -46, 1.1), (-50, -46, 1.1), (-66, -30, 1.2), (-70, 6, 1.2), (-64, 24, 1.1)):
-    tree(x, z, s)
+# 위성사진에서 검출한 수관 위치 (scripts/blender/site_trees.json): 수공간·회랑 주변은 소나무, 나머지는 활엽수
+import json  # noqa: E402
+with open('/Users/hare/Documents/큐비크스홈페이지/scripts/blender/site_trees.json') as fp:
+    SITE_TREES = json.load(fp)
+for k, (x, z, dens) in enumerate(SITE_TREES):
+    rs = random.Random(k)
+    size = 0.85 + 0.35 * dens + rs.uniform(-0.1, 0.15)
+    in_garden = -32 <= x <= 24 and 24 <= z <= 52
+    if in_garden or rs.random() < 0.18:
+        pine(x, z, size * 0.95, seed=k + 100)
+    else:
+        tree(x, z, size)
 pines.build(smooth=True)
 needles.build()
+leaves.build()
 glow.build()
 
 # 귀빈동(연수동 북동동 옥상) 테라스 — 실제 만찬 사진을 찍은 자리

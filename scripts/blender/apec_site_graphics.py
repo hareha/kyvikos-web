@@ -240,7 +240,34 @@ def pine_needles():
     im.save(OUT / 'apec_pine_needles.png')
 
 
+# ── 활엽수 잎 카드 (투명 배경, 잔가지에 달린 잎들) ────────────────
+def leaves():
+    W = H = 512
+    im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    random.seed(33)
+    for _ in range(6):   # 잔가지
+        x0, y0 = random.randint(60, 450), random.randint(60, 450)
+        d.line([(256, 470), (x0, y0)], fill=(70, 52, 36, 255), width=4)
+    for _ in range(520):
+        cx, cy = random.gauss(256, 105), random.gauss(240, 100)
+        if not (12 < cx < 500 and 12 < cy < 500):
+            continue
+        a = random.uniform(0, math.pi)
+        L, w = random.uniform(16, 30), random.uniform(7, 12)
+        g = random.randint(62, 120)
+        col = (int(g * random.uniform(0.45, 0.62)), g, int(g * random.uniform(0.3, 0.45)), 255)
+        pts = []
+        for k in range(12):
+            t = k / 12 * 2 * math.pi
+            px, py = math.cos(t) * L, math.sin(t) * w * (1 - 0.3 * math.cos(t))
+            pts.append((cx + px * math.cos(a) - py * math.sin(a), cy + px * math.sin(a) + py * math.cos(a)))
+        d.polygon(pts, fill=col)
+    im.save(OUT / 'apec_leaves.png')
+
+
 pine_needles()
+leaves()
 rail()
 for tag, seed in (('a', 12), ('b', 29), ('c', 41)):
     room_glass(tag, seed)
