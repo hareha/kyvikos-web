@@ -6,10 +6,10 @@ import { loadBakedScene } from '../../scene/baked.js';
 /*
  * 경주 황룡원 — APEC CEO Summit 특별만찬
  *
- * 만찬장(잔디·무대·테이블·히터·사인월)과 중도타워·한옥·소나무는 Blender 에서
- * 현장 사진을 기준으로 만들고 조명을 베이크한 장면(apec_stage.glb)을 불러온다.
- * 이 파일은 그 바깥의 주변부(광장·산 능선·동쪽 건물·숲·도시 불빛)와 실시간 광원만 담당한다.
- *   +x: 오른쪽(무대 쪽)   -z: 뒤쪽(중도타워·무대)   +z: 앞쪽(귀빈동 테라스·콘솔 부스)
+ * 만찬장(잔디·무대·테이블·히터·사인월)과 황룡원 시설(중도타워·일주문·회랑·정원·신평루·연수동)은
+ * Blender 에서 현장 사진·공식 조감도를 기준으로 만들고 조명을 베이크한 장면(apec_stage.glb)을 불러온다.
+ * 이 파일은 그 바깥의 주변부(광장·산 능선·숲·도시 불빛)와 실시간 광원만 담당한다.
+ *   -x: 회랑·정원(길 쪽)   +x: 신평루   -z: 중도타워·무대   +z: 연수동(옥상 귀빈동 테라스)
  */
 
 const PI = Math.PI;
@@ -19,10 +19,6 @@ export function build() {
     plaza: pbr('asphalt_02', { color: '#6f737a', tile: 5 }),
     stone: pbr('rock_tile_floor_02', { color: '#d4d7dc', tile: 1.4, roughness: 0.85 }),
     mountain: std('#10141c', 1),
-    plaster: pbr('beige_wall_001', { color: '#f4f1ea', tile: 3 }),
-    woodRed: pbr('dark_wooden_planks', { color: '#c0503a', tile: 1.5, roughness: 0.8 }),
-    tile: pbr('ceramic_roof_01', { color: '#3a3f46', tile: 1.6, roughness: 0.7, side: THREE.DoubleSide }),
-    window: std('#20160e', 0.8, 0, { emissive: '#ffb468', emissiveIntensity: 0.7 }),
     foliage: std('#1d3321', 1),
     trunk: std('#3a2b20', 1),
   };
@@ -30,9 +26,8 @@ export function build() {
   const b = new Builder();
   b.withLayer('context', () => {
     site(b, M);
-    eastWing(b, M);
-    for (let x = 2; x <= 34; x += 5.5) roundTree(b, M, x, -30 - (x % 3), 0.9 + (x % 4) * 0.08);
-    for (let z = -20; z <= 16; z += 6) roundTree(b, M, -52, z + (z % 4), 1.1);
+    for (let x = 6; x <= 36; x += 6) roundTree(b, M, x, -34 - (x % 3), 0.9 + (x % 4) * 0.08);
+    for (let z = -26; z <= 24; z += 7) roundTree(b, M, 54 + (z % 3), z, 1.1);
   });
 
   const root = b.build();
@@ -40,7 +35,7 @@ export function build() {
   const lights = addLights(root);
 
   // Blender 에서 베이크한 만찬장·중도타워·한옥
-  loadBakedScene(root, 'apec_stage', { context: ['ground', 'pagoda', 'halls', 'pines', 'lanterns'] }).catch((error) =>
+  loadBakedScene(root, 'apec_stage', { context: ['ground', 'pagoda', 'halls', 'garden', 'yeonsu', 'pines', 'lanterns'] }).catch((error) =>
     console.warn('[kyvikos] 베이크 장면 로드 실패', error),
   );
   return { root, lights };
@@ -91,26 +86,7 @@ function cityLights() {
   return points;
 }
 
-// ── 동쪽 건물 · 숲 ─────────────────────────────────────────────
-function roof(b, M, x, y, z, hw, hd, h) {
-  const ridge = 0.85;
-  b.add(G.roof(hw, hd, h, { ridge, lift: h * 0.35 }), M.tile, T(x, y, z));
-  const ridgeLen = Math.max(hw - hd * ridge, hd * (1 - ridge)) * 2 + 0.6;
-  b.add(G.box(1, 1, 1), M.tile, T(x, y + h + 0.12, z, 0, 0, 0, ridgeLen, 0.32, 0.4));
-}
-
-function eastWing(b, M) {
-  b.group(T(41, 0, -3), () => {
-    b.add(G.box(10, 9, 44), M.plaster, T(0, 4.5, 0));
-    for (let z = -19; z <= 19; z += 6.3) b.add(G.box(0.1, 3.6, 2.6), M.window, T(-5.02, 2.2, z));
-    for (let z = -19; z <= 19; z += 3.15) b.add(G.box(0.1, 1.0, 1.4), M.window, T(-5.02, 6.6, z), { outline: false });
-    for (const z of [-14, 0, 14]) {
-      b.add(G.box(6, 2.4, 5), M.woodRed, T(0, 10.2, z));
-      roof(b, M, 0, 11.3, z, 4.8, 4, 2.2);
-    }
-  });
-}
-
+// ── 숲 ─────────────────────────────────────────────────────
 function roundTree(b, M, x, z, s = 1) {
   b.group(T(x, 0, z, x, 0, 0, s, s, s), () => {
     b.add(G.cyl(0.25, 0.35, 3, 8), M.trunk, T(0, 1.5, 0), { outline: false });
@@ -138,8 +114,8 @@ function addLights(root) {
     add(l, base);
   };
   // Blender 장면과 같은 위치·색의 노란 투광
-  spot([-18, 26, 34], [-6, 0, 2], 5200, '#ffc27a');
-  spot([28, 24, 28], [4, 0, 2], 3800, '#ffc680');
+  spot([-16, 25, 22.5], [-6, 0, 0], 5200, '#ffc27a');
+  spot([22, 24, 22.5], [6, 0, 0], 3800, '#ffc680');
   spot([6, 8.2, -15], [6, 1.2, -15], 900, '#d8e4ff', 0.9);
 
   const led = new THREE.RectAreaLight('#4a78ff', 1, 14.4, 6.2);

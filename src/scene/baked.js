@@ -144,7 +144,7 @@ export async function loadBakedScene(root, name, { context = [] } = {}) {
         edges[layer].push(boxEdges.clone().translate(center.x, center.y, center.z).applyMatrix4(m.premultiply(mesh.matrixWorld)));
       }
     } else {
-      const threshold = owner === 'tables' || owner === 'pines' ? 50 : 30;
+      const threshold = ['tables', 'pines', 'garden'].includes(owner) ? 50 : 30;
       edges[layer].push(new THREE.EdgesGeometry(mesh.geometry, threshold).applyMatrix4(mesh.matrixWorld));
     }
   });

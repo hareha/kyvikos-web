@@ -309,8 +309,8 @@ emit.build()
 
 # ── 조명 ─────────────────────────────────────────────────────
 # 잔디를 노랗게 비추는 강한 투광 (사진의 나트륨빛 톤)
-light(C_LIGHT, 'flood_left', 'AREA', (-18, 26, 34), (-6, 0, 2), energy=42000, color=(1.0, 0.76, 0.46), size=5)
-light(C_LIGHT, 'flood_right', 'AREA', (28, 24, 28), (4, 0, 2), energy=30000, color=(1.0, 0.78, 0.5), size=5)
+light(C_LIGHT, 'flood_left', 'AREA', (-16, 25, 22.5), (-6, 0, 0), energy=42000, color=(1.0, 0.76, 0.46), size=5)
+light(C_LIGHT, 'flood_right', 'AREA', (22, 24, 22.5), (6, 0, 0), energy=30000, color=(1.0, 0.78, 0.5), size=5)
 light(C_LIGHT, 'stage_top', 'AREA', (CX, 8.2, CZ + 1), (CX, TOP, CZ + 1), energy=2500, color=(0.85, 0.9, 1.0), size=8)
 world_hdri(f'{HDRI}/moonless_golf_1k.hdr', 0.35)
 

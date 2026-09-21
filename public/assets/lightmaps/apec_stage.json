@@ -1,28 +1,34 @@
 {
   "groups": {
     "ground": {
-      "scale": 4.340740079465131,
+      "scale": 6.1749984777492095,
       "size": 4096,
-      "mean": 0.4567457437515259,
+      "mean": 0.6431215405464172,
       "file": "apec_stage_ground.webp"
     },
     "objects": {
-      "scale": 4.718072603578147,
+      "scale": 6.1186744570732,
       "size": 2048,
-      "mean": 0.3909163773059845,
+      "mean": 0.5043155550956726,
       "file": "apec_stage_objects.webp"
     },
     "pagoda": {
-      "scale": 1.830365724537683,
-      "size": 2048,
-      "mean": 0.3257763683795929,
+      "scale": 1.703653121772021,
+      "size": 4096,
+      "mean": 0.08052945882081985,
       "file": "apec_stage_pagoda.webp"
     },
     "halls": {
-      "scale": 7.1692594626675445,
-      "size": 2048,
-      "mean": 0.26043012738227844,
+      "scale": 2.5538791133009924,
+      "size": 4096,
+      "mean": 0.060293957591056824,
       "file": "apec_stage_halls.webp"
+    },
+    "yeonsu": {
+      "scale": 6.437840850456925,
+      "size": 4096,
+      "mean": 0.11776559799909592,
+      "file": "apec_stage_yeonsu.webp"
     }
   },
   "materials": {
@@ -42,15 +48,31 @@
     "stainless": "objects",
     "sign": "objects",
     "stone": "objects",
-    "granite": "halls",
-    "wood": "pagoda",
-    "woodRed": "halls",
-    "rail": "pagoda",
-    "tile": "halls",
-    "bronze": "pagoda",
-    "plaster": "halls",
+    "granite": "yeonsu",
+    "balustrade": "halls",
+    "wallWood": "pagoda",
+    "vermilion": "yeonsu",
+    "bracket": "halls",
+    "copperTile": "pagoda",
+    "deckWood": "yeonsu",
+    "goldRail": "halls",
+    "finialGold": "pagoda",
+    "gateDoor": "halls",
+    "tileGrey": "yeonsu",
+    "plaque": "halls",
+    "pillarStone": "halls",
+    "rafter": "yeonsu",
+    "fretRail": "yeonsu",
+    "pond": "halls",
+    "gardenRock": "halls",
+    "shrub": "halls",
     "pineBark": "halls",
-    "pineNeedle": "halls"
+    "pineNeedle": "halls",
+    "stoneWall": "yeonsu",
+    "yeonsuFacade": "yeonsu",
+    "terraceStone": "yeonsu",
+    "steelRail": "yeonsu",
+    "parasol": "yeonsu"
   },
   "objects": {
     "ground": "ground",
@@ -62,6 +84,8 @@
     "lanterns": "objects",
     "pagoda": "pagoda",
     "halls": "halls",
-    "pines": "halls"
+    "garden": "halls",
+    "pines": "halls",
+    "yeonsu": "yeonsu"
   }
 }

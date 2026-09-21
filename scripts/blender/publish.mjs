@@ -45,7 +45,8 @@ for (const group of Object.keys(manifest.groups)) {
 // 화면 그래픽(LED·배너·사인·창호)은 GLB 와 별도로 WebP 로 배포
 await mkdir(path.join(OUT, 'graphics'), { recursive: true });
 const shots = path.join(ROOT, 'assets-src/shots');
-for (const file of ['apec_real_led.png', 'apec_real_fascia.png', 'apec_real_sign.png', 'apec_windows.png']) {
+for (const file of ['apec_real_led.png', 'apec_real_fascia.png', 'apec_real_sign.png', 'apec_windows.png',
+  'apec_rail.png', 'apec_yeonsu.png', 'apec_hanji.png', 'apec_fret.png']) {
   await sharp(path.join(shots, file)).webp({ quality: 90 }).toFile(path.join(OUT, 'graphics', file.replace('.png', '.webp')));
 }
 await writeFile(path.join(OUT, 'lightmaps', `${name}.json`), JSON.stringify(manifest, null, 2));
