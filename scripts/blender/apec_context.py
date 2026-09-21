@@ -886,7 +886,10 @@ pine(14.5, 14.5, 0.8, seed=5)
 import json  # noqa: E402
 with open('/Users/hare/Documents/큐비크스홈페이지/scripts/blender/site_trees.json') as fp:
     SITE_TREES = json.load(fp)
+PLATE = (-84, 94, -66, 70)   # 웹 받침판 범위 (src/venues/apec/scene.js PLATE) — 판 밖 나무는 심지 않는다
 for k, (x, z, dens) in enumerate(SITE_TREES):
+    if not (PLATE[0] + 4 <= x <= PLATE[1] - 4 and PLATE[2] + 4 <= z <= PLATE[3] - 4):
+        continue
     rs = random.Random(k)
     size = 0.85 + 0.35 * dens + rs.uniform(-0.1, 0.15)
     in_garden = -32 <= x <= 24 and 24 <= z <= 52

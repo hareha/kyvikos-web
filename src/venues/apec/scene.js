@@ -25,7 +25,9 @@ export function build() {
     for (const [x, z, w, d] of [[5, 17.2, 60.4, 0.4], [5, -33.2, 60.4, 0.4], [35.2, -8, 0.4, 50]]) {
       b.add(G.box(w, 0.22, d), M.stone, T(x, 0.11, z), { outline: false });
     }
+    // 와이어프레임: 받침판 윤곽 + 5m 바둑판 모눈
     b.polyline(plateOutline(0.02));
+    for (const line of plateGrid(5, 0.02)) b.polyline(line);
   });
 
   const root = b.build();
@@ -40,10 +42,9 @@ export function build() {
 }
 
 // ── 부지 받침판 ────────────────────────────────────────────────
-// 건축 모형처럼 황룡원 부지만 잘라낸 판. 윗면은 위성사진(웹 좌표로 정렬, 야간 톤)을 깔아
-// 주변 도로·주차장·하천 산책로가 실제대로 보이고, 가장자리는 두께 있는 석재 옆면으로 마감한다.
-const PLATE = { x0: -98, x1: 112, z0: -100, z1: 104, r: 26, depth: 3 };
-const AERIAL = { x0: -105, x1: 115, z0: -112, z1: 108 };   // apec_site_aerial 이 덮는 범위
+// 황룡원 부지만 잘라낸 미니어처 받침판. 실제 구현에서는 무광 단색 판 + 두께 있는 옆면 + 가는 테두리,
+// 와이어프레임에서는 판 위 5m 바둑판 모눈.
+export const PLATE = { x0: -84, x1: 94, z0: -66, z1: 70, r: 10, depth: 2.4 };
 
 function plateShape() {
   const { x0, x1, z0, z1, r } = PLATE;
@@ -67,29 +68,34 @@ function plateOutline(y) {
     .map((p) => new THREE.Vector3(p.x, y, -p.y));
 }
 
+/** 둥근 모서리 안쪽으로 잘린 모눈 선들 */
+function plateGrid(step, y) {
+  const { x0, x1, z0, z1, r } = PLATE;
+  // 모서리 원호 때문에 줄어드는 길이
+  const inset = (d) => (d >= r ? 0 : r - Math.sqrt(Math.max(0, r * r - (r - d) * (r - d))));
+  const lines = [];
+  for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) {
+    const d = Math.min(x - x0, x1 - x);
+    lines.push([new THREE.Vector3(x, y, z0 + inset(d)), new THREE.Vector3(x, y, z1 - inset(d))]);
+  }
+  for (let z = Math.ceil(z0 / step) * step; z <= z1; z += step) {
+    const d = Math.min(z - z0, z1 - z);
+    lines.push([new THREE.Vector3(x0 + inset(d), y, z), new THREE.Vector3(x1 - inset(d), y, z)]);
+  }
+  return lines;
+}
+
 function sitePlate() {
   const geo = new THREE.ExtrudeGeometry(plateShape(), { depth: PLATE.depth, bevelEnabled: false, curveSegments: 16 });
   geo.rotateX(-PI / 2);
   geo.translate(0, -PLATE.depth - 0.02, 0);
-  // 윗면 UV = 위성사진 범위
-  const pos = geo.attributes.position;
-  const nor = geo.attributes.normal;
-  const uv = geo.attributes.uv;
-  const w = AERIAL.x1 - AERIAL.x0;
-  const d = AERIAL.z1 - AERIAL.z0;
-  for (let i = 0; i < pos.count; i++) {
-    if (Math.abs(nor.getY(i)) > 0.9) uv.setXY(i, (pos.getX(i) - AERIAL.x0) / w, (pos.getZ(i) - AERIAL.z0) / d);
-  }
-  const map = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/graphics/apec_site_aerial.webp?v=${__BUILD__}`);
-  map.colorSpace = THREE.SRGBColorSpace;
-  map.anisotropy = 8;
-  const top = revealable(new THREE.MeshBasicMaterial({ map }));
-  const side = revealable(new THREE.MeshStandardMaterial({ color: '#15181f', roughness: 0.85 }));
+  const top = revealable(new THREE.MeshStandardMaterial({ color: '#5d5f63', roughness: 0.92, metalness: 0 }));
+  const side = revealable(new THREE.MeshStandardMaterial({ color: '#1b1d22', roughness: 0.7 }));
   const plate = new THREE.Mesh(geo, [top, side]);
-  // 윗 모서리의 가는 금빛 선 (모형 받침 마감)
+  // 윗 모서리 마감선
   const rim = new THREE.LineLoop(
     new THREE.BufferGeometry().setFromPoints(plateOutline(0.0)),
-    revealable(new THREE.LineBasicMaterial({ color: '#8a7550', transparent: true, opacity: 0.8 })),
+    revealable(new THREE.LineBasicMaterial({ color: '#9a8662' })),
   );
   const group = new THREE.Group();
   group.add(plate, rim);
