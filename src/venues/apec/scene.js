@@ -85,13 +85,37 @@ function plateGrid(step, y) {
   return lines;
 }
 
+/** 5m 한 칸 모눈 (판 윗면 UV = 월드 좌표 m 이므로 repeat 1/5) */
+function gridTexture() {
+  const size = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  g.fillStyle = '#2a2c30';
+  g.fillRect(0, 0, size, size);
+  // 아주 옅은 얼룩 (매트한 도장면)
+  for (let i = 0; i < 900; i++) {
+    g.fillStyle = `rgba(255,255,255,${Math.random() * 0.018})`;
+    g.fillRect(Math.random() * size, Math.random() * size, 2, 2);
+  }
+  g.fillStyle = '#383b41';
+  g.fillRect(0, 0, size, 2);
+  g.fillRect(0, 0, 2, size);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1 / 5, 1 / 5);
+  t.anisotropy = 8;
+  return t;
+}
+
 function sitePlate() {
   const geo = new THREE.ExtrudeGeometry(plateShape(), { depth: PLATE.depth, bevelEnabled: false, curveSegments: 16 });
   geo.rotateX(-PI / 2);
   geo.translate(0, -PLATE.depth - 0.06, 0);   // 윗면 -0.06 (지면에 놓인 것들의 윗면과 6cm 이상)
-  // 모형 받침: 윤이 나는 흰 판 (HDRI 반사로 은은한 광택) + 짙은 옆면
-  const top = revealable(new THREE.MeshPhysicalMaterial({ color: '#eceae4', roughness: 0.32, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.2 }));
-  const side = revealable(new THREE.MeshStandardMaterial({ color: '#2a2c31', roughness: 0.45 }));
+  // 건축 모형 받침: 짙은 차콜 무광 판 + 옅게 음각된 5m 모눈, 옆면은 더 짙게
+  const top = revealable(new THREE.MeshStandardMaterial({ color: '#ffffff', map: gridTexture(), roughness: 0.88, metalness: 0 }));
+  const side = revealable(new THREE.MeshStandardMaterial({ color: '#141518', roughness: 0.6 }));
   const plate = new THREE.Mesh(geo, [top, side]);
   // 윗 모서리 마감선
   const rim = new THREE.LineLoop(
