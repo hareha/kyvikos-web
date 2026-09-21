@@ -1,39 +1,39 @@
 {
   "groups": {
     "ground": {
-      "scale": 8.113717955091726,
+      "scale": 8.185768529124882,
       "size": 4096,
-      "mean": 0.4608767330646515,
+      "mean": 0.477863073348999,
       "file": "apec_stage_ground.webp"
     },
     "objects": {
-      "scale": 5.825576536033465,
+      "scale": 5.820097897363747,
       "size": 4096,
-      "mean": 0.20743167400360107,
+      "mean": 0.218150332570076,
       "file": "apec_stage_objects.webp"
     },
     "pagoda": {
-      "scale": 1.6454998857301326,
+      "scale": 1.6037651961264416,
       "size": 4096,
-      "mean": 0.0826098844408989,
+      "mean": 0.0872611477971077,
       "file": "apec_stage_pagoda.webp"
     },
     "halls": {
-      "scale": 1.4213408756515387,
+      "scale": 1.8244270397269207,
       "size": 4096,
-      "mean": 0.024069814011454582,
+      "mean": 0.037322815507650375,
       "file": "apec_stage_halls.webp"
     },
     "yeonsu_ne": {
-      "scale": 2.659300306568978,
+      "scale": 2.6728336836980815,
       "size": 4096,
-      "mean": 0.055908795446157455,
+      "mean": 0.059139102697372437,
       "file": "apec_stage_yeonsu_ne.webp"
     },
     "yeonsu_nw": {
-      "scale": 5.309451170589639,
+      "scale": 5.086997617845972,
       "size": 4096,
-      "mean": 0.08056778460741043,
+      "mean": 0.08413807302713394,
       "file": "apec_stage_yeonsu_nw.webp"
     }
   },
