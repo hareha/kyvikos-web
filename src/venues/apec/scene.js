@@ -88,9 +88,10 @@ function plateGrid(step, y) {
 function sitePlate() {
   const geo = new THREE.ExtrudeGeometry(plateShape(), { depth: PLATE.depth, bevelEnabled: false, curveSegments: 16 });
   geo.rotateX(-PI / 2);
-  geo.translate(0, -PLATE.depth - 0.02, 0);
-  const top = revealable(new THREE.MeshStandardMaterial({ color: '#5d5f63', roughness: 0.92, metalness: 0 }));
-  const side = revealable(new THREE.MeshStandardMaterial({ color: '#1b1d22', roughness: 0.7 }));
+  geo.translate(0, -PLATE.depth - 0.06, 0);   // 윗면 -0.06 (지면에 놓인 것들의 윗면과 6cm 이상)
+  // 모형 받침: 윤이 나는 흰 판 (HDRI 반사로 은은한 광택) + 짙은 옆면
+  const top = revealable(new THREE.MeshPhysicalMaterial({ color: '#eceae4', roughness: 0.32, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.2 }));
+  const side = revealable(new THREE.MeshStandardMaterial({ color: '#2a2c31', roughness: 0.45 }));
   const plate = new THREE.Mesh(geo, [top, side]);
   // 윗 모서리 마감선
   const rim = new THREE.LineLoop(

@@ -546,6 +546,18 @@ function applyRevealState() {
   }
 }
 
+/**
+ * 깊이 정밀도는 near 에 비례한다. near 를 0.1 로 고정하면 조감 거리(150~260m)에서 몇 cm 떨어진 면끼리
+ * 깊이가 섞여 깜빡인다(z-fighting). 바라보는 점까지 거리에 맞춰 near 를 키운다 (1인칭 시점은 0.1 유지).
+ */
+function fitNearPlane() {
+  const near = THREE.MathUtils.clamp(camera.position.distanceTo(controls.target) * 0.015, 0.1, 2.5);
+  if (Math.abs(near - camera.near) > camera.near * 0.1) {
+    camera.near = near;
+    camera.updateProjectionMatrix();
+  }
+}
+
 function frame() {
   try {
     applyRevealState();
@@ -553,6 +565,7 @@ function frame() {
     grain.uniforms.uTime.value = performance.now() * 0.001;
     sky.position.copy(camera.position);
     if (controls.enabled) controls.update();
+    fitNearPlane();
     updateHotspots();
     if (SAFE_MODE) {
       renderer.setRenderTarget(null);

@@ -102,7 +102,7 @@ def on_lawn(x, z, margin=0.0):
 def paver(px, pz):
     if not on_lawn(px, pz, 0.3):
         return
-    ground.add(bevel_box(0.5, 0.05, 0.5, 0.012), T(px, 0.135, pz, random.uniform(-0.02, 0.02)), M['paver'], 1.2)
+    ground.add(bevel_box(0.5, 0.05, 0.5, 0.012), T(px, 0.17, pz, random.uniform(-0.02, 0.02)), M['paver'], 1.2)   # 윗면 0.195 (잔디 0.12)
 
 
 # 무대 앞을 가로지르는 흰 디딤돌 두 줄
@@ -119,12 +119,12 @@ while z <= 16.5:
     paver(MED[0] + 0.35, z + 0.35)
     z += 0.7
 # 동심원 패턴: 가운데 원판 + 끊어진 고리 세 겹
-ground.add(cyl(0.9, 0.9, 0.05, 48), T(MED[0], 0.135, MED[1]), M['paver'], 1.2)
+ground.add(cyl(0.9, 0.9, 0.05, 48), T(MED[0], 0.17, MED[1]), M['paver'], 1.2)
 for r0, r1, count in ((1.45, 1.9, 12), (2.35, 2.75, 20), (3.15, 3.45, 28)):
     span = 2 * PI / count
     for i in range(count):
         a = i * span
-        ground.add(ring_segment(r0, r1, a + span * 0.1, a + span * 0.9, 0.05), T(MED[0], 0.11, MED[1]), M['paver'], 1.2)
+        ground.add(ring_segment(r0, r1, a + span * 0.1, a + span * 0.9, 0.05), T(MED[0], 0.145, MED[1]), M['paver'], 1.2)
 ground.build()
 
 outer = Assembly('outer', C_RENDER_ONLY)
@@ -137,14 +137,14 @@ FRONT = CZ + 4.5  # 무대 앞면 z = -11.5
 stage = Assembly('stage', C_STATIC)
 stage.add(bevel_box(18, TOP - 0.06, 9, 0.02), T(CX, (TOP - 0.06) / 2, CZ), M['stageBody'])
 stage.add(plane(18, 9), T(CX, TOP + 0.002, CZ, 0, -PI / 2), M['stageFloor'], tile=None)
-emit.add(plane(18, 1.1), T(CX, 0.58, FRONT + 0.012), M['fascia'], tile=None)
+emit.add(plane(18, 1.1), T(CX, 0.58, FRONT + 0.07), M['fascia'], tile=None)
 # 좌우 계단 (단 높이 0.3m, 앞끝에 흰 LED 라인)
 for sx in (CX - 4.3, CX + 4.3):
     for k in (3, 2, 1):
         h = 0.3 * k
         zc = FRONT + 0.35 * (4 - k) - 0.175
         stage.add(box(3.0, h, 0.35), T(sx, h / 2, zc), M['stairBlue'], 1)
-        emit.add(box(3.0, 0.02, 0.03), T(sx, h + 0.005, zc + 0.16), M['nosing'])
+        emit.add(box(3.0, 0.07, 0.03), T(sx, h + 0.035, zc + 0.16), M['nosing'])
 # 무대 뒤 계단 (대기 천막 쪽, 무대 오른쪽 뒤)
 BACK = CZ - 4.5
 for k in (3, 2, 1):
@@ -153,7 +153,7 @@ for k in (3, 2, 1):
     stage.add(box(2.4, h, 0.35), T(CX + 6.2, h / 2, zc), M['stairBlue'], 1)
 # LED월 (하단 로고 띠 포함 14.4 × 6.2 m)
 stage.add(bevel_box(14.8, 6.5, 0.35, 0.02), T(CX, TOP + 3.25, CZ - 3.9), M['ledFrame'])
-emit.add(plane(14.4, 6.2), T(CX, TOP + 3.1, CZ - 3.71), M['led'], tile=None)
+emit.add(plane(14.4, 6.2), T(CX, TOP + 3.1, CZ - 3.64), M['led'], tile=None)   # 프레임 앞면(-3.725)보다 앞
 # 흰 연설대 2개
 for lx, lz in ((CX - 4.6, CZ + 2.2), (CX + 1.4, CZ + 1.3)):
     stage.add(bevel_box(0.6, 1.08, 0.42, 0.03), T(lx, TOP + 0.54, lz), M['lectern'])
@@ -222,14 +222,14 @@ roof.build(smooth=True)
 for i in range(12):
     lx = X0 + 1.4 + i * (X1 - X0 - 2.8) / 11
     truss.add(bevel_box(0.34, 0.3, 0.3, 0.03), T(lx, HT + 0.38, ZF), M['black'])
-    emit.add(cyl(0.12, 0.12, 0.02, 20), T(lx, HT + 0.38, ZF + 0.16, 0, PI / 2), M['washLens'])
+    emit.add(cyl(0.12, 0.12, 0.02, 20), T(lx, HT + 0.38, ZF + 0.22, 0, PI / 2), M['washLens'])
     light(C_LIGHT, f'wash_{i}', 'SPOT', (lx, HT + 0.38, ZF + 0.2), (lx * 0.8 + CX * 0.2, TOP, CZ + 2.5),
           energy=520, color=(1.0, 0.88, 0.72), spot=0.8, blend=0.5, size=0.12)
 for i in range(14):
     lx = X0 + 1.0 + i * (X1 - X0 - 2.0) / 13
     truss.add(bevel_box(0.16, 0.22, 0.16, 0.02), T(lx, HT - 0.32, ZF), M['black'])  # 요크
     truss.add(bevel_box(0.3, 0.34, 0.3, 0.04), T(lx, HT - 0.62, ZF, 0, 0.5), M['black'])  # 헤드
-    emit.add(cyl(0.1, 0.1, 0.02, 16), T(lx, HT - 0.72, ZF + 0.12, 0, 0.5 + PI / 2), M['blueLens'])
+    emit.add(cyl(0.1, 0.1, 0.02, 16), T(lx, HT - 0.72, ZF + 0.19, 0, 0.5 + PI / 2), M['blueLens'])
     light(C_LIGHT, f'mover_{i}', 'SPOT', (lx, HT - 0.75, ZF + 0.15),
           (lx + random.uniform(-2, 2), 0.1, -5 + random.uniform(-2, 3)),
           energy=700, color=(0.3, 0.5, 1.0), spot=0.28, blend=0.35, size=0.04)
@@ -262,7 +262,7 @@ chair_spots = []
 for (tx, tz) in TABLES:
     base = T(tx, 0.12, tz)
     tables.add(cyl(0.92, 0.92, 0.03, 48), base @ T(0, 0.755, 0), M['tableCloth'], 0.6)
-    tables.add(cloth_skirt(0.93, 1.0, 0.74, folds=16, depth=0.02), base @ T(0, 0.37, 0, random.uniform(0, PI)),
+    tables.add(cloth_skirt(0.93, 1.0, 0.7, folds=16, depth=0.02), base @ T(0, 0.35, 0, random.uniform(0, PI)),
                M['tableCloth'], 0.6)
     # 가운데 유리 캔들 세 개 (드론 사진의 테이블 가운데 불빛)
     for ci, (cx_, cz_, ch) in enumerate(((0, 0, 0.16), (0.13, 0.08, 0.11), (-0.12, 0.09, 0.13))):
@@ -271,8 +271,8 @@ for (tx, tz) in TABLES:
     for i in range(10):
         a = i / 10 * 2 * PI + 0.16
         px, pz = math.sin(a) * 0.66, math.cos(a) * 0.66
-        tables.add(cyl(0.14, 0.14, 0.012, 24), base @ T(px, 0.776, pz), M['plate'])
-        tables.add(bevel_box(0.09, 0.025, 0.2, 0.008), base @ T(px, 0.795, pz, a), M['napkin'], 0.4)
+        tables.add(cyl(0.14, 0.14, 0.012, 24), base @ T(px, 0.79, pz), M['plate'])
+        tables.add(bevel_box(0.09, 0.025, 0.2, 0.008), base @ T(px, 0.815, pz, a), M['napkin'], 0.4)
         wine_glass(base, a + 0.13, 0.52)
         wine_glass(base, a - 0.1, 0.5)
         chair_spots.append(base @ T(math.sin(a) * 1.32, 0, math.cos(a) * 1.32, a))
@@ -301,7 +301,7 @@ print('heaters', len(HEATERS))
 heaters = Assembly('heaters', C_STATIC)
 for (hx, hz) in HEATERS:
     base = T(hx, 0.12, hz)
-    heaters.add(box(0.5, 0.04, 0.5), base @ T(0, 0.02, 0), M['stainless'])
+    heaters.add(box(0.5, 0.08, 0.5), base @ T(0, 0.04, 0), M['stainless'])
     heaters.add(bevel_box(0.44, 0.62, 0.44, 0.02), base @ T(0, 0.35, 0), M['stainless'])
     for sx in (-1, 1):
         for sz in (-1, 1):
@@ -310,7 +310,7 @@ for (hx, hz) in HEATERS:
     heaters.add(cyl(0.02, 0.42, 0.3, 4), base @ T(0, 2.36, 0, PI / 4), M['stainless'])
     heaters.add(box(0.08, 0.08, 0.08), base @ T(0, 2.54, 0), M['stainless'])
     glass.add(cyl(0.055, 0.055, 1.5, 20), base @ T(0, 1.43, 0), M['glass'])
-    emit.add(cyl(0.03, 0.03, 1.4, 12), base @ T(0, 1.43, 0), M['flame'])
+    emit.add(cyl(0.03, 0.03, 1.3, 12), base @ T(0, 1.43, 0), M['flame'])
     light(C_LIGHT, f'heater_{hx}_{hz}', 'POINT', (hx, 1.5, hz), energy=70, color=(1.0, 0.55, 0.25), size=0.06)
 heaters.build()
 glass.build(smooth=True)
@@ -320,11 +320,11 @@ SIGN = T(-15.5, 0.12, -24.5, 0.55)   # 타워 기단 앞 동선 가 (드론 사�
 sign = Assembly('sign', C_STATIC)
 sign.add(bevel_box(4.9, 0.3, 0.7, 0.02), SIGN @ T(0, 0.15, 0), M['black'])
 sign.add(bevel_box(4.7, 3.3, 0.3, 0.02), SIGN @ T(0, 1.95, -0.02), M['black'])
-sign.add(plane(4.5, 3.2), SIGN @ T(0, 1.95, 0.135), M['sign'], tile=None)
+sign.add(plane(4.5, 3.2), SIGN @ T(0, 1.95, 0.2), M['sign'], tile=None)
 sign.add(box(4.3, 0.08, 0.08), SIGN @ T(0, 3.72, 0.05), M['black'])
 for fx in (-1.5, -0.5, 0.5, 1.5):
     sign.add(bevel_box(0.4, 0.3, 0.25, 0.02), SIGN @ T(fx, 3.95, 0.05), M['black'])
-    emit.add(plane(0.32, 0.22), SIGN @ T(fx, 3.95, 0.18), M['washLens'], tile=None)
+    emit.add(plane(0.32, 0.22), SIGN @ T(fx, 3.95, 0.24), M['washLens'], tile=None)
     p = SIGN @ V((fx, 3.95, 0.2))
     tgt = SIGN @ V((fx * 2.5, 0, 10))
     light(C_LIGHT, f'sign_flood_{fx}', 'SPOT', tuple(p), tuple(tgt), energy=2600, color=(1.0, 0.9, 0.75),

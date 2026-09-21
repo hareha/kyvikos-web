@@ -90,9 +90,18 @@ export async function loadBakedScene(root, name, { context = [] } = {}) {
     const color = new THREE.Color().fromArray(web.color ?? [1, 1, 1]);
     let material;
 
-    if (group) {
+    const hasUv1 = Boolean(mesh.geometry.attributes.uv1);
+    if (group && !hasUv1) {
+      // 모델을 고친 뒤 아직 베이크 전: 라이트맵 UV 가 없으므로 실시간 조명으로 그린다
+      material = new THREE.MeshStandardMaterial({
+        color: web.image ? new THREE.Color('#ffffff') : color,
+        roughness: web.rough ?? 0.7,
+        metalness: web.metal ?? 0,
+        map: web.image ? graphic(web.image) : web.tex ? library(web.tex) : null,
+        side: source.side,
+      });
+    } else if (group) {
       // 정적 구조물: 색·텍스처 × 베이크된 조명
-      const hasUv1 = Boolean(mesh.geometry.attributes.uv1);
       material = new THREE.MeshBasicMaterial({
         color,
         lightMap: lightmapFor(group, hasUv1 ? 1 : 0),
