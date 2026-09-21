@@ -80,7 +80,7 @@ function sitePlate() {
   for (let i = 0; i < pos.count; i++) {
     if (Math.abs(nor.getY(i)) > 0.9) uv.setXY(i, (pos.getX(i) - AERIAL.x0) / w, (pos.getZ(i) - AERIAL.z0) / d);
   }
-  const map = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/graphics/apec_site_aerial.webp`);
+  const map = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/graphics/apec_site_aerial.webp?v=${__BUILD__}`);
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = 8;
   const top = revealable(new THREE.MeshBasicMaterial({ map }));

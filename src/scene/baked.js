@@ -16,6 +16,7 @@ import { revealable, lineMaterials } from './kit.js';
  */
 
 const BASE = import.meta.env.BASE_URL;
+const V = `?v=${__BUILD__}`; // 배포 버전 (캐시 무효화)
 const gltfLoader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const textureLoader = new THREE.TextureLoader();
 const fileLoader = new THREE.FileLoader().setResponseType('json');
@@ -36,7 +37,7 @@ function texture(url, { srgb = true, repeat = false } = {}) {
 }
 
 const library = (id) => texture(`${BASE}assets/textures/${id}_diff.webp`, { repeat: true });
-const graphic = (file) => texture(`${BASE}assets/graphics/${file.replace(/\.png$/, '.webp')}`);
+const graphic = (file) => texture(`${BASE}assets/graphics/${file.replace(/\.png$/, '.webp')}${V}`);
 
 /** Blender 발광 세기 → 웹 밝기 배율 (블룸 임계값 0.85 기준) */
 const glowFactor = (strength, isImage) =>
@@ -55,13 +56,13 @@ function ownerName(object, names) {
  */
 export async function loadBakedScene(root, name, { context = [] } = {}) {
   const [gltf, manifest] = await Promise.all([
-    gltfLoader.loadAsync(`${BASE}assets/models/${name}.glb`),
-    fileLoader.loadAsync(`${BASE}assets/lightmaps/${name}.json`),
+    gltfLoader.loadAsync(`${BASE}assets/models/${name}.glb${V}`),
+    fileLoader.loadAsync(`${BASE}assets/lightmaps/${name}.json${V}`),
   ]);
 
   const lightmaps = {};
   for (const [group, info] of Object.entries(manifest.groups)) {
-    const base = texture(`${BASE}assets/lightmaps/${info.file}`);
+    const base = texture(`${BASE}assets/lightmaps/${info.file}${V}`);
     // 라이트맵은 8비트에 1/scale 로 담겨 있다. MeshBasicMaterial 은 라이트맵에 1/π 를 곱하므로 π 를 되돌린다
     lightmaps[group] = { base, intensity: info.scale * Math.PI, byChannel: {} };
   }
