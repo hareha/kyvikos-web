@@ -63,7 +63,7 @@ M = {
     'goldRail': mat('goldRail', image_base=f'{SHOTS}/apec_rail.png', rough=0.4),
     'deck': mat('deckWood', 'dark_wooden_planks', (0.55, 0.3, 0.18), 0.7),
     'gold': mat('finialGold', None, (0.85, 0.62, 0.25), 0.3, 1.0),
-    'windowGlow': mat('windowGlow', emit_image=f'{SHOTS}/apec_windows.png', emit_strength=3.2, rough=0.5),
+    'windowGlow': mat('windowGlow', emit_image=f'{SHOTS}/apec_windows.png', emit_strength=2.2, rough=0.5),
     'eaveLamp': mat('eaveLamp', None, (1, 1, 1), emit=(1.0, 0.97, 0.9), emit_strength=80),
     # 석재
     'granite': mat('granite', 'rock_tile_floor_02', (0.86, 0.86, 0.84), 0.8),
@@ -334,15 +334,10 @@ print('pagoda top', round(TOP, 1))
 for n, p in enumerate(eave_points):
     if p[0] > PX:
         light(C_LIGHT, f'pagoda_lamp_{n}', 'POINT', (p[0], p[1] - 0.3, p[2]), energy=110, color=(1.0, 0.96, 0.9), size=0.2)
-# 기단 앞 업라이트 (따뜻한 투광) — 잔디(+x) 면과 회랑(+z) 면
-for u in (-10, 0, 10):
-    light(C_LIGHT, f'pagoda_up_x{u}', 'SPOT', (PX + 18, BASE_Y + 0.5, PZ + u), (PX + 12, 28, PZ + u * 0.6),
-          energy=26000, color=(1.0, 0.72, 0.42), spot=0.55, blend=0.7, size=0.4)
-for u in (-8, 6):
-    light(C_LIGHT, f'pagoda_up_z{u}', 'SPOT', (PX + u, BASE_Y + 0.5, PZ + 18), (PX + u * 0.6, 28, PZ + 12),
-          energy=18000, color=(1.0, 0.72, 0.42), spot=0.55, blend=0.7, size=0.4)
-light(C_LIGHT, 'pagoda_crown', 'SPOT', (PX + 30, 40, PZ + 14), (PX, TOP - 8, PZ),
-      energy=30000, color=(1.0, 0.8, 0.5), spot=0.18, blend=0.5, size=0.3)
+# 현장 사진: 타워를 비추는 업라이트는 없다. 불 켜진 창(발광 창호)과 처마 네 귀 점조명만으로 보이고,
+# 지붕·몸체는 거의 검은 실루엣. 1층만 실내 조명으로 따뜻하게 밝다.
+light(C_LIGHT, 'pagoda_1f', 'AREA', (PX + 17.2, BASE_Y + 4.5, PZ), (PX + 30, BASE_Y, PZ), energy=2500,
+      color=(1.0, 0.74, 0.45), size=24)
 
 
 # ── 한옥 부재 ─────────────────────────────────────────────────
@@ -958,7 +953,7 @@ leaves.build()
 glow.build()
 
 # 귀빈동(연수동 북동동 옥상) 테라스 — 실제 만찬 사진을 찍은 자리
-camera(C_CAM, 'cam_terrace', (24.4, 15.7, 21.2), (-10, 0.5, -16), 64)
+camera(C_CAM, 'cam_terrace', (26.5, 14.6, 20.1), (-10.1, 23.4, -26.5), 84)   # 현장 사진에서 역산 (아이폰 광각, 위로 약 9°)
 # 신평루 콘솔 부스 — 콘솔 뒤에서 무대 쪽 (소개서 18p 사진)
 camera(C_CAM, 'cam_console', (SP[0] + 4.2, SP_BASE + 2.9, SP[1] - 0.8), (SP[0] - 6, 0.4, -24), 66)
 print('context built')

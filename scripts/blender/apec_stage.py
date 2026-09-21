@@ -78,10 +78,10 @@ M = {
     'chairBlack': material('chairBlack', 'cotton_jersey', (0.007, 0.007, 0.009), 0.75, normal=0.6, sheen=0.05),
     'chairGold': material('chairGold', 'cotton_jersey', (0.66, 0.47, 0.22), 0.28, 0.45, normal=0.25, sheen=0.6),
     'stainless': material('stainless', None, (0.8, 0.81, 0.82), 0.22, 1.0),
-    'flame': material('flame', None, (1, 0.45, 0.1), emit=(1.0, 0.42, 0.1), emit_strength=35),
+    'flame': material('flame', None, (1, 0.5, 0.15), emit=(1.0, 0.5, 0.15), emit_strength=70),
     'sign': material('sign', emit_image=f'{SHOTS}/apec_real_sign.png', emit_strength=0.35, rough=0.5),
     'stone': material('stone', 'rock_tile_floor_02', (0.6, 0.61, 0.62), 0.9),
-    'candle': material('candle', None, (1, 0.7, 0.35), emit=(1.0, 0.62, 0.25), emit_strength=18),
+    'candle': material('candle', None, (1, 0.7, 0.35), emit=(1.0, 0.62, 0.25), emit_strength=4),
     'lanternGlow': material('lanternGlow', None, (1, 0.8, 0.55), emit=(1.0, 0.75, 0.45), emit_strength=4),
 }
 
@@ -242,9 +242,9 @@ roof.build(smooth=True)
 # 전면 트러스 조명 두 줄: 위 워시 12개, 아래 파란 무빙라이트 14개
 for i in range(12):
     lx = X0 + 1.4 + i * (X1 - X0 - 2.8) / 11
-    truss.add(mesh_source(SRC_WASH), T(lx, HT + 0.21, ZF, 0, -(PI / 2 + 0.45)), list(SRC_WASH.data.materials))   # 워시: 렌즈가 무대(-z)·아래를 봄
-    light(C_LIGHT, f'wash_{i}', 'SPOT', (lx, HT + 0.38, ZF + 0.2), (lx * 0.8 + CX * 0.2, TOP, CZ + 2.5),
-          energy=520, color=(1.0, 0.88, 0.72), spot=0.8, blend=0.5, size=0.12)
+    truss.add(mesh_source(SRC_WASH), T(lx, HT + 0.21, ZF, 0, PI / 2 + 0.45), list(SRC_WASH.data.materials))   # 워시: 현장 사진처럼 객석(+z)·아래를 봄
+    light(C_LIGHT, f'wash_{i}', 'SPOT', (lx, HT + 0.3, ZF + 0.25), (lx * 0.8 + CX * 0.2, 0, 6),
+          energy=900, color=(1.0, 0.92, 0.8), spot=0.7, blend=0.6, size=0.12)
 for i in range(14):
     lx = X0 + 1.0 + i * (X1 - X0 - 2.0) / 13
     truss.add(mesh_source(SRC_MOVER), T(lx, HT - 0.21, ZF, 0, PI), list(SRC_MOVER.data.materials))   # 무빙헤드 (거꾸로 매달림)
@@ -324,12 +324,13 @@ print('heaters', len(HEATERS))
 heaters = Assembly('heaters', C_STATIC)
 for k, (hx, hz) in enumerate(HEATERS):
     gear.pyramid_heater(heaters, T(hx, 0.12, hz, (k % 4) * PI / 8), M, glass=glass, emit=emit)
+    light(C_LIGHT, f'heater_{k}', 'POINT', (hx, 1.4, hz), energy=160, color=(1.0, 0.55, 0.22), size=0.08)
     light(C_LIGHT, f'heater_{hx}_{hz}', 'POINT', (hx, 1.5, hz), energy=70, color=(1.0, 0.55, 0.25), size=0.06)
 heaters.build()
 glass.build(smooth=True)
 
 # ── 보라색 사인월 + 상단 투광등 4개 ─────────────────────────────
-SIGN = T(-15.5, 0.12, -24.5, 0.55)   # 타워 기단 앞 동선 가 (드론 사진)
+SIGN = T(-19.0, 0.12, -1.5, 0.785)   # 드론 사진: 타워 계단 왼쪽 앞 포장면, 잔디·테라스 쪽을 봄
 sign = Assembly('sign', C_STATIC)
 sign.add(bevel_box(4.9, 0.3, 0.7, 0.02), SIGN @ T(0, 0.15, 0), M['black'])
 sign.add(bevel_box(4.7, 3.3, 0.3, 0.02), SIGN @ T(0, 1.95, -0.02), M['black'])
@@ -347,7 +348,7 @@ sign.build()
 # 석등
 lanterns = Assembly('lanterns', C_STATIC)
 LANTERN_FIRE = 1.9 * 0.66
-for (lx, lz) in ((-14.8, -17.5), (-15.2, -3.0), (-19.5, 8.5)):
+for (lx, lz) in ((-18.5, 4.0), (-20.0, -18.5)):   # 드론 사진: 사인월 왼쪽, 계단 오른쪽
     base = T(lx, 0.1, lz)
     lanterns.add(mesh_source(SRC_LANTERN), base, list(SRC_LANTERN.data.materials))   # 석등 (불러온 모델)
     emit.add(box(0.2, 0.2, 0.2), base @ T(0, LANTERN_FIRE, 0), M['lanternGlow'])      # 화사석 안 불빛
@@ -357,10 +358,13 @@ emit.build()
 # ── 조명 ─────────────────────────────────────────────────────
 # 잔디를 노랗게 비추는 강한 투광 (사진의 나트륨빛 톤)
 # 연수동 옥상(북서동 · 북동동 테라스 모서리)에서 잔디를 비추는 투광
-light(C_LIGHT, 'flood_left', 'AREA', (40, 19, -4), (4, 0, -2), energy=42000, color=(1.0, 0.76, 0.46), size=5)
-light(C_LIGHT, 'flood_right', 'AREA', (22, 19, 17), (0, 0, 0), energy=30000, color=(1.0, 0.78, 0.5), size=5)
+# 잔디 투광: 연수동 옥상 가장자리에서 잔디만 비추는 좁은 스폿 (타워·지붕으로 새지 않게)
+for k, (pos, tgt) in enumerate((((37.5, 17.0, -24.0), (8, 0, -22)), ((37.5, 17.0, -6.0), (4, 0, -6)),
+                               ((37.5, 17.0, 10.0), (4, 0, 8)), ((10.0, 17.0, 19.5), (6, 0, -2)),
+                               ((-10.0, 17.0, 19.5), (-8, 0, 0)))):
+    light(C_LIGHT, f'flood_{k}', 'SPOT', pos, tgt, energy=48000, color=(1.0, 0.9, 0.52), spot=1.3, blend=0.95, size=1.5)
 light(C_LIGHT, 'stage_top', 'AREA', (CX, 8.2, CZ + 1), (CX, TOP, CZ + 1), energy=1100, color=(0.85, 0.9, 1.0), size=8)
-world_hdri(f'{HDRI}/moonless_golf_1k.hdr', 0.35)
+world_hdri(f'{HDRI}/moonless_golf_1k.hdr', 0.02)   # 현장 사진: 하늘이 완전히 검다
 
 # ── 카메라 (현장 사진과 비슷한 위치) ─────────────────────────────
 camera(C_CAM, 'cam_vip', (-2.2, 1.3, -0.4), (6, 4.0, -19), 50)       # 테이블에서 무대 (image36)

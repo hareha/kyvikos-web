@@ -137,8 +137,8 @@ function addLights(root) {
     return light;
   };
 
-  add(new THREE.HemisphereLight('#7c8fc4', '#1b160c', 1), 0.55);
-  add(new THREE.DirectionalLight('#a9bbff', 1), 0.5).position.set(-80, 120, 60);
+  add(new THREE.HemisphereLight('#6d7896', '#1b160c', 1), 0.3);
+  add(new THREE.DirectionalLight('#a9bbff', 1), 0.15).position.set(-80, 120, 60);
 
   const spot = (pos, target, base, color = '#ffe2b0', angle = 0.55) => {
     const l = new THREE.SpotLight(color, 1, 0, angle, 0.7, 2);
