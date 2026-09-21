@@ -70,21 +70,30 @@ def build(coll, cover_mat, sash_mat, name='banquet_chair'):
     y0, y1 = min(v.y for v in vs), max(v.y for v in vs)
     seat = max(v.z for v in vs if v.y > (y0 + y1) / 2 + 0.05)     # 앞쪽 좌판 윗면 높이
 
-    # 1) 커버 원형: 의자 + 좌판 아래를 바닥까지 채운 상자(아래로 살짝 퍼짐)
+    # 1) 커버 원형 — 스판 커버는 뼈대 사이 빈 곳을 당겨 덮는다:
+    #    등받이: 등받이 쿠션 + 뒷다리 영역의 볼록 껍질을 바닥까지 (뒤는 꼭대기에서 바닥까지 곧게 떨어짐)
+    #    좌판: 좌판 + 네 다리의 볼록 껍질 (다리가 벌어진 만큼 아래로 살짝 퍼짐)
+    back_pts = [v for v in vs if v.z > seat + 0.04]
+    yb0 = min(v.y for v in back_pts)
+    yb1 = max(v.y for v in back_pts)                               # 등받이 앞면
+    back_region = [v.copy() for v in vs if v.y <= yb1 + 0.005]
+    back_region += [Vector((v.x, v.y, 0.0)) for v in back_region]
+    seat_region = [v.copy() for v in vs if v.z <= seat + 0.005]
+    seat_region += [Vector((v.x, v.y, 0.0)) for v in seat_region]
+
     bm = bmesh.new()
-    bm.from_mesh(base.data)
-    fill = bmesh.new()
-    bmesh.ops.create_cube(fill, size=1.0)
-    for v in fill.verts:
-        flare = 1.06 if v.co.z < 0 else 1.0
-        v.co.x = v.co.x * (x1 - x0) * flare
-        v.co.y = (y0 + y1) / 2 + v.co.y * (y1 - y0) * flare
-        v.co.z = (v.co.z + 0.5) * (seat - 0.02)
-    me = bpy.data.meshes.new('f')
-    fill.to_mesh(me)
-    fill.free()
-    bm.from_mesh(me)
-    bpy.data.meshes.remove(me)
+    for pts in (back_region, seat_region):
+        tmp = bmesh.new()
+        for p in pts:
+            tmp.verts.new(p)
+        res = bmesh.ops.convex_hull(tmp, input=tmp.verts[:])
+        extra = {v for v in res.get('geom_interior', []) + res.get('geom_unused', []) if isinstance(v, bmesh.types.BMVert)}
+        bmesh.ops.delete(tmp, geom=list(extra), context='VERTS')
+        me = bpy.data.meshes.new('h')
+        tmp.to_mesh(me)
+        tmp.free()
+        bm.from_mesh(me)
+        bpy.data.meshes.remove(me)
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()
@@ -94,16 +103,16 @@ def build(coll, cover_mat, sash_mat, name='banquet_chair'):
     # 2) 원단 곡면: 리메시(물 샐 틈 없는 한 겹) → 스무딩 → 1cm 부풀림 → 감축
     m = cover.modifiers.new('remesh', 'REMESH')
     m.mode = 'VOXEL'
-    m.voxel_size = 0.012
+    m.voxel_size = 0.008
     m = cover.modifiers.new('smooth', 'CORRECTIVE_SMOOTH')
-    m.iterations = 30
+    m.iterations = 18
     m.smooth_type = 'LENGTH_WEIGHTED'
     m.use_only_smooth = True
     m = cover.modifiers.new('inflate', 'DISPLACE')
-    m.strength = 0.01
+    m.strength = 0.004
     m.mid_level = 0.0
     m = cover.modifiers.new('decimate', 'DECIMATE')
-    m.ratio = 0.12
+    m.ratio = 0.08
     _apply_modifiers(cover)
     bpy.data.objects.remove(base, do_unlink=True)
     cover.data.materials.append(cover_mat)
@@ -111,25 +120,44 @@ def build(coll, cover_mat, sash_mat, name='banquet_chair'):
     for p in cover.data.polygons:
         p.use_smooth = True
 
-    # 3) 새틴 띠: 등받이 부분에서 띠 높이의 면을 떼어 바깥으로 두께
+    # 3) 새틴 띠: 등받이를 높이별로 잘라 얻은 단면 고리를 바깥으로 살짝 띄워 이어 붙인다 (깨끗한 띠)
     bm = bmesh.new()
     bm.from_mesh(cover.data)
-    # 띠 위아래를 평면으로 잘라 가장자리를 곧게
-    for zc_ in SASH:
-        geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
-        bmesh.ops.bisect_plane(bm, geom=geom, plane_co=(0, 0, zc_), plane_no=(0, 0, 1))
-    back_y = y0 + (y1 - y0) * 0.35          # 등받이 쪽(-y)
-    band = [f for f in bm.faces
-            if SASH[0] - 1e-4 <= min(v.co.z for v in f.verts) and max(v.co.z for v in f.verts) <= SASH[1] + 1e-4
-            and f.calc_center_median().y < back_y]
-    dup = bmesh.ops.duplicate(bm, geom=band)
-    band_faces = [g for g in dup['geom'] if isinstance(g, bmesh.types.BMFace)]
-    for f in band_faces:
-        f.material_index = 1
+    back_y = yb1 + 0.03
+
+    def section(z, n=64):
+        tmp = bm.copy()
+        cut = bmesh.ops.bisect_plane(tmp, geom=tmp.verts[:] + tmp.edges[:] + tmp.faces[:],
+                                     plane_co=(0, 0, z), plane_no=(0, 0, 1))
+        pts = [v.co.copy() for v in cut['geom_cut'] if isinstance(v, bmesh.types.BMVert) and v.co.y < back_y]
+        tmp.free()
+        c = sum(pts, Vector()) / len(pts)
+        pts.sort(key=lambda p: math.atan2(p.y - c.y, p.x - c.x))
+        # 각도 기준으로 고르게 다시 뽑기
+        out = []
+        for k in range(n):
+            a = -math.pi + 2 * math.pi * k / n
+            best = max(pts, key=lambda p: math.cos(math.atan2(p.y - c.y, p.x - c.x) - a))
+            d = (best - c)
+            d.z = 0
+            out.append(Vector((c.x, c.y, z)) + d * (1 + 0.012 / max(d.length, 1e-3)))
+        return out
+
+    levels = [SASH[0] + (SASH[1] - SASH[0]) * t for t in (0, 0.25, 0.5, 0.75, 1)]
+    rings = []
+    for i, z in enumerate(levels):
+        bulge = 0.004 * math.sin(math.pi * i / (len(levels) - 1))       # 가운데가 살짝 부푼 새틴
+        rings.append([bm.verts.new(p + (p - Vector((0, (yb0 + yb1) / 2, z))).normalized() * bulge) for p in section(z)])
+    band_faces = []
+    for r0, r1 in zip(rings[:-1], rings[1:]):
+        n = len(r0)
+        for k in range(n):
+            f = bm.faces.new((r0[k], r0[(k + 1) % n], r1[(k + 1) % n], r1[k]))
+            f.material_index = 1
+            f.smooth = True
+            band_faces.append(f)
+    bmesh.ops.recalc_face_normals(bm, faces=band_faces)
     band_verts = {v for f in band_faces for v in f.verts}
-    for v in band_verts:
-        v.co += v.normal * 0.006
-    bmesh.ops.solidify(bm, geom=band_faces, thickness=0.004)
 
     # 뒤 리본: 고리 두 개 + 꼬리 두 개 (납작한 띠)
     rear = min(v.co.y for v in band_verts)
@@ -146,10 +174,13 @@ def build(coll, cover_mat, sash_mat, name='banquet_chair'):
                 side = Vector((0, 0, 1))
             left.append(bm.verts.new(p + side * width / 2))
             right.append(bm.verts.new(p - side * width / 2))
+        faces = []
         for i in range(n - 1):
             f = bm.faces.new((left[i], left[i + 1], right[i + 1], right[i]))
             f.material_index = 1
             f.smooth = True
+            faces.append(f)
+        bmesh.ops.solidify(bm, geom=faces, thickness=0.004)   # 웹에서 양쪽 모두 보이도록 두께
 
     for s in (-1, 1):   # 고리 (작은 나비 모양)
         pts = [Vector((s * 0.055 * math.sin(t * math.pi),

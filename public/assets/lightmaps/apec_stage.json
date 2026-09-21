@@ -1,39 +1,39 @@
 {
   "groups": {
     "ground": {
-      "scale": 8.081938974235378,
+      "scale": 8.115980780642968,
       "size": 4096,
-      "mean": 0.45039474964141846,
+      "mean": 0.4604755640029907,
       "file": "apec_stage_ground.webp"
     },
     "objects": {
-      "scale": 5.736023731853669,
+      "scale": 5.8283816213193145,
       "size": 4096,
-      "mean": 0.21231864392757416,
+      "mean": 0.20624816417694092,
       "file": "apec_stage_objects.webp"
     },
     "pagoda": {
-      "scale": 1.6415853863177092,
+      "scale": 1.6437315066223652,
       "size": 4096,
-      "mean": 0.08267725259065628,
+      "mean": 0.08270173519849777,
       "file": "apec_stage_pagoda.webp"
     },
     "halls": {
-      "scale": 1.9510370201390748,
+      "scale": 1.9818428936211985,
       "size": 4096,
-      "mean": 0.04451838135719299,
+      "mean": 0.04515077546238899,
       "file": "apec_stage_halls.webp"
     },
     "yeonsu_ne": {
-      "scale": 2.6323836782704304,
+      "scale": 2.6358990176864294,
       "size": 4096,
-      "mean": 0.05666690692305565,
+      "mean": 0.056736353784799576,
       "file": "apec_stage_yeonsu_ne.webp"
     },
     "yeonsu_nw": {
-      "scale": 5.3738720131957045,
+      "scale": 5.374888013238515,
       "size": 4096,
-      "mean": 0.08322788029909134,
+      "mean": 0.08338064700365067,
       "file": "apec_stage_yeonsu_nw.webp"
     }
   },
@@ -53,7 +53,6 @@
     "stainless": "objects",
     "sign": "objects",
     "stone": "objects",
-    "ballastTank": "objects",
     "tentAlu": "objects",
     "tentWhite": "objects",
     "roadCase": "objects",
