@@ -30,7 +30,8 @@ bake.use_pass_color = False
 bake.margin = 8
 bake.margin_type = 'EXTEND'
 
-GROUPS = {
+NAME = CFG.get('name', 'apec_stage')   # 다른 행사장: BAKE={'name': 'hyundai', 'groups': {...}}
+GROUPS = CFG.get('groups') or {
     'ground': (['ground'], CFG.get('ground_size', 4096)),
     'objects': (['stage', 'roof', 'tables', 'heaters', 'sign', 'lanterns', 'backstage'], CFG.get('objects_size', 4096)),
     'pagoda': (['pagoda'], CFG.get('pagoda_size', 4096)),
@@ -107,7 +108,7 @@ def bake_group(name, objs, size):
     png = bpy.data.images.new(f'LM_{name}_8', size, size, alpha=False)
     png.colorspace_settings.name = 'sRGB'
     png.pixels.foreach_set(out.ravel())
-    png.filepath_raw = f'{OUT}/lightmap_{name}.png'
+    png.filepath_raw = f'{OUT}/{NAME}_lightmap_{name}.png' if NAME != 'apec_stage' else f'{OUT}/lightmap_{name}.png'
     png.file_format = 'PNG'
     png.save()
     bpy.data.images.remove(png)
@@ -119,7 +120,7 @@ hidden = [o for o in bpy.data.collections['RENDER_ONLY'].objects]
 for o in hidden:
     o.hide_render = True
 
-MANIFEST = f'{OUT}/apec_stage.json'
+MANIFEST = f'{OUT}/{NAME}.json'
 if CFG.get('export_only'):
     with open(MANIFEST) as f:
         manifest = json.load(f)
@@ -176,7 +177,7 @@ export = [o for c in ('STATIC', 'DYNAMIC', 'EMISSIVE') for o in bpy.data.collect
 with bpy.context.temp_override(**view3d_override()):
     select_only(export)
     bpy.ops.export_scene.gltf(
-        filepath=f'{OUT}/apec_stage.glb',
+        filepath=f'{OUT}/{NAME}.glb',
         export_format='GLB',
         use_selection=True,
         export_yup=True,
@@ -195,6 +196,9 @@ for m, nodes in lm_nodes:
     for n in nodes:
         m.node_tree.nodes.remove(n)
 
+# 웹에서 쓰는 그래픽 파일(재질의 web.image) 목록
+manifest['graphics'] = sorted({m['web']['image'] for o in export for m in o.data.materials
+                               if m and 'web' in m and m['web'].get('image')})
 with open(MANIFEST, 'w') as f:
     json.dump(manifest, f, ensure_ascii=False, indent=2)
 print('exported', len(export), 'objects')

@@ -38,18 +38,21 @@ execFileSync(
 const manifest = JSON.parse(await readFile(path.join(SRC, `${name}.json`), 'utf8'));
 for (const group of Object.keys(manifest.groups)) {
   const file = `${name}_${group}.webp`;
-  await sharp(path.join(SRC, `lightmap_${group}.png`)).webp({ quality: 88 }).toFile(path.join(OUT, 'lightmaps', file));
+  const src = name === 'apec_stage' ? `lightmap_${group}.png` : `${name}_lightmap_${group}.png`;
+  await sharp(path.join(SRC, src)).webp({ quality: 88 }).toFile(path.join(OUT, 'lightmaps', file));
   manifest.groups[group].file = file;
 }
 
 // 화면 그래픽(LED·배너·사인·창호)은 GLB 와 별도로 WebP 로 배포
 await mkdir(path.join(OUT, 'graphics'), { recursive: true });
 const shots = path.join(ROOT, 'assets-src/shots');
-for (const file of [
-  'apec_real_led.png', 'apec_real_fascia.png', 'apec_real_sign.png', 'apec_windows.png',
-  'apec_rail.png', 'apec_hanji.png', 'apec_fret.png', 'apec_stage_floor.png', 'apec_pine_needles.png',
-  'apec_leaves.png', 'apec_room_a.png', 'apec_room_b.png', 'apec_room_c.png', 'apec_ui_light.png', 'apec_ui_audio.png', 'apec_ui_video.png',
-]) {
+const files = new Set([
+  ...(manifest.graphics ?? []),
+  ...(name === 'apec_stage' ? ['apec_real_led.png', 'apec_real_fascia.png', 'apec_real_sign.png', 'apec_windows.png',
+    'apec_rail.png', 'apec_hanji.png', 'apec_fret.png', 'apec_stage_floor.png', 'apec_pine_needles.png', 'apec_leaves.png',
+    'apec_room_a.png', 'apec_room_b.png', 'apec_room_c.png', 'apec_ui_light.png', 'apec_ui_audio.png', 'apec_ui_video.png'] : []),
+]);
+for (const file of files) {
   await sharp(path.join(shots, file)).webp({ quality: 90 }).toFile(path.join(OUT, 'graphics', file.replace('.png', '.webp')));
 }
 await writeFile(path.join(OUT, 'lightmaps', `${name}.json`), JSON.stringify(manifest, null, 2));

@@ -93,3 +93,88 @@ def load(uid, name, height=None, width=None, rot_z=0.0, rot_x=0.0, decimate=None
         coll.objects.link(obj)
     print('prop', name, len(obj.data.polygons), 'faces')
     return obj
+
+
+def retint(obj, rgb, name_suffix, sat_min=0.3):
+    """모델 텍스처에서 채도 높은 부분(차체 도색)만 원하는 색으로 바꾼 재질 사본을 만들어 적용 (창·타이어·크롬은 그대로)"""
+    import colorsys
+    import numpy as np
+    th, ts, tv = colorsys.rgb_to_hsv(*rgb)
+    new_mats = []
+    for m in obj.data.materials:
+        if m is None:
+            new_mats.append(m)
+            continue
+        c = m.copy()
+        c.name = f'{m.name}_{name_suffix}'
+        bsdf = next((n for n in c.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        link = next((l for l in c.node_tree.links if l.to_socket == bsdf.inputs['Base Color']), None) if bsdf else None
+        if link and link.from_node.type == 'TEX_IMAGE' and link.from_node.image:
+            src = link.from_node.image
+            img = src.copy()
+            img.name = f'{src.name}_{name_suffix}'
+            px = np.empty(img.size[0] * img.size[1] * 4, np.float32)
+            img.pixels.foreach_get(px)
+            p = px.reshape(-1, 4)
+            r, g, b = p[:, 0], p[:, 1], p[:, 2]
+            mx, mn = p[:, :3].max(1), p[:, :3].min(1)
+            sat = np.where(mx > 1e-4, (mx - mn) / np.maximum(mx, 1e-4), 0)
+            mask = sat > sat_min
+            # 도색 부분: 원래 밝기를 유지한 채 목표 색으로
+            lum = mx[mask]
+            tgt = np.array(rgb, np.float32)
+            p[mask, :3] = tgt[None, :] * (lum / max(tv, 1e-3))[:, None].clip(0, 1.4)
+            img.pixels.foreach_set(p.ravel())
+            img.pack()
+            link.from_node.image = img
+        elif bsdf:
+            col = bsdf.inputs['Base Color'].default_value
+            h, s_, v = colorsys.rgb_to_hsv(col[0], col[1], col[2])
+            if s_ > sat_min or c.name.lower().startswith(('body', 'paint', 'car')):
+                bsdf.inputs['Base Color'].default_value = (*rgb, 1)
+        if 'web' in c:
+            w = dict(c['web']); w['color'] = list(rgb) if not link else w['color']; c['web'] = w
+        new_mats.append(c)
+    me = obj.data.copy()
+    me.name = f'{obj.data.name}_{name_suffix}'
+    for k, m in enumerate(new_mats):
+        me.materials[k] = m
+    o = obj.copy()
+    o.data = me
+    o.name = f'{obj.name}_{name_suffix}'
+    for c in obj.users_collection:
+        c.objects.link(o)
+    return o
+
+
+def set_material_color(obj, match, rgb, suffix):
+    """이름에 match 가 들어간 재질의 기본색만 바꾼 사본 (예: 'body')"""
+    new = obj.copy()
+    new.data = obj.data.copy()
+    new.name = f'{obj.name}_{suffix}'
+    if match == 'auto':
+        # 차체 도색 = 밝은 재질 중 면적이 가장 큰 것 (재질 이름은 불러올 때마다 바뀜)
+        area = {}
+        for p in obj.data.polygons:
+            area[p.material_index] = area.get(p.material_index, 0) + p.area
+        def bright(i):
+            m = obj.data.materials[i]
+            b = next((n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None) if m else None
+            return b is not None and max(b.inputs['Base Color'].default_value[:3]) > 0.5
+        pick = max((i for i in area if bright(i)), key=lambda i: area[i])
+    for k, m in enumerate(new.data.materials):
+        if m and ((match == 'auto' and k == pick) or (match != 'auto' and match in m.name.lower())):
+            c = m.copy()
+            c.name = f'{m.name}_{suffix}'
+            bsdf = next((n for n in c.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+            if bsdf:
+                for l in list(c.node_tree.links):
+                    if l.to_socket == bsdf.inputs['Base Color']:
+                        c.node_tree.links.remove(l)
+                bsdf.inputs['Base Color'].default_value = (*rgb, 1)
+            if 'web' in c:
+                w = dict(c['web']); w['color'] = list(rgb); c['web'] = w
+            new.data.materials[k] = c
+    for c in obj.users_collection:
+        c.objects.link(new)
+    return new

@@ -1,0 +1,81 @@
+{
+  "groups": {
+    "floor": {
+      "scale": 0.4117793201104459,
+      "size": 4096,
+      "mean": 0.01467053685337305,
+      "file": "basquiat_floor.webp"
+    },
+    "hall": {
+      "scale": 5.435884802237803,
+      "size": 4096,
+      "mean": 0.11790180951356888,
+      "file": "basquiat_hall.webp"
+    },
+    "walls": {
+      "scale": 2.547380049591483,
+      "size": 4096,
+      "mean": 0.19551289081573486,
+      "file": "basquiat_walls.webp"
+    },
+    "works": {
+      "scale": 3.449670575235204,
+      "size": 4096,
+      "mean": 0.24175484478473663,
+      "file": "basquiat_works.webp"
+    }
+  },
+  "materials": {
+    "bqCarpet": "floor",
+    "bqRedCarpet": "floor",
+    "bqShell": "hall",
+    "bqLobby": "hall",
+    "bqWhite": "works",
+    "potted_plant_02_pot": "hall",
+    "potted_plant_02_leaves": "hall",
+    "bqCeiling": "hall",
+    "bqSlotFrame": "hall",
+    "bqBlack": "walls",
+    "bqMaroon": "works",
+    "bqBeige": "walls",
+    "bqNavy": "walls",
+    "bqLogo": "works",
+    "bqPoster": "works",
+    "bqIntro": "works",
+    "bqFrameWhite": "works",
+    "bqArt_blue": "works",
+    "bqFrameWood": "works",
+    "bqArt_back": "works",
+    "bqArt_cart": "works",
+    "bqArt_small": "works",
+    "bqVase": "works",
+    "bqRig": "works",
+    "bqDark": "works",
+    "bqArt_panels": "works",
+    "bqArt_organ": "works",
+    "bqTee": "works",
+    "bqPhoto": "works"
+  },
+  "objects": {
+    "floor": "floor",
+    "hall": "hall",
+    "lobby": "hall",
+    "ceiling": "hall",
+    "walls": "walls",
+    "works": "works"
+  },
+  "graphics": [
+    "bq_logo.png",
+    "bq_photo.png",
+    "bq_r_art_back.png",
+    "bq_r_art_blue.png",
+    "bq_r_art_cart.png",
+    "bq_r_art_organ.png",
+    "bq_r_art_panels.png",
+    "bq_r_art_small.png",
+    "bq_r_intro.png",
+    "bq_r_poster.png",
+    "bq_r_projection.png",
+    "bq_screen.png"
+  ]
+}

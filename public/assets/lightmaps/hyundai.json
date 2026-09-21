@@ -1,0 +1,73 @@
+{
+  "groups": {
+    "building": {
+      "scale": 5.188740167928806,
+      "size": 4096,
+      "mean": 0.33377113938331604,
+      "file": "hyundai_building.webp"
+    },
+    "floors": {
+      "scale": 5.060435067052429,
+      "size": 4096,
+      "mean": 0.6549966931343079,
+      "file": "hyundai_floors.webp"
+    },
+    "exhibits": {
+      "scale": 4.280984518320694,
+      "size": 4096,
+      "mean": 0.24417243897914886,
+      "file": "hyundai_exhibits.webp"
+    }
+  },
+  "materials": {
+    "hySlab": "building",
+    "hyPipe": "building",
+    "hyPipeDark": "building",
+    "hyColumn": "building",
+    "hyConcrete": "building",
+    "hyMullion": "building",
+    "hySteel": "exhibits",
+    "hyWallDark": "exhibits",
+    "hyFloor": "floors",
+    "hyFloorUp": "floors",
+    "hySidewalk": "floors",
+    "hyStreet": "floors",
+    "hyBlack": "exhibits",
+    "hyArch": "exhibits",
+    "hyWallWhite": "exhibits",
+    "hyChrome": "exhibits",
+    "hyRope": "exhibits",
+    "potted_plant_02_pot": "exhibits",
+    "potted_plant_02_leaves": "exhibits",
+    "hyBlueprint": "exhibits",
+    "hyDesk": "exhibits",
+    "hyBoard": "exhibits",
+    "hySign": "exhibits",
+    "hyArchiveTop": "exhibits",
+    "hyPallet": "exhibits",
+    "hyCarton": "exhibits",
+    "hyMat": "exhibits",
+    "hyP92": "exhibits",
+    "hyP90": "exhibits"
+  },
+  "objects": {
+    "building": "building",
+    "floors": "floors",
+    "outer": "floors",
+    "exhibit1": "exhibits",
+    "exhibit2": "exhibits",
+    "exhibit3": "exhibits"
+  },
+  "graphics": [
+    "hy_arch.png",
+    "hy_archive.png",
+    "hy_blueprint.png",
+    "hy_city.png",
+    "hy_header.png",
+    "hy_mural_real.png",
+    "hy_neon.png",
+    "hy_p90.png",
+    "hy_p92.png",
+    "hy_sign.png"
+  ]
+}

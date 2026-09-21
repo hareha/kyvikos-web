@@ -16,7 +16,7 @@ SKIP = ('pines', 'pine_needles', 'tree_leaves', 'banquet_chair')
 
 faces = []   # (obj, mat, normal, d, verts(world))
 for ob in bpy.data.objects:
-    if ob.type != 'MESH' or ob.name.startswith(SKIP) or ob.name.startswith(('chair_', 'wineglass_')):
+    if ob.type != 'MESH' or ob.name.startswith(SKIP) or ob.name.startswith(('chair_', 'wineglass_', 'car_', 'body_')):
         continue
     if any(c.name in ('SOURCES', 'RENDER_ONLY') for c in ob.users_collection):
         continue

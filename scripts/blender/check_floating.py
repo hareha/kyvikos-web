@@ -15,7 +15,7 @@ SKIP = ('pine_needles', 'tree_leaves', 'context_emissive', 'emissive', 'glass', 
 verts, polys, face_island = [], [], []
 islands = []          # (object, zmin, center, sample verts)
 for ob in bpy.data.objects:
-    if ob.type != 'MESH' or ob.name.startswith(SKIP) or ob.name.startswith(('chair_', 'wineglass_')):
+    if ob.type != 'MESH' or ob.name.startswith(SKIP) or ob.name.startswith(('chair_', 'wineglass_', 'car_', 'body_')):
         continue
     if any(c.name in ('SOURCES', 'RENDER_ONLY', 'LIGHTS', 'CAMERAS') for c in ob.users_collection):
         continue
