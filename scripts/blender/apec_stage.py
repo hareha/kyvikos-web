@@ -32,6 +32,12 @@ from lib import (PI, SHOTS, HDRI, Assembly, T, bevel_box, box, camera, cloth_ski
 import bpy  # noqa: E402
 from mathutils import Vector as V  # noqa: E402
 
+import gear  # noqa: E402
+import props  # noqa: E402
+importlib.reload(gear)
+importlib.reload(props)
+from lib import mesh_source  # noqa: E402
+
 random.seed(7)
 reset()
 scene = bpy.context.scene
@@ -58,6 +64,7 @@ M = {
     'led': material('led', emit_image=f'{SHOTS}/apec_real_led.png', emit_strength=3.0, rough=0.25),
     'ledFrame': material('ledFrame', None, (0.015, 0.015, 0.02), 0.5),
     'lectern': material('lectern', None, (0.93, 0.94, 0.95), 0.3, coat=0.4),
+    'lecternPanel': material('lecternPanel', None, (0.86, 0.88, 0.92), 0.12, coat=0.7),
     'roof': material('roof', None, (0.16, 0.17, 0.19), 0.55),
     'aluminium': material('aluminium', None, (0.82, 0.84, 0.86), 0.3, 1.0),
     'black': material('black', None, (0.012, 0.012, 0.015), 0.5),
@@ -79,6 +86,21 @@ M = {
 }
 
 emit = Assembly('emissive', C_EMIT)
+
+# ── 불러온 소품 (CC BY, CREDITS.md) ────────────────────────────
+SRC_PLATE = props.load('d045ad82b6fb4102b06c05eaea80961d', 'src_plate', width=0.28, decimate=0.06, coll=C_SRC, materials=M['plate'])
+SRC_CUTLERY = props.load('f6efe212a8d9426481d877236a548a5a', 'src_cutlery', width=0.21, rot_x=-PI / 2, decimate=0.22, coll=C_SRC, materials=M['stainless'])
+SRC_GLASS = props.load('88c1cc6d02fb49cfa35692b790134594', 'src_wineglass', height=0.2, decimate=0.3, coll=C_SRC, materials=M['glass'])
+SRC_SPEAKER = props.load('f3209a6a45b844df92560099f982a508', 'src_speaker', height=1.6, coll=C_SRC)
+SRC_LANTERN = props.load('4e674d91b33a450781aebd9c490b0f05', 'src_lantern', height=1.9, coll=C_SRC)
+SRC_MOVER = props.load('3f838303f817454e9be539e244d039ac', 'src_mover', height=0.42, parts=[0, 5, 6, 7], coll=C_SRC)
+SRC_WASH = props.load('3f838303f817454e9be539e244d039ac', 'src_wash', width=0.36, parts=[1, 2], coll=C_SRC)
+PLATE_H = max(v.co.z for v in SRC_PLATE.data.vertices)
+# 조명기 렌즈 재질을 발광으로 (워시: 따뜻한 흰빛, 무빙: 파랑)
+for src, lens in ((SRC_WASH, M['washLens']), (SRC_MOVER, M['blueLens'])):
+    for k, m in enumerate(src.data.materials):
+        if m and 'Lens' in m.name:
+            src.data.materials[k] = lens
 glass = Assembly('glass', C_DYNAMIC)
 
 # ── 잔디 · 디딤돌 ─────────────────────────────────────────────
@@ -102,7 +124,7 @@ def on_lawn(x, z, margin=0.0):
 def paver(px, pz):
     if not on_lawn(px, pz, 0.3):
         return
-    ground.add(bevel_box(0.5, 0.05, 0.5, 0.012), T(px, 0.17, pz, random.uniform(-0.02, 0.02)), M['paver'], 1.2)   # 윗면 0.195 (잔디 0.12)
+    ground.add(bevel_box(0.5, 0.12, 0.5, 0.012), T(px, 0.135, pz, random.uniform(-0.02, 0.02)), M['paver'], 1.2)   # 잔디에 박힘, 윗면 0.195
 
 
 # 무대 앞을 가로지르는 흰 디딤돌 두 줄
@@ -119,12 +141,12 @@ while z <= 16.5:
     paver(MED[0] + 0.35, z + 0.35)
     z += 0.7
 # 동심원 패턴: 가운데 원판 + 끊어진 고리 세 겹
-ground.add(cyl(0.9, 0.9, 0.05, 48), T(MED[0], 0.17, MED[1]), M['paver'], 1.2)
+ground.add(cyl(0.9, 0.9, 0.12, 48), T(MED[0], 0.135, MED[1]), M['paver'], 1.2)
 for r0, r1, count in ((1.45, 1.9, 12), (2.35, 2.75, 20), (3.15, 3.45, 28)):
     span = 2 * PI / count
     for i in range(count):
         a = i * span
-        ground.add(ring_segment(r0, r1, a + span * 0.1, a + span * 0.9, 0.05), T(MED[0], 0.145, MED[1]), M['paver'], 1.2)
+        ground.add(ring_segment(r0, r1, a + span * 0.1, a + span * 0.9, 0.12), T(MED[0], 0.075, MED[1]), M['paver'], 1.2)
 ground.build()
 
 outer = Assembly('outer', C_RENDER_ONLY)
@@ -135,8 +157,8 @@ outer.build()
 CX, CZ, TOP = 6, -16, 1.2
 FRONT = CZ + 4.5  # 무대 앞면 z = -11.5
 stage = Assembly('stage', C_STATIC)
-stage.add(bevel_box(18, TOP - 0.06, 9, 0.02), T(CX, (TOP - 0.06) / 2, CZ), M['stageBody'])
-stage.add(plane(18, 9), T(CX, TOP + 0.002, CZ, 0, -PI / 2), M['stageFloor'], tile=None)
+stage.add(bevel_box(18, TOP - 0.04, 9, 0.02), T(CX, (TOP - 0.04) / 2, CZ), M['stageBody'])
+stage.add(box(18, 0.05, 9), T(CX, TOP - 0.025, CZ), M['stageFloor'], tile=None)   # 무대 상판 (윗면에 바닥 그래픽)
 emit.add(plane(18, 1.1), T(CX, 0.58, FRONT + 0.07), M['fascia'], tile=None)
 # 좌우 계단 (단 높이 0.3m, 앞끝에 흰 LED 라인)
 for sx in (CX - 4.3, CX + 4.3):
@@ -154,13 +176,12 @@ for k in (3, 2, 1):
 # LED월 (하단 로고 띠 포함 14.4 × 6.2 m)
 stage.add(bevel_box(14.8, 6.5, 0.35, 0.02), T(CX, TOP + 3.25, CZ - 3.9), M['ledFrame'])
 emit.add(plane(14.4, 6.2), T(CX, TOP + 3.1, CZ - 3.64), M['led'], tile=None)   # 프레임 앞면(-3.725)보다 앞
-# 흰 연설대 2개
+# 흰 아크릴 연설대 2개 (gear.lectern)
 for lx, lz in ((CX - 4.6, CZ + 2.2), (CX + 1.4, CZ + 1.3)):
-    stage.add(bevel_box(0.6, 1.08, 0.42, 0.03), T(lx, TOP + 0.54, lz), M['lectern'])
-    stage.add(bevel_box(0.7, 0.04, 0.52, 0.01), T(lx, TOP + 1.12, lz + 0.02, 0, -0.22), M['lectern'])
-# 무대 앞 양쪽 스피커
+    gear.lectern(stage, T(lx, TOP, lz), M)
+# 무대 앞 양쪽 스피커 (불러온 모델)
 for sx in (-4.3, 16.3):
-    stage.add(bevel_box(1.0, 1.9, 0.9, 0.03), T(sx, 0.95 + 0.12, FRONT + 0.3), M['black'])
+    stage.add(mesh_source(SRC_SPEAKER), T(sx, 0.12, FRONT + 0.4), list(SRC_SPEAKER.data.materials))
 stage.build()
 
 # ── 지붕 · 트러스 타워 · 조명 ──────────────────────────────────
@@ -221,15 +242,12 @@ roof.build(smooth=True)
 # 전면 트러스 조명 두 줄: 위 워시 12개, 아래 파란 무빙라이트 14개
 for i in range(12):
     lx = X0 + 1.4 + i * (X1 - X0 - 2.8) / 11
-    truss.add(bevel_box(0.34, 0.3, 0.3, 0.03), T(lx, HT + 0.38, ZF), M['black'])
-    emit.add(cyl(0.12, 0.12, 0.02, 20), T(lx, HT + 0.38, ZF + 0.22, 0, PI / 2), M['washLens'])
+    truss.add(mesh_source(SRC_WASH), T(lx, HT + 0.21, ZF, 0, -(PI / 2 + 0.45)), list(SRC_WASH.data.materials))   # 워시: 렌즈가 무대(-z)·아래를 봄
     light(C_LIGHT, f'wash_{i}', 'SPOT', (lx, HT + 0.38, ZF + 0.2), (lx * 0.8 + CX * 0.2, TOP, CZ + 2.5),
           energy=520, color=(1.0, 0.88, 0.72), spot=0.8, blend=0.5, size=0.12)
 for i in range(14):
     lx = X0 + 1.0 + i * (X1 - X0 - 2.0) / 13
-    truss.add(bevel_box(0.16, 0.22, 0.16, 0.02), T(lx, HT - 0.32, ZF), M['black'])  # 요크
-    truss.add(bevel_box(0.3, 0.34, 0.3, 0.04), T(lx, HT - 0.62, ZF, 0, 0.5), M['black'])  # 헤드
-    emit.add(cyl(0.1, 0.1, 0.02, 16), T(lx, HT - 0.72, ZF + 0.19, 0, 0.5 + PI / 2), M['blueLens'])
+    truss.add(mesh_source(SRC_MOVER), T(lx, HT - 0.21, ZF, 0, PI), list(SRC_MOVER.data.materials))   # 무빙헤드 (거꾸로 매달림)
     light(C_LIGHT, f'mover_{i}', 'SPOT', (lx, HT - 0.75, ZF + 0.15),
           (lx + random.uniform(-2, 2), 0.1, -5 + random.uniform(-2, 3)),
           energy=700, color=(0.3, 0.5, 1.0), spot=0.28, blend=0.35, size=0.04)
@@ -251,18 +269,19 @@ for tz in (-3, 2.5, 8, 13.5):
 print('tables', len(TABLES))
 
 
+glass_spots = []
+
+
 def wine_glass(base, a, r):
-    gx, gz = math.sin(a) * r, math.cos(a) * r
-    glass.add(cyl(0.028, 0.028, 0.004, 12), base @ T(gx, 0.772, gz), M['glass'])
-    glass.add(cyl(0.004, 0.004, 0.1, 6), base @ T(gx, 0.824, gz), M['glass'])
-    glass.add(cyl(0.042, 0.03, 0.095, 14), base @ T(gx, 0.92, gz), M['glass'])
+    """와인잔 (불러온 모델, 인스턴스)"""
+    glass_spots.append(base @ T(math.sin(a) * r, 0.771, math.cos(a) * r, a))
 
 
 chair_spots = []
 for (tx, tz) in TABLES:
     base = T(tx, 0.12, tz)
     tables.add(cyl(0.92, 0.92, 0.03, 48), base @ T(0, 0.755, 0), M['tableCloth'], 0.6)
-    tables.add(cloth_skirt(0.93, 1.0, 0.7, folds=16, depth=0.02), base @ T(0, 0.35, 0, random.uniform(0, PI)),
+    tables.add(cloth_skirt(0.93, 1.0, 0.745, folds=16, depth=0.02), base @ T(0, 0.3725, 0, random.uniform(0, PI)),
                M['tableCloth'], 0.6)
     # 가운데 유리 캔들 세 개 (드론 사진의 테이블 가운데 불빛)
     for ci, (cx_, cz_, ch) in enumerate(((0, 0, 0.16), (0.13, 0.08, 0.11), (-0.12, 0.09, 0.13))):
@@ -271,8 +290,10 @@ for (tx, tz) in TABLES:
     for i in range(10):
         a = i / 10 * 2 * PI + 0.16
         px, pz = math.sin(a) * 0.66, math.cos(a) * 0.66
-        tables.add(cyl(0.14, 0.14, 0.012, 24), base @ T(px, 0.79, pz), M['plate'])
-        tables.add(bevel_box(0.09, 0.025, 0.2, 0.008), base @ T(px, 0.815, pz, a), M['napkin'], 0.4)
+        seat = base @ T(px, 0.771, pz, a)                                           # 로컬 +z = 바깥(손님 쪽)
+        tables.add(mesh_source(SRC_PLATE), seat, M['plate'])
+        tables.add(bevel_box(0.09, 0.02, 0.2, 0.008), seat @ T(0, PLATE_H + 0.01, 0), M['napkin'], 0.4)   # 접시 위 냅킨
+        tables.add(mesh_source(SRC_CUTLERY), seat @ T(0.2, 0.0, 0.0), M['stainless'])       # 오른쪽 커트러리
         wine_glass(base, a + 0.13, 0.52)
         wine_glass(base, a - 0.1, 0.5)
         chair_spots.append(base @ T(math.sin(a) * 1.32, 0, math.cos(a) * 1.32, a))
@@ -284,6 +305,8 @@ importlib.reload(banquet_chair)
 chair_src = banquet_chair.build(C_SRC, M['chairBlack'], M['chairGold'])
 for i, spot in enumerate(chair_spots):
     instance(chair_src, C_DYNAMIC, f'chair_{i:03d}', spot)
+for i, spot in enumerate(glass_spots):
+    instance(SRC_GLASS, C_DYNAMIC, f'wineglass_{i:03d}', spot)
 
 # ── 스테인리스 피라미드 히터 ───────────────────────────────────
 # 테이블 사이 빈자리에 고르게 (동선·잔디 밖 제외)
@@ -299,18 +322,8 @@ for hz in (-6.2, -0.2, 5.3, 10.8, 15.8):
         HEATERS.append((hx, hz))
 print('heaters', len(HEATERS))
 heaters = Assembly('heaters', C_STATIC)
-for (hx, hz) in HEATERS:
-    base = T(hx, 0.12, hz)
-    heaters.add(box(0.5, 0.08, 0.5), base @ T(0, 0.04, 0), M['stainless'])
-    heaters.add(bevel_box(0.44, 0.62, 0.44, 0.02), base @ T(0, 0.35, 0), M['stainless'])
-    for sx in (-1, 1):
-        for sz in (-1, 1):
-            g, m = tube(V((sx * 0.19, 0.66, sz * 0.19)), V((sx * 0.1, 2.2, sz * 0.1)), 0.015, 6)
-            heaters.add(g, base @ m, M['stainless'])
-    heaters.add(cyl(0.02, 0.42, 0.3, 4), base @ T(0, 2.36, 0, PI / 4), M['stainless'])
-    heaters.add(box(0.08, 0.08, 0.08), base @ T(0, 2.54, 0), M['stainless'])
-    glass.add(cyl(0.055, 0.055, 1.5, 20), base @ T(0, 1.43, 0), M['glass'])
-    emit.add(cyl(0.03, 0.03, 1.3, 12), base @ T(0, 1.43, 0), M['flame'])
+for k, (hx, hz) in enumerate(HEATERS):
+    gear.pyramid_heater(heaters, T(hx, 0.12, hz, (k % 4) * PI / 8), M, glass=glass, emit=emit)
     light(C_LIGHT, f'heater_{hx}_{hz}', 'POINT', (hx, 1.5, hz), energy=70, color=(1.0, 0.55, 0.25), size=0.06)
 heaters.build()
 glass.build(smooth=True)
@@ -320,12 +333,12 @@ SIGN = T(-15.5, 0.12, -24.5, 0.55)   # 타워 기단 앞 동선 가 (드론 사�
 sign = Assembly('sign', C_STATIC)
 sign.add(bevel_box(4.9, 0.3, 0.7, 0.02), SIGN @ T(0, 0.15, 0), M['black'])
 sign.add(bevel_box(4.7, 3.3, 0.3, 0.02), SIGN @ T(0, 1.95, -0.02), M['black'])
-sign.add(plane(4.5, 3.2), SIGN @ T(0, 1.95, 0.2), M['sign'], tile=None)
-sign.add(box(4.3, 0.08, 0.08), SIGN @ T(0, 3.72, 0.05), M['black'])
+sign.add(box(4.5, 3.2, 0.03), SIGN @ T(0, 1.95, 0.145), M['sign'], tile=None)   # 패널 앞면에 붙은 그래픽판
+sign.add(box(4.3, 0.08, 0.08), SIGN @ T(0, 3.64, 0.05), M['black'])   # 패널 위 조명 바
 for fx in (-1.5, -0.5, 0.5, 1.5):
-    sign.add(bevel_box(0.4, 0.3, 0.25, 0.02), SIGN @ T(fx, 3.95, 0.05), M['black'])
-    emit.add(plane(0.32, 0.22), SIGN @ T(fx, 3.95, 0.24), M['washLens'], tile=None)
-    p = SIGN @ V((fx, 3.95, 0.2))
+    sign.add(bevel_box(0.4, 0.3, 0.25, 0.02), SIGN @ T(fx, 3.83, 0.05), M['black'])
+    emit.add(plane(0.32, 0.22), SIGN @ T(fx, 3.83, 0.18), M['washLens'], tile=None)
+    p = SIGN @ V((fx, 3.83, 0.2))
     tgt = SIGN @ V((fx * 2.5, 0, 10))
     light(C_LIGHT, f'sign_flood_{fx}', 'SPOT', tuple(p), tuple(tgt), energy=2600, color=(1.0, 0.9, 0.75),
           spot=0.9, blend=0.4, size=0.15)
@@ -333,14 +346,11 @@ sign.build()
 
 # 석등
 lanterns = Assembly('lanterns', C_STATIC)
+LANTERN_FIRE = 1.9 * 0.66
 for (lx, lz) in ((-14.8, -17.5), (-15.2, -3.0), (-19.5, 8.5)):
-    base = T(lx, 0.12, lz)
-    lanterns.add(bevel_box(0.8, 0.3, 0.8, 0.03), base @ T(0, 0.15, 0), M['stone'], 1)
-    lanterns.add(cyl(0.16, 0.2, 1.0, 12), base @ T(0, 0.8, 0), M['stone'], 1)
-    lanterns.add(bevel_box(0.7, 0.14, 0.7, 0.02), base @ T(0, 1.37, 0), M['stone'], 1)
-    emit.add(box(0.46, 0.44, 0.46), base @ T(0, 1.66, 0), M['lanternGlow'])
-    lanterns.add(cyl(0.08, 0.75, 0.38, 4), base @ T(0, 2.07, 0, PI / 4), M['stone'], 1)
-    lanterns.add(sphere(0.1, 1), base @ T(0, 2.32, 0), M['stone'], 1)
+    base = T(lx, 0.1, lz)
+    lanterns.add(mesh_source(SRC_LANTERN), base, list(SRC_LANTERN.data.materials))   # 석등 (불러온 모델)
+    emit.add(box(0.2, 0.2, 0.2), base @ T(0, LANTERN_FIRE, 0), M['lanternGlow'])      # 화사석 안 불빛
 lanterns.build()
 emit.build()
 

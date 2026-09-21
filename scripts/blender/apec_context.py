@@ -28,6 +28,12 @@ from lib import (PI, SHOTS, Assembly, T, bevel_box, box, camera, cyl, light, mat
 
 import bmesh  # noqa: E402
 import bpy  # noqa: E402
+
+import gear  # noqa: E402
+import props  # noqa: E402
+importlib.reload(gear)
+importlib.reload(props)
+from lib import mesh_source  # noqa: E402
 from mathutils import Vector as V  # noqa: E402
 
 random.seed(11)
@@ -98,7 +104,22 @@ M = {
     'uiAudio': mat('uiAudio', emit_image=f'{SHOTS}/apec_ui_audio.png', emit_strength=2.0, rough=0.3),
     'uiVideo': mat('uiVideo', emit_image=f'{SHOTS}/apec_ui_video.png', emit_strength=2.0, rough=0.3),
     'clipLamp': mat('clipLamp', None, (1, 1, 1), emit=(1.0, 0.92, 0.78), emit_strength=40),
+    'consoleBody': mat('consoleBody', None, (0.035, 0.037, 0.042), 0.45, 0.2),
+    'keyGrey': mat('keyGrey', None, (0.12, 0.12, 0.13), 0.5),
+    'keyAmber': mat('keyAmber', None, (1, 0.6, 0.2), emit=(1.0, 0.55, 0.15), emit_strength=6),
+    'keyWhite': mat('keyWhite', None, (1, 1, 1), emit=(0.9, 0.92, 1.0), emit_strength=5),
+    'keyRed': mat('keyRed', None, (1, 0.2, 0.15), emit=(1.0, 0.15, 0.1), emit_strength=6),
+    'keyGreen': mat('keyGreen', None, (0.2, 1, 0.3), emit=(0.15, 1.0, 0.3), emit_strength=6),
+    'black': mat('black', None, (0.012, 0.012, 0.015), 0.5),
+    'stainless': mat('stainless', None, (0.8, 0.81, 0.82), 0.22, 1.0),
+    'glass': mat('glass', None, (0.9, 0.93, 0.95), 0.03, transmission=1.0),
+    'flame': mat('flame', None, (1, 0.45, 0.1), emit=(1.0, 0.42, 0.1), emit_strength=35),
 }
+C_SRC = bpy.data.collections['SOURCES']
+SRC_MIXER = props.load('d3995c11393d439da2fe205db7caeb44', 'src_mixer', width=0.95, decimate=0.25, coll=C_SRC)
+SRC_LAPTOP = props.load('7d870e900889481395b4a575b9fa8c3e', 'src_laptop', width=0.33, coll=C_SRC)
+SRC_PARASOL = props.load('d6c9705a4f8e421ea473196ab9910088', 'src_parasol', height=2.6, coll=C_SRC, materials=M['parasol'])   # 원래 천 무늬 대신 흰 캔버스
+SRC_TABLESET = props.load('outdoor_table_chair_set_01', 'src_tableset', width=1.9, coll=C_SRC)
 
 glow = Assembly('context_emissive', C_EMIT)
 
@@ -139,6 +160,14 @@ def hip_roof(hw, hd, h, ridge=0.85, lift=None, curve=1.8, seg_u=12, seg_t=8, thi
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         bmesh.ops.solidify(bm, geom=bm.faces[:], thickness=thickness)
     return build
+
+
+def seat(beam_top, hd, ridge, rh, overhang, thickness=0.22, curve=1.8):
+    """지붕 밑면이 벽선(처마 끝에서 overhang 안쪽)의 보 윗면에 얹히도록 하는 지붕 바닥 높이.
+    hip_roof 곡면(= 밑면): 처마(t=1)→용마루(t=0) 높이 rh·(1-t)^curve, 두께는 곡면 위로 (광선으로 확인)"""
+    run = hd * ridge
+    y = rh * min(1.0, overhang / run) ** curve
+    return beam_top - y - 0.04   # 4cm 겹치게 (틈 없음)
 
 
 def gable_roof(length, width, h, thickness=0.25, sag=0.25, seg=10):
@@ -243,7 +272,7 @@ for i in range(9):
 
     wall_h = H - 2.6
     # 벽체 + 창호
-    pagoda.add(box(core * 2, H - 0.4, core * 2), T(PX, y + (H - 0.4) / 2, PZ), M['wallWood'], 1.5)
+    pagoda.add(box(core * 2, H + 0.1, core * 2), T(PX, y + (H + 0.1) / 2, PZ), M['wallWood'], 1.5)   # 다음 층 마루 속까지
     window_band(PX, y + 0.35 + wall_h * 0.46, PZ, core + 0.08, wall_h * 0.78)
     # 기둥 (주칠)
     bays = 7 if i < 5 else 5
@@ -264,10 +293,13 @@ for i in range(9):
         for (x, z, ry) in ((t, half, 0), (t, -half, PI), (half, t, PI / 2), (-half, t, -PI / 2)):
             if abs(abs(x) - half) < 1e-3 and abs(abs(z) - half) < 1e-3 and ry in (PI / 2, -PI / 2):
                 continue   # 모서리는 앞뒤 방향 공포 하나만 (두 방향이 겹치면 윗면이 같은 높이)
-            pagoda.add(box(0.36, 0.34, 2.0), T(PX + x, y + wall_h + 1.05, PZ + z, ry) @ T(0, 0, 0.7), M['bracket'], 1)
+            pagoda.add(box(0.36, 0.34, 2.0), T(PX + x, y + wall_h + 1.0, PZ + z, ry) @ T(0, 0, 0.7), M['bracket'], 1)   # 평방(윗면 +0.85) 위에
             pagoda.add(box(0.22, 0.26, 1.4), T(PX + x, y + wall_h + 1.4, PZ + z, ry) @ T(0, 0, 1.2, 0, -0.35), M['bracket'], 1)   # 아래 쇠서(0.36)보다 좁게
     # 지붕
-    eave = y + H - 1.0
+    if top:
+        eave = seat(y + wall_h + 1.77, half + 3.6, 0.98, 5.2, overhang=3.6 - 1.86, thickness=0.3, curve=1.5)
+    else:
+        eave = seat(y + wall_h + 1.77, half + 3.4, 1 - (half - 1.0) / (half + 3.4), 2.2, overhang=3.4 - 1.86, thickness=0.28)
     if top:
         rh, hb = 5.2, half + 3.6
         pagoda.add(hip_roof(hb, hb, rh, ridge=0.98, lift=1.1, curve=1.5, thickness=0.3), T(PX, eave, PZ), M['copper'], 1.4)
@@ -323,13 +355,21 @@ def ridge(asm, frame, length, y):
         asm.add(bevel_box(0.5, 0.9, 0.72, 0.08), frame @ T(sx * length / 2, y + 0.25, 0), M['tileGrey'], 1)
 
 
-def rafters(asm, frame, length, depth, y, step=0.55):
-    """처마 밑 주칠 서까래 (끝만 보이게 짧게)"""
+def hip_under(base, hd, ridge, rh, thickness=0.22, curve=1.8):
+    """hip_roof 밑면 높이 (처마 끝에서 안쪽으로 r 위치, 모서리 들림 제외)"""
+    return lambda r: base + rh * min(1.0, max(0.0, (hd - r) / (hd * ridge))) ** curve
+
+
+def rafters(asm, frame, length, r0, r1, under, step=0.55, radius=0.07):
+    """둥근 주칠 서까래: 벽선(보 위, r0)에서 처마 끝 가까이(r1)까지 지붕 밑면 바로 아래를 따라 (앞뒤 두 면)"""
     n = int(length / step)
     for k in range(n + 1):
         x = -length / 2 + k * length / n
         for s in (-1, 1):
-            asm.add(box(0.14, 0.14, 1.4), frame @ T(x, y, s * (depth / 2 - 0.5), 0, s * 0.45), M['rafter'], 1)
+            a = V((x, under(r0) - radius + 0.02, s * r0))
+            b = V((x, under(r1) - radius + 0.02, s * r1))
+            g, m = tube(frame @ a, frame @ b, radius, 8, caps=True)
+            asm.add(g, m, M['rafter'], 1)
 
 
 def hanok(asm, cx, cz, w, d, ry=0.0, y0=0.0, wall_h=3.4, veranda=True, base_h=0.6, label='', lamp=600):
@@ -349,18 +389,20 @@ def hanok(asm, cx, cz, w, d, ry=0.0, y0=0.0, wall_h=3.4, veranda=True, base_h=0.
             for sz, rot in ((1, 0), (-1, PI)):
                 glow.add(plane(w / bays - 0.5, wall_h * 0.76), f @ T(xm, yb + wall_h * 0.44, sz * (d / 2 + 0.07), rot), M['hanji'], tile=None)
     if veranda:
-        asm.add(box(w + 1.2, 0.25, 1.8), f @ T(0, yb + 0.35, d / 2 + 1.3), M['deck'], 1.2)
-        g = f @ T(0, yb + 0.5 + 0.45, d / 2 + 2.15)
+        asm.add(box(w + 1.2, 0.25, 1.8), f @ T(0, yb + 0.125, d / 2 + 1.3), M['deck'], 1.2)            # 툇마루 (기단 위)
+        asm.add(box(w + 1.0, base_h, 0.9), f @ T(0, y0 + base_h / 2, d / 2 + 1.75), M['granite'], 1.5)   # 기단 밖 마루 받침 (기단과 5cm 띄움)
+        g = f @ T(0, yb + 0.25 + 0.45, d / 2 + 2.15)
         asm.add(plane(w + 1.2, 0.9), g, M['fret'], tile=None)
         asm.add(plane(w + 1.2, 0.9), g @ T(0, 0, -0.03, PI), M['fret'], tile=None)
         for x in (-w / 2 - 0.6, w / 2 + 0.6):
-            asm.add(cyl(0.16, 0.18, wall_h, 10), f @ T(x, yb + 0.5 + wall_h / 2, d / 2 + 2.15), M['vermilion'], 1)
+            asm.add(cyl(0.16, 0.18, wall_h + 0.1, 10), f @ T(x, yb + 0.25 + (wall_h + 0.1) / 2, d / 2 + 2.15), M['vermilion'], 1)
     top = yb + wall_h
     asm.add(box(w + 0.6, 0.5, d + 0.6), f @ T(0, top + 0.1, 0), M['vermilion'], 1)
-    rafters(asm, f, w + 2.0, d + 4.6, top + 0.35, step=0.55)
     rh = min(3.4, 1.4 + d * 0.3)
-    asm.add(hip_roof(w / 2 + 2.6, d / 2 + 2.8, rh, ridge=0.8, lift=1.1), f @ T(0, top + 0.4, 0), M['tileGrey'], 1.4)
-    ridge(asm, f, max(w - d * 0.8, 2), top + 0.4 + rh)
+    base = seat(top + 0.35, d / 2 + 2.8, 0.8, rh, overhang=2.5)          # 창방(폭 d+0.6) 위에 얹힘
+    rafters(asm, f, w + 0.4, d / 2 + 0.3, d / 2 + 2.45, hip_under(base, d / 2 + 2.8, 0.8, rh))
+    asm.add(hip_roof(w / 2 + 2.6, d / 2 + 2.8, rh, ridge=0.8, lift=1.1), f @ T(0, base, 0), M['tileGrey'], 1.4)
+    ridge(asm, f, max(w - d * 0.8, 2), base + rh)
     if lamp:
         p = f @ V((0, top - 0.2, d / 2 + 2.0))
         t = f @ V((0, y0, d / 2 + 6))
@@ -380,16 +422,18 @@ def iljumun(cx, cz):
         halls.add(box(b - a - 0.8, 4.6, 0.18), f @ T((a + b) / 2, 0.5 + 2.3, 0), M['door'], 1.2)
     halls.add(box(W + 0.8, 0.6, D + 0.6), f @ T(0, 7.2, 0), M['vermilion'], 1)
     halls.add(box(W + 1.4, 0.8, D + 1.4), f @ T(0, 7.8, 0), M['bracket'], 1)
-    rafters(halls, f, W + 3, D + 4.2, 8.1, step=0.55)
     # 아래 지붕(좌우 날개) + 위층 누 + 윗지붕
-    halls.add(hip_roof(W / 2 + 2.4, D / 2 + 2.4, 2.2, ridge=0.75, lift=0.9), f @ T(0, 7.8, 0), M['tileGrey'], 1.4)
+    lb = seat(8.2, D / 2 + 2.4, 0.75, 2.2, overhang=1.7)
+    halls.add(hip_roof(W / 2 + 2.4, D / 2 + 2.4, 2.2, ridge=0.75, lift=0.9), f @ T(0, lb, 0), M['tileGrey'], 1.4)
+    rafters(halls, f, W + 1.2, D / 2 + 0.7, D / 2 + 2.05, hip_under(lb, D / 2 + 2.4, 0.75, 2.2))
     halls.add(box(W / 3 + 0.8, 3.0, D - 0.6), f @ T(0, 10.0 + 1.5, 0), M['vermilion'], 1)
     for s in (-1, 1):
-        g = f @ T(0, 10.0, s * (D / 2 - 0.1))
-        halls.add(plane(W / 3 + 0.6, 1.0), g @ T(0, 0.5, 0.05, 0 if s > 0 else PI), M['goldRail'], tile=None)
-        halls.add(box(3.6, 1.0, 0.12), g @ T(0, 2.0, 0.1 * s), M['plaque'], 1)  # 皇龍院 현판
-    halls.add(hip_roof(W / 3 / 2 + 3.2, D / 2 + 2.6, 3.0, ridge=0.8, lift=1.1), f @ T(0, 13.0, 0), M['tileGrey'], 1.4)
-    ridge(halls, f, W / 3 * 0.9, 16.1)
+        g = f @ T(0, 10.0, s * (D - 0.6) / 2)                                  # 누 몸체 벽면
+        halls.add(box(W / 3 + 0.6, 1.0, 0.03), g @ T(0, 0.5, s * 0.015, 0 if s > 0 else PI), M['goldRail'], tile=None)   # 벽에 붙은 난간판
+        halls.add(box(3.6, 1.0, 0.12), g @ T(0, 2.0, s * 0.05), M['plaque'], 1)  # 皇龍院 현판 (벽에 붙음)
+    ub = seat(13.0, D / 2 + 2.6, 0.8, 3.0, overhang=2.9)                  # 누 몸체(깊이 D-0.6) 위
+    halls.add(hip_roof(W / 3 / 2 + 3.2, D / 2 + 2.6, 3.0, ridge=0.8, lift=1.1), f @ T(0, ub, 0), M['tileGrey'], 1.4)
+    ridge(halls, f, W / 3 * 0.9, ub + 3.0)
     light(C_LIGHT, 'site_gate', 'AREA', tuple(f @ V((0, 9.5, D + 4))), tuple(f @ V((0, 4, 0))),
           energy=2400, color=(1.0, 0.78, 0.5), size=8)
 
@@ -414,17 +458,22 @@ def corridor():
         halls.add(box(0.26, 0.4, CW + 0.4), f @ T(x, 3.8, 0), M['rafter'], 1)                  # 대들보
     for z in (-CW / 2, CW / 2):
         halls.add(box(L + 0.4, 0.5, 0.3), f @ T(0, 3.85, z), M['rafter'], 1)                  # 도리
-    rafters(halls, f, L, CW + 2.6, 3.9, step=0.6)
-    halls.add(gable_roof(L + 1.2, CW + 3.2, 1.9, sag=0.18), f @ T(0, 4.1, 0), M['tileGrey'], 1.4)
-    ridge(halls, f, L + 1.0, 6.1)
+    t_ = (CW / 2) / ((CW + 3.2) / 2)
+    gb = 4.1 - (1.9 * (1 - t_) - 0.18 * math.sin(PI * t_)) - 0.04               # 밑면이 도리 위에 얹힘
+    half_w = (CW + 3.2) / 2
+    rafters(halls, f, L, CW / 2, half_w - 0.3,
+            lambda r: gb + 1.9 * (1 - r / half_w) - 0.18 * math.sin(PI * r / half_w), step=0.6)
+    halls.add(gable_roof(L + 1.2, CW + 3.2, 1.9, sag=0.18), f @ T(0, gb, 0), M['tileGrey'], 1.4)
+    ridge(halls, f, L + 1.0, gb + 1.9)
     # 가운데 누각 (위성사진의 밝은 지붕 칸, x -10 ~ -1)
     px = -5.5 - mid
     for x in (px - 3.5, px + 3.5):
         for z in (-CW / 2 - 0.6, CW / 2 + 0.6):
             halls.add(cyl(0.3, 0.32, 5.4, 16), f @ T(x, 0.4 + 2.7, z), M['vermilion'], 1)
     halls.add(box(8.0, 0.5, CW + 1.8), f @ T(px, 5.9, 0), M['bracket'], 1)
-    halls.add(hip_roof(5.6, CW / 2 + 2.6, 2.6, ridge=0.7, lift=1.0), f @ T(px, 6.1, 0), M['tileGrey'], 1.4)
-    ridge(halls, f, 3.4, 8.7)
+    pb = seat(6.15, CW / 2 + 2.6, 0.7, 2.6, overhang=1.7)
+    halls.add(hip_roof(5.6, CW / 2 + 2.6, 2.6, ridge=0.7, lift=1.0), f @ T(px, pb, 0), M['tileGrey'], 1.4)
+    ridge(halls, f, 3.4, pb + 2.6)
     for k in range(0, n, 3):
         x = -L / 2 + (k + 0.5) * L / n
         light(C_LIGHT, f'site_corr_{k}', 'POINT', tuple(f @ V((x, 3.3, 0))), energy=90, color=(1.0, 0.75, 0.45), size=0.3)
@@ -446,7 +495,7 @@ def sinpyeongru(cx, cz):
     zs = [-D / 2, 0, D / 2]
     for x in xs:
         for z in zs:
-            halls.add(cyl(0.32, 0.34, 7.2, 14), f @ T(x, SP_BASE + 3.6, z), M['vermilion'], 1)
+            halls.add(cyl(0.32, 0.34, 7.85, 14), f @ T(x, SP_BASE + 3.925, z), M['vermilion'], 1)   # 기단 위 → 창방 밑(8.825)
     halls.add(box(W + 1.8, 0.3, D + 1.8), f @ T(0, 3.9 + SP_BASE, 0), M['deck'], 1.2)            # 누마루
     halls.add(box(W + 1.8, 0.4, D + 1.8), f @ T(0, 3.55 + SP_BASE, 0), M['rafter'], 1)
     for (px, pz, ry, ln) in ((0, D / 2 + 0.85, 0, W + 1.7), (0, -D / 2 - 0.85, PI, W + 1.7),
@@ -456,9 +505,10 @@ def sinpyeongru(cx, cz):
         halls.add(plane(ln, 0.9), g @ T(0, 0, -0.03, PI), M['fret'], tile=None)
     halls.add(box(W + 0.6, 0.55, D + 0.6), f @ T(0, 8.1 + SP_BASE, 0), M['vermilion'], 1)
     halls.add(box(W + 1.2, 0.6, D + 1.2), f @ T(0, 8.65 + SP_BASE, 0), M['bracket'], 1)
-    rafters(halls, f, W + 2, D + 3.6, 8.8 + SP_BASE, step=0.55)
-    halls.add(hip_roof(W / 2 + 2.6, D / 2 + 2.4, 3.6, ridge=0.8, lift=1.2), f @ T(0, 8.9 + SP_BASE, 0), M['tileGrey'], 1.4)
-    ridge(halls, f, W * 0.55, 12.6 + SP_BASE)
+    sb = seat(8.95 + SP_BASE, D / 2 + 2.4, 0.8, 3.6, overhang=1.8)          # 평방(깊이 D+1.2) 위
+    rafters(halls, f, W + 1.0, D / 2 + 0.6, D / 2 + 2.05, hip_under(sb, D / 2 + 2.4, 0.8, 3.6))
+    halls.add(hip_roof(W / 2 + 2.6, D / 2 + 2.4, 3.6, ridge=0.8, lift=1.2), f @ T(0, sb, 0), M['tileGrey'], 1.4)
+    ridge(halls, f, W * 0.55, sb + 3.6)
     for x in (-W / 3, W / 3):
         light(C_LIGHT, f'site_sinpyeong_{x:.0f}', 'POINT', tuple(f @ V((x, 7.4 + SP_BASE, 0))), energy=70, color=(1.0, 0.72, 0.42), size=0.4)
 
@@ -473,7 +523,7 @@ def south_row():
     halls.add(cyl(r, r, 0.3, 64), T(cx, 0.15, cz), M['path'], 1.2)   # 윗면 0.3 (남쪽 돌길 0.14 보다 높게)
     for k in range(24):
         a = k / 24 * 2 * PI
-        halls.add(box(0.5, 0.05, 1.1), T(cx + math.cos(a) * (r - 0.8), 0.36, cz + math.sin(a) * (r - 0.8), PI / 2 - a), M['granite'], 1)
+        halls.add(box(0.5, 0.05, 1.1), T(cx + math.cos(a) * (r - 0.8), 0.32, cz + math.sin(a) * (r - 0.8), PI / 2 - a), M['granite'], 1)   # 광장에 박힘
     halls.add(cyl(0.9, 0.9, 0.3, 24), T(cx, 0.42, cz), M['balustrade'], 1)
     # 한옥 별채 (용마루 x 방향)
     hanok(halls, -32.0, -41.0, 14.0, 6.0, ry=0.0, y0=0.0, wall_h=3.4, veranda=False, base_h=0.8, label='annex', lamp=300)
@@ -547,8 +597,9 @@ def garden_block():
         garden.add(plane(2.9, 0.7), g, M['fret'], tile=None)
         garden.add(plane(2.9, 0.7), g @ T(0, 0, -0.03, PI), M['fret'], tile=None)
     garden.add(cyl(3.1, 3.1, 0.5, 6), T(hx, 4.7, hz), M['bracket'], 1)
-    garden.add(cyl(0.3, 5.2, 2.8, 6), T(hx, 6.3, hz), M['tileGrey'], 1.4)
-    garden.add(cyl(0.12, 0.3, 1.4, 8), T(hx, 8.3, hz), M['tileGrey'], 1)
+    rb = 4.95 - 2.8 * (5.2 - 3.1) / (5.2 - 0.3) - 0.04          # 원뿔 면이 도리(반지름 3.1, 윗면 4.95)에 얹힘
+    garden.add(cyl(0.3, 5.2, 2.8, 6), T(hx, rb + 1.4, hz), M['tileGrey'], 1.4)
+    garden.add(cyl(0.12, 0.3, 1.4, 8), T(hx, rb + 2.8 + 0.6, hz), M['tileGrey'], 1)
     light(C_LIGHT, 'site_pavilion', 'POINT', (hx, 4.2, hz), energy=380, color=(1.0, 0.75, 0.45), size=0.4)
     # 돌다리 (회랑 누각 앞에서 연못 서쪽을 건너 산책로로)
     bx, z0, z1 = -3.5, 23.6, 42.5
@@ -559,7 +610,9 @@ def garden_block():
         ya, yb = 0.5 + 0.9 * math.sin(PI * t0), 0.5 + 0.9 * math.sin(PI * t1)
         garden.add(box(2.0, 0.3, abs(zb - za) + 0.05), T(bx, (ya + yb) / 2, (za + zb) / 2, 0, -math.atan2(yb - ya, zb - za)), M['granite'], 1.2)
     for s in (-1, 1):
-        balustrade(garden, [(bx + s * 0.95, 0.9, z0 + 0.8), (bx + s * 0.95, 1.5, (z0 + z1) / 2), (bx + s * 0.95, 0.9, z1 - 0.8)], h=0.5, post=1.6)
+        deck = lambda z: 0.5 + 0.9 * math.sin(PI * (z - z0) / (z1 - z0)) + 0.13      # 다리 윗면
+        zs_ = [z0 + 0.8 + (z1 - z0 - 1.6) * k / 8 for k in range(9)]
+        balustrade(garden, [(bx + s * 0.95, deck(z), z) for z in zs_], h=0.5, post=1.2)
     # 곡선 산책로 (위성사진의 흰 길)
     pts = [(-31, 26), (-28, 33), (-20, 38), (-10, 40), (-3.5, 43), (4, 46), (14, 48.5), (24, 50)]
     garden.add(strip(pts, 1.6, 0.1), T(), M['path'], 1.2)   # 이음부가 겹치지 않는 한 장의 띠
@@ -625,6 +678,10 @@ def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True):
             a, b = V((ax, h + parapet + 0.25, az)), V((bx, h + parapet + 0.25, bz))
             g, m = tube(a, b, 0.035, 8)
             asm.add(g, m, M['steelRail'])
+            n = max(1, round((b - a).length / 1.6))
+            for k in range(n + 1):   # 난간 기둥 (난간벽 위에 박힘)
+                p = a + (b - a) * (k / n)
+                asm.add(box(0.04, 0.3, 0.04), T(p.x, h + parapet + 0.1, p.z), M['steelRail'], 1)
 
 
 def yeonsu_block():
@@ -639,13 +696,9 @@ def yeonsu_block():
     ye_ne.add(box(8.0, 0.25, 12.0), T(59, ROOF_Y + 0.42, 27), M['granite_clad'], 1.2)          # 창틀 받침
     glass_roof.add(box(7.6, 1.2, 11.6), T(59, ROOF_Y + 1.15, 27), M['skylight'])
     # 귀빈동 테라스 가구 (파라솔 테이블)
-    for (x, z) in ((27, 26), (27, 34), (27, 42), (31, 47)):
-        ye_ne.add(cyl(0.6, 0.6, 0.05, 20), T(x, Y + 0.75, z), M['steelRail'], 1)
-        ye_ne.add(cyl(0.05, 0.05, 2.4, 8), T(x, Y + 1.2, z), M['steelRail'], 1)
-        ye_ne.add(cyl(0.05, 1.5, 0.5, 16), T(x, Y + 2.4, z), M['parasol'], 1)
-        for k in range(4):
-            a = k * PI / 2 + PI / 4
-            ye_ne.add(box(0.5, 0.8, 0.5), T(x + math.cos(a) * 1.0, Y + 0.4, z + math.sin(a) * 1.0), M['steelRail'], 1)
+    for k, (x, z) in enumerate(((27, 26), (27, 34), (27, 42), (31, 47))):   # 야외 테이블 세트 + 파라솔 (불러온 모델)
+        ye_ne.add(mesh_source(SRC_TABLESET), T(x, Y, z, k * 0.7), list(SRC_TABLESET.data.materials))
+        ye_ne.add(mesh_source(SRC_PARASOL), T(x, Y, z), list(SRC_PARASOL.data.materials))
     light(C_LIGHT, 'site_terrace', 'POINT', (27, Y + 2.6, 30), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
 
     # 북서동 + 잔디 쪽 저층부(화분 줄)
@@ -691,21 +744,13 @@ def tank(x, z, ry=0.0):
 
 
 def tent(x, z, ry=0.0):
-    """5×5 팝업 천막: 네 기둥, 피라미드 지붕, 세 면 벽 (무대 쪽 +z 는 열림)"""
+    """대기용 팝업 천막 (gear.popup_tent) + 접이식 테이블·의자"""
     f = T(x, 0.12, z, ry)
-    for sx in (-2.45, 2.45):
-        for sz in (-2.45, 2.45):
-            backstage.add(box(0.06, 2.5, 0.06), f @ T(sx, 1.25, sz), M['alu'], 1)
-    backstage.add(box(5.3, 0.25, 5.3), f @ T(0, 2.4, 0), M['tent'], 1)
-    backstage.add(cyl(0.12, 3.54, 1.2, 4), f @ T(0, 3.12, 0, PI / 4), M['tent'], 1)
-    for (px, pz, ry2) in ((0, -2.56, PI), (2.56, 0, PI / 2), (-2.56, 0, -PI / 2)):   # 기둥 바깥
-        g = f @ T(px, 1.2, pz, ry2)
-        backstage.add(plane(4.9, 2.3), g, M['tent'], 1.5)
-        backstage.add(plane(4.9, 2.3), g @ T(0, 0, -0.02, PI), M['tent'], 1.5)
-    backstage.add(box(1.8, 0.05, 0.75), f @ T(0, 0.74, -1.3), M['tent'], 1)          # 접이식 테이블
-    for sx in (-0.7, 0.7):
-        backstage.add(box(0.05, 0.72, 0.6), f @ T(sx, 0.36, -1.3), M['alu'], 1)
-        backstage.add(box(0.45, 0.45, 0.45), f @ T(sx, 0.23, -0.4), M['case'], 1)       # 의자
+    gear.popup_tent(backstage, f, M, size=5.0, walls=(True, True, True, False))
+    backstage.add(bevel_box(1.8, 0.04, 0.75, 0.01), f @ T(0, 0.74, -1.3), M['tent'], 1)
+    for sx in (-0.8, 0.8):
+        backstage.add(bevel_box(0.04, 0.72, 0.6, 0.005), f @ T(sx, 0.36, -1.3), M['alu'], 1)
+        gear.folding_chair(backstage, f @ T(sx * 0.7, 0, -0.5, PI), M)
 
 
 def console_booth():
@@ -731,45 +776,30 @@ def console_booth():
         for yy in (0.1, DH):
             gg, m = tube(V((ax, y0 + yy, az)), V((bx, y0 + yy, bz)), 0.02, 6)
             backstage.add(gg, m, M['tent'])
-    # 콘솔 테이블 (로드 케이스)
+    # 운영 데스크: 플라이트 케이스 위에 실제 장비 (운영자는 -z 쪽에 앉아 무대(+z)를 본다)
     zt = zf - 0.9
     rows = ((cx - 3.2, 1.7, 'light'), (cx - 0.6, 1.5, 'audio'), (cx + 3.3, 1.9, 'video'))   # 기둥(x ±1.83) 피해서
     for (x, w, kind) in rows:
-        backstage.add(box(w, 0.82, 0.85), T(x, y0 + 0.41, zt), M['case'], 1)
-        if kind == 'light':          # 조명 콘솔: 경사진 본체 + 화면 두 개 + 페이더 줄 + 실행 버튼
-            backstage.add(box(1.4, 0.14, 0.7), T(x, y0 + 0.89, zt, 0, -0.1), M['case'], 1)
-            backstage.add(box(1.36, 0.42, 0.06), T(x, y0 + 1.15, zt + 0.3, 0, -0.35), M['case'], 1)
-            for sx in (-0.34, 0.34):
-                glow.add(plane(0.62, 0.38), T(x + sx, y0 + 1.16, zt + 0.265, PI, -0.35), M['uiLight'], tile=None)
-            for k in range(15):
-                fx = x - 0.6 + k * 0.085
-                backstage.add(box(0.03, 0.025, 0.06), T(fx, y0 + 0.975, zt - 0.2), M['alu'], 1)          # 페이더 캡
-                glow.add(box(0.05, 0.008, 0.025), T(fx, y0 + 0.965, zt - 0.05), M['clipLamp'] if k % 3 else M['uiAudio'])
-        elif kind == 'audio':        # 음향 콘솔: 채널 스트립 + 화면
-            backstage.add(box(1.3, 0.1, 0.7), T(x, y0 + 0.87, zt, 0, -0.12), M['case'], 1)
-            glow.add(plane(0.5, 0.32), T(x, y0 + 1.15, zt + 0.28, PI, -0.3), M['uiAudio'], tile=None)
-            for k in range(16):
-                fx = x - 0.56 + k * 0.075
-                backstage.add(box(0.028, 0.022, 0.05), T(fx, y0 + 0.935, zt - 0.18), M['alu'], 1)
-                for r in range(3):
-                    backstage.add(cyl(0.012, 0.012, 0.02, 8), T(fx, y0 + 0.935, zt + 0.02 + r * 0.07), M['alu'], 1)
-        else:                        # 영상 스위처 + 노트북 + 멀티뷰 모니터
-            backstage.add(box(0.9, 0.08, 0.45), T(x - 0.4, y0 + 0.86, zt), M['case'], 1)
-            glow.add(plane(0.62, 0.36), T(x + 0.5, y0 + 1.1, zt + 0.25, PI), M['uiVideo'], tile=None)
-            glow.add(plane(0.34, 0.22), T(x - 0.4, y0 + 1.0, zt + 0.1, PI, -0.3), M['uiVideo'], tile=None)
-    for (x, _, _) in rows:           # 운영 의자
-        backstage.add(box(0.5, 0.48, 0.5), T(x, y0 + 0.24, zt - 1.0), M['case'], 1)
-        backstage.add(box(0.5, 0.5, 0.06), T(x, y0 + 0.72, zt - 1.25), M['case'], 1)
-    # 55인치 프로그램 모니터 (칸막이 밖, 운영석 쪽을 봄) + 스탠드
-    tvx = cx - 2.0
-    backstage.add(box(0.06, 2.2, 0.06), T(tvx, y0 + 1.1, zf + 0.45), M['alu'], 1)
-    backstage.add(box(0.9, 0.08, 0.6), T(tvx, y0 + 0.04, zf + 0.45), M['alu'], 1)
-    backstage.add(box(1.26, 0.74, 0.06), T(tvx, y0 + 2.45, zf + 0.42), M['case'], 1)
-    glow.add(plane(1.22, 0.69), T(tvx, y0 + 2.45, zf + 0.32, PI), bpy.data.materials['led'], tile=None)
-    # 보조 모니터
-    backstage.add(box(0.05, 1.6, 0.05), T(cx + 3.6, y0 + 0.8, zf + 0.35), M['alu'], 1)
-    backstage.add(box(0.62, 0.4, 0.05), T(cx + 3.6, y0 + 1.7, zf + 0.32), M['case'], 1)
-    glow.add(plane(0.58, 0.36), T(cx + 3.6, y0 + 1.7, zf + 0.23, PI), M['uiVideo'], tile=None)
+        gear.road_case(backstage, T(x, y0, zt), M, w, 0.8, 0.85)
+        desk = T(x, y0 + 0.8, zt, PI)                                      # 장비 앞(+z 로컬)이 운영자 쪽
+        if kind == 'light':
+            gear.lighting_console(backstage, desk, M, glow)
+        elif kind == 'audio':
+            backstage.add(mesh_source(SRC_MIXER), desk, M['consoleBody'])
+            gear.program_monitor(backstage, T(x + 0.55, y0 + 0.8, zt + 0.25), M, glow, M['uiAudio'], height=0.45, w=0.5, hgt=0.32)
+        else:
+            gear.video_switcher(backstage, desk @ T(-0.45, 0, 0.05), M, glow)
+            backstage.add(mesh_source(SRC_LAPTOP), desk @ T(0.45, 0, 0.1), list(SRC_LAPTOP.data.materials))
+            gear.program_monitor(backstage, T(x, y0 + 0.8, zt + 0.3), M, glow, M['uiVideo'], height=0.5, w=0.62, hgt=0.36)
+    for (x, _, _) in rows:           # 스태프 접이식 의자
+        gear.folding_chair(backstage, T(x, y0, zt - 1.0), M)
+    # 55인치 프로그램 모니터 (칸막이 밖, 운영석 쪽을 봄)
+    gear.program_monitor(backstage, T(cx - 2.0, y0, zf + 0.45), M, glow, bpy.data.materials['led'])
+    gear.program_monitor(backstage, T(cx + 3.6, y0, zf + 0.35), M, glow, M['uiVideo'], height=1.7, w=0.62, hgt=0.4)
+    # 오른쪽 옆 줄: 중계 데스크 (케이스 + 노트북)
+    for zz in (zf - 1.2, zf - 2.6):
+        gear.road_case(backstage, T(cx + 4.9, y0, zz), M, 0.75, 0.74, 1.3, handles=False)
+        backstage.add(mesh_source(SRC_LAPTOP), T(cx + 4.9, y0 + 0.74, zz, -PI / 2), list(SRC_LAPTOP.data.materials))
     # 칸막이 위 클립 조명
     for x in (cx - 4.6, cx - 1.2, cx + 1.8, cx + 4.8):
         glow.add(sphere(0.07, 2), T(x, y0 + 1.72, zf - 0.1), M['clipLamp'])
@@ -782,13 +812,13 @@ def console_booth():
     light(C_LIGHT, 'site_booth_work', 'AREA', (cx, y0 + 3.3, cz), (cx, y0, cz), energy=160, color=(1.0, 0.85, 0.65), size=6)
     # 바닥의 케이스
     for (x, z) in ((cx - 5.0, cz - 2.5), (cx - 4.2, cz - 2.6), (cx + 4.5, cz - 2.2)):
-        backstage.add(bevel_box(0.8, 0.6, 0.6, 0.03), T(x, y0 + 0.3, z), M['case'], 1)
+        gear.road_case(backstage, T(x, y0, z), M, 0.8, 0.6, 0.6)
 
 
 def backstage_block():
     # 대기용 천막: 무대 바로 뒤 (무대 뒤 계단과 신평루 사이)
-    tent(3.2, -26.8)
-    tent(8.8, -26.8)
+    tent(2.8, -26.8)
+    tent(9.2, -26.8)
     console_booth()
 
 
@@ -847,7 +877,7 @@ def pine(px, pz, s=1.0, seed=0):
     rnd = random.Random(seed or int(px * 13 + pz * 7))
     # 줄기: 한쪽으로 휘며 올라간다
     lean = V((rnd.uniform(-0.45, 0.45), 1, rnd.uniform(-0.45, 0.45))).normalized()
-    pts = [V((px, 0.1, pz))]
+    pts = [V((px, -0.15, pz))]
     drift = V((0, 0, 0))
     for k in range(10):
         drift = drift * 0.7 + V((rnd.uniform(-0.12, 0.12), 0, rnd.uniform(-0.12, 0.12)))
@@ -883,7 +913,7 @@ def tree(px, pz, s=1.0):
     """활엽수 (느티·벚나무류): 줄기에서 갈라진 가지 끝마다 잎 카드 뭉치, 전체는 둥근 수관"""
     rnd = random.Random(int(px * 31 + pz * 17))
     top = V((px + rnd.uniform(-0.3, 0.3), 3.0 * s, pz + rnd.uniform(-0.3, 0.3)))
-    g, m = tube(V((px, 0, pz)), top, 0.22 * s, 10, caps=True)
+    g, m = tube(V((px, -0.15, pz)), top, 0.22 * s, 10, caps=True)
     pines.add(g, m, M['treeBark'], 0.8)
     crown_r, crown_h = rnd.uniform(3.0, 4.2) * s, rnd.uniform(3.2, 4.4) * s
     center = top + V((0, crown_h * 0.55, 0))

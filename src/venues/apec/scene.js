@@ -112,7 +112,7 @@ function gridTexture() {
 function sitePlate() {
   const geo = new THREE.ExtrudeGeometry(plateShape(), { depth: PLATE.depth, bevelEnabled: false, curveSegments: 16 });
   geo.rotateX(-PI / 2);
-  geo.translate(0, -PLATE.depth - 0.06, 0);   // 윗면 -0.06 (지면에 놓인 것들의 윗면과 6cm 이상)
+  geo.translate(0, -PLATE.depth - 0.01, 0);   // 윗면 -0.01 (바닥 y=0 인 것들이 판 위에 붙어 보이게)
   // 건축 모형 받침: 짙은 차콜 무광 판 + 옅게 음각된 5m 모눈, 옆면은 더 짙게
   const top = revealable(new THREE.MeshStandardMaterial({ color: '#ffffff', map: gridTexture(), roughness: 0.88, metalness: 0 }));
   const side = revealable(new THREE.MeshStandardMaterial({ color: '#141518', roughness: 0.6 }));

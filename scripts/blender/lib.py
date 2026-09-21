@@ -150,12 +150,15 @@ class Assembly:
         self.bm.from_mesh(me)
         bpy.data.meshes.remove(me)
         self.bm.faces.ensure_lookup_table()
-        if mat not in self.mats:
-            self.mats.append(mat)
-        idx = self.mats.index(mat)
+        # mat 이 목록이면 도형 원래의 재질 번호를 그 목록에 맞춰 옮긴다 (불러온 모델)
+        mats = mat if isinstance(mat, (list, tuple)) else [mat]
+        for m in mats:
+            if m not in self.mats:
+                self.mats.append(m)
+        remap = [self.mats.index(m) for m in mats]
         uv = self.bm.loops.layers.uv.active
         for f in self.bm.faces[start:]:
-            f.material_index = idx
+            f.material_index = remap[min(f.material_index, len(remap) - 1)] if len(remap) > 1 else remap[0]
             if tile is None:
                 continue
             n = f.normal
@@ -262,8 +265,7 @@ def cloth_skirt(r_top, r_bottom, h, folds=14, depth=0.035, seg=96, rings=8):
                 a, b = verts[j][i], verts[j][(i + 1) % seg]
                 c, d = verts[j + 1][(i + 1) % seg], verts[j + 1][i]
                 bm.faces.new((a, d, c, b))
-        bm.faces.new(list(reversed(verts[0])))
-        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)   # 윗면은 열어 둔다 (테이블 윗판이 덮음)
     return build
 
 
@@ -332,6 +334,15 @@ def world_hdri(path, strength=0.5):
     links.new(env.outputs['Color'], bg.inputs['Color'])
     bpy.context.scene.world = world
     return world
+
+
+def mesh_source(obj):
+    """Blender 오브젝트의 메시를 Assembly.add 에 넣을 수 있는 도형으로 (웹 좌표, UV·재질 번호 유지)"""
+    def build(bm):
+        me = obj.data
+        bm.from_mesh(me)
+        bmesh.ops.transform(bm, matrix=TO_WEB @ obj.matrix_world, verts=bm.verts)
+    return build
 
 
 def instance(src, coll, name, web_matrix):
