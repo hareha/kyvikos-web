@@ -6,7 +6,10 @@
 - apec_yeonsu.png    연수동 외벽 한 칸: 밝은 회색 화강석 판 + 층마다 긴 창 (가로 8m × 세로 4m)
 - apec_hanji.png     한옥 창호(띠살문): 붉은 목재 틀 + 불 켜진 한지
 - apec_fret.png      신평루·연수동 한옥 난간의 붉은 계자 난간 (구름 무늬 풍혈)
+- apec_stage_floor.png  무대 바닥: 흰 무대면 + 파란 고보 원 (드론 사진)
+- apec_ui_*.png        콘솔 화면: 조명 콘솔(보라 격자) / 음향 콘솔(채널 미터) / 영상 스위처(멀티뷰)
 """
+import math
 import random
 from pathlib import Path
 
@@ -130,7 +133,119 @@ def fret():
     noise(im, 6).filter(ImageFilter.GaussianBlur(0.6)).save(OUT / 'apec_fret.png')
 
 
+# ── 무대 바닥 (18m × 9m) ─────────────────────────────────────
+def stage_floor():
+    W, H = 2048, 1024
+    im = Image.new('RGB', (W, H), (150, 160, 178))
+    d = ImageDraw.Draw(im)
+    for x in range(0, W, 114):                       # 무대 판 이음새 (1m)
+        d.line([x, 0, x, H], fill=(128, 136, 152), width=2)
+    for y in range(0, H, 228):
+        d.line([0, y, W, y], fill=(128, 136, 152), width=2)
+    glow = Image.new('RGB', (W, H), (0, 0, 0))
+    g = ImageDraw.Draw(glow)
+    random.seed(8)
+    for _ in range(26):                               # 파란 무빙라이트 고보
+        cx, cy, r = random.randint(80, W - 80), random.randint(200, H - 60), random.randint(50, 95)
+        g.ellipse([cx - r, cy - r * 0.8, cx + r, cy + r * 0.8], fill=(40, 90, 230))
+        g.ellipse([cx - r * 0.45, cy - r * 0.35, cx + r * 0.45, cy + r * 0.35], fill=(90, 140, 255))
+    glow = glow.filter(ImageFilter.GaussianBlur(18))
+    im = Image.blend(im, Image.eval(glow, lambda v: min(255, v)), 0.0)
+    px, gp = im.load(), glow.load()
+    for y in range(H):
+        for x in range(W):
+            a, b = px[x, y], gp[x, y]
+            px[x, y] = tuple(int(min(255, a[i] * (1 - 0.0035 * b[2]) + b[i] * 0.95)) for i in range(3))
+    noise(im, 4).save(OUT / 'apec_stage_floor.png')
+
+
+# ── 콘솔 화면 (3칸: 조명 / 음향 / 영상) ─────────────────────────
+def console_ui():
+    W, H = 1536, 512
+    im = Image.new('RGB', (W, H), (8, 8, 14))
+    d = ImageDraw.Draw(im)
+    # 조명 콘솔: 보라 배경에 실행 버튼 격자 + 파란 큐 리스트
+    d.rectangle([0, 0, 511, H], fill=(70, 40, 150))
+    for gx in range(8):
+        for gy in range(6):
+            c = random.choice([(150, 110, 230), (90, 160, 250), (230, 200, 90), (60, 40, 120)])
+            d.rectangle([14 + gx * 62, 60 + gy * 72, 66 + gx * 62, 120 + gy * 72], fill=c)
+    d.rectangle([0, 0, 511, 44], fill=(30, 30, 60))
+    # 음향 콘솔: 채널 미터
+    d.rectangle([512, 0, 1023, H], fill=(20, 26, 40))
+    for ch in range(24):
+        x = 530 + ch * 20
+        lvl = random.randint(80, 380)
+        d.rectangle([x, H - 40 - lvl, x + 12, H - 40], fill=(60, 220, 110))
+        d.rectangle([x, H - 40 - lvl, x + 12, H - 40 - lvl + 20], fill=(240, 210, 60))
+    d.rectangle([512, 0, 1023, 40], fill=(50, 70, 110))
+    # 영상 스위처: 멀티뷰 4분할
+    d.rectangle([1024, 0, W, H], fill=(10, 10, 16))
+    for i, c in enumerate([(210, 60, 90), (60, 90, 220), (120, 60, 200), (40, 40, 60)]):
+        x0, y0 = 1034 + (i % 2) * 252, 10 + (i // 2) * 250
+        d.rectangle([x0, y0, x0 + 240, y0 + 240], fill=c)
+        d.rectangle([x0 + 60, y0 + 70, x0 + 180, y0 + 150], fill=(250, 220, 200))
+    im = im.filter(ImageFilter.GaussianBlur(1.0))
+    for i, name in enumerate(('light', 'audio', 'video')):
+        im.crop((i * 512, 0, i * 512 + 512, H)).save(OUT / f'apec_ui_{name}.png')
+
+
+# ── 연수동 창 안쪽 (창 하나 = 가로 7m × 세로 2.7m, 4칸) ─────────────
+def room_glass(tag, seed):
+    W, H = 1024, 400
+    im = Image.new('RGB', (W, H), (0, 0, 0))
+    d = ImageDraw.Draw(im)
+    random.seed(seed)
+    for k in range(4):
+        x0 = k * 256
+        lit = random.random() < 0.65
+        top, bot = ((236, 176, 104), (170, 110, 58)) if lit else ((40, 46, 56), (22, 26, 32))
+        for y in range(H):
+            t = y / H
+            d.line([x0, y, x0 + 255, y], fill=tuple(int(top[i] * (1 - t) + bot[i] * t) for i in range(3)))
+        if lit:   # 반쯤 친 커튼 주름
+            cw = random.randint(40, 90)
+            for side in (0, 1):
+                for x in range(cw):
+                    xx = x0 + (x if side == 0 else 255 - x)
+                    v = 0.75 + 0.25 * math.sin(x * 0.45)
+                    d.line([xx, 0, xx, H], fill=(int(250 * v), int(226 * v), int(186 * v)))
+    for k in range(5):   # 창틀·창살
+        x = min(W - 7, k * 256)
+        d.rectangle([x - 6, 0, x + 6, H], fill=(70, 72, 76))
+    d.rectangle([0, 0, W, 10], fill=(70, 72, 76))
+    d.rectangle([0, H - 10, W, H], fill=(70, 72, 76))
+    d.rectangle([0, 96, W, 104], fill=(70, 72, 76))
+    im.filter(ImageFilter.GaussianBlur(0.8)).save(OUT / f'apec_room_{tag}.png')
+
+
+# ── 솔잎 카드 (투명 배경, 잔가지에서 사방으로 뻗은 솔잎) ─────────────
+def pine_needles():
+    W = H = 512
+    im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    random.seed(21)
+    twig = [(40 + t * 430, 300 - t * 90 + math.sin(t * 5) * 10) for t in [k / 20 for k in range(21)]]
+    d.line(twig, fill=(92, 58, 34, 255), width=6)
+    for k in range(420):
+        t = random.random()
+        i = min(19, int(t * 20))
+        bx = twig[i][0] + (twig[i + 1][0] - twig[i][0]) * (t * 20 - i)
+        by = twig[i][1] + (twig[i + 1][1] - twig[i][1]) * (t * 20 - i)
+        a = random.uniform(-math.pi, math.pi)
+        L = random.uniform(40, 95) * (0.6 + 0.4 * math.sin(t * math.pi))
+        ex, ey = bx + math.cos(a) * L, by + math.sin(a) * L * 0.8
+        g = random.randint(70, 118)
+        d.line([(bx, by), (ex, ey)], fill=(int(g * 0.38), g, int(g * 0.42), 255), width=2)
+    im.save(OUT / 'apec_pine_needles.png')
+
+
+pine_needles()
 rail()
+for tag, seed in (('a', 12), ('b', 29), ('c', 41)):
+    room_glass(tag, seed)
+stage_floor()
+console_ui()
 yeonsu()
 hanji()
 fret()

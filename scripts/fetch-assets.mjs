@@ -32,6 +32,7 @@ const TEXTURES = {
   brick_wall_005: 1024,
   concrete_floor_01: 1024,
   corrugated_iron_02: 512,
+  granite_tile_03: 1024,
 };
 
 // 모델 id → 폴리곤 유지 비율 (1 = 축소 안 함)

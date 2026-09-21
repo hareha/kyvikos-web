@@ -59,7 +59,7 @@ def image(path, colorspace='sRGB'):
 
 def material(name, tex=None, color=(1, 1, 1), rough=0.8, metal=0.0, normal=1.0,
              emit=None, emit_strength=0.0, emit_image=None, image_base=None,
-             transmission=0.0, sheen=0.0, coat=0.0):
+             transmission=0.0, sheen=0.0, coat=0.0, alpha=False):
     """Principled BSDF 재질. tex = Poly Haven 텍스처 id (디퓨즈 × color, 노멀)"""
     m = bpy.data.materials.new(name)
     m.use_nodes = True
@@ -87,7 +87,18 @@ def material(name, tex=None, color=(1, 1, 1), rough=0.8, metal=0.0, normal=1.0,
     elif image_base:
         t = nodes.new('ShaderNodeTexImage')
         t.image = image(image_base)
-        links.new(t.outputs['Color'], bsdf.inputs['Base Color'])
+        if alpha:
+            t.image.alpha_mode = 'STRAIGHT'
+            links.new(t.outputs['Alpha'], bsdf.inputs['Alpha'])
+            mix = nodes.new('ShaderNodeMix')
+            mix.data_type = 'RGBA'
+            mix.blend_type = 'MULTIPLY'
+            mix.inputs['Factor'].default_value = 1.0
+            links.new(t.outputs['Color'], mix.inputs[6])
+            mix.inputs[7].default_value = base
+            links.new(mix.outputs[2], bsdf.inputs['Base Color'])
+        else:
+            links.new(t.outputs['Color'], bsdf.inputs['Base Color'])
     else:
         bsdf.inputs['Base Color'].default_value = base
     if emit_image:
@@ -111,6 +122,7 @@ def material(name, tex=None, color=(1, 1, 1), rough=0.8, metal=0.0, normal=1.0,
         'tex': tex or '', 'color': list(color), 'rough': rough, 'metal': metal,
         'emit': bool(emit or emit_image), 'emitColor': list(emit or (1, 1, 1)), 'emitStrength': emit_strength,
         'image': graphic.rsplit('/', 1)[-1] if graphic else '', 'transmission': transmission,
+        'alpha': alpha,
     }
     return m
 

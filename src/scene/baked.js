@@ -110,6 +110,16 @@ export async function loadBakedScene(root, name, { context = [] } = {}) {
         map: web.image ? graphic(web.image) : null,
         toneMapped: false,
       });
+    } else if (web.alpha && web.image) {
+      // 솔잎 같은 알파 카드: 투명 부분을 잘라내고 양면으로
+      material = new THREE.MeshStandardMaterial({
+        color,
+        map: graphic(web.image),
+        alphaTest: 0.5,
+        side: THREE.DoubleSide,
+        roughness: web.rough ?? 0.8,
+        metalness: 0,
+      });
     } else if (web.transmission) {
       material = new THREE.MeshStandardMaterial({
         color,
@@ -131,7 +141,7 @@ export async function loadBakedScene(root, name, { context = [] } = {}) {
     mesh.material = revealable(material);
 
     // 와이어프레임 선 (발광체·유리는 제외)
-    if (web.emit || web.transmission) return;
+    if (web.emit || web.transmission || web.alpha) return;
     const layer = contextSet.has(owner) ? 'context' : 'event';
     if (mesh.isInstancedMesh) {
       // 인스턴스(의자)는 외곽 상자만

@@ -13,6 +13,9 @@
 - 동선: 흰 사각 디딤돌 줄 + 무대 앞 동심원 패턴
 - 사인월: 보라색 'APEC 경상북도' + 상단 투광등 4개
 - 잔디: 강한 노란 투광
+
+배치 좌표는 위성사진 실측 (scripts/blender/site_survey.md): 무대 앞 원형 디딤돌(MED)을 기준점으로
+잔디마당 x -25~35 · z -33~17, 남동쪽은 중도타워 기단을 둘러싼 흰 원형 동선(중심 -43,-11 / 반지름 27)
 """
 import importlib
 import math
@@ -45,9 +48,9 @@ C_SRC.hide_viewport = True
 # ── 재질 ─────────────────────────────────────────────────────
 M = {
     'lawn': material('lawn', 'leafy_grass', (0.46, 0.7, 0.3), 0.95),
-    'paver': material('paver', None, (0.8, 0.8, 0.77), 0.6),
+    'paver': material('paver', None, (0.74, 0.74, 0.72), 0.6),
     'plaza': material('plaza', 'asphalt_02', (0.35, 0.36, 0.38), 0.9),
-    'stageFloor': material('stageFloor', None, (0.86, 0.9, 0.95), 0.22, coat=0.3),
+    'stageFloor': material('stageFloor', image_base=f'{SHOTS}/apec_stage_floor.png', rough=0.25, coat=0.3),
     'stageBody': material('stageBody', None, (0.02, 0.02, 0.03), 0.6),
     'stairBlue': material('stairBlue', None, (0.04, 0.1, 0.45), 0.45),
     'nosing': material('nosing', None, (0.8, 0.9, 1), emit=(0.7, 0.85, 1.0), emit_strength=6),
@@ -61,16 +64,17 @@ M = {
     'washLens': material('washLens', None, (1, 0.9, 0.75), emit=(1.0, 0.86, 0.66), emit_strength=60),
     'blueLens': material('blueLens', None, (0.3, 0.5, 1), emit=(0.25, 0.45, 1.0), emit_strength=45),
     'tableCloth': material('tableCloth', 'cotton_jersey', (0.022, 0.026, 0.05), 0.85, normal=0.7, sheen=0.4),
-    'plate': material('plate', None, (0.95, 0.95, 0.93), 0.15, coat=0.6),
+    'plate': material('plate', None, (0.7, 0.7, 0.68), 0.15, coat=0.6),
     'napkin': material('napkin', 'cotton_jersey', (0.95, 0.95, 0.93), 0.9, normal=0.4),
     'glass': material('glass', None, (0.9, 0.93, 0.95), 0.03, transmission=1.0),
     'flower': material('flower', None, (0.92, 0.92, 0.95), 0.8, sheen=0.3),
-    'chairBlack': material('chairBlack', 'cotton_jersey', (0.015, 0.015, 0.018), 0.7, normal=0.5, sheen=0.3),
-    'chairGold': material('chairGold', 'cotton_jersey', (0.62, 0.48, 0.28), 0.3, 0.35, normal=0.25, sheen=0.8),
+    'chairBlack': material('chairBlack', 'cotton_jersey', (0.007, 0.007, 0.009), 0.75, normal=0.6, sheen=0.05),
+    'chairGold': material('chairGold', 'cotton_jersey', (0.66, 0.47, 0.22), 0.28, 0.45, normal=0.25, sheen=0.6),
     'stainless': material('stainless', None, (0.8, 0.81, 0.82), 0.22, 1.0),
     'flame': material('flame', None, (1, 0.45, 0.1), emit=(1.0, 0.42, 0.1), emit_strength=35),
     'sign': material('sign', emit_image=f'{SHOTS}/apec_real_sign.png', emit_strength=0.35, rough=0.5),
     'stone': material('stone', 'rock_tile_floor_02', (0.6, 0.61, 0.62), 0.9),
+    'candle': material('candle', None, (1, 0.7, 0.35), emit=(1.0, 0.62, 0.25), emit_strength=18),
     'lanternGlow': material('lanternGlow', None, (1, 0.8, 0.55), emit=(1.0, 0.75, 0.45), emit_strength=4),
 }
 
@@ -79,24 +83,38 @@ glass = Assembly('glass', C_DYNAMIC)
 
 # ── 잔디 · 디딤돌 ─────────────────────────────────────────────
 ground = Assembly('ground', C_STATIC)
-ground.add(box(64, 0.12, 46), T(0, 0.06, -1), M['lawn'], tile=2.5)
-MED = (6, -7.6)  # 무대 앞 동심원 중심
+LAWN = (-25, 35, -33, 17)                       # x0, x1, z0, z1 (위성 실측)
+TOWER_C, TOWER_R = (-43, -11), 27.5             # 중도타워 원형 동선
+ground.add(box(LAWN[1] - LAWN[0], 0.12, LAWN[3] - LAWN[2]),
+           T((LAWN[0] + LAWN[1]) / 2, 0.06, (LAWN[2] + LAWN[3]) / 2), M['lawn'], tile=2.5)
+MED = (6, -7.6)  # 무대 앞 동심원 중심 (위성사진 기준점)
+
+
+LAWN_PINES = ((22, 8, 4.6), (14.5, 14.5, 2.6))  # 잔디 위 소나무 (x, z, 비울 반지름) — apec_context.py 와 같은 값
+
+
+def on_lawn(x, z, margin=0.0):
+    inside = LAWN[0] + margin <= x <= LAWN[1] - margin and LAWN[2] + margin <= z <= LAWN[3] - margin
+    clear = all(math.hypot(x - px, z - pz) > r + margin * 0.5 for px, pz, r in LAWN_PINES)
+    return inside and clear and math.hypot(x - TOWER_C[0], z - TOWER_C[1]) > TOWER_R + margin
 
 
 def paver(px, pz):
+    if not on_lawn(px, pz, 0.3):
+        return
     ground.add(bevel_box(0.5, 0.05, 0.5, 0.012), T(px, 0.135, pz, random.uniform(-0.02, 0.02)), M['paver'], 1.2)
 
 
 # 무대 앞을 가로지르는 흰 디딤돌 두 줄
-x = -31.0
-while x <= 31:
+x = -24.0
+while x <= 34:
     if abs(x - MED[0]) > 4.1:
         paver(x, MED[1] - 0.35)
         paver(x + 0.35, MED[1] + 0.35)
     x += 0.7
 # 앞쪽으로 뻗는 동선 두 줄
 z = MED[1] + 4.0
-while z <= 22:
+while z <= 16.5:
     paver(MED[0] - 0.35, z)
     paver(MED[0] + 0.35, z + 0.35)
     z += 0.7
@@ -118,7 +136,7 @@ CX, CZ, TOP = 6, -16, 1.2
 FRONT = CZ + 4.5  # 무대 앞면 z = -11.5
 stage = Assembly('stage', C_STATIC)
 stage.add(bevel_box(18, TOP - 0.06, 9, 0.02), T(CX, (TOP - 0.06) / 2, CZ), M['stageBody'])
-stage.add(box(18, 0.06, 9), T(CX, TOP - 0.03, CZ), M['stageFloor'], tile=3)
+stage.add(plane(18, 9), T(CX, TOP + 0.002, CZ, 0, -PI / 2), M['stageFloor'], tile=None)
 emit.add(plane(18, 1.1), T(CX, 0.58, FRONT + 0.012), M['fascia'], tile=None)
 # 좌우 계단 (단 높이 0.3m, 앞끝에 흰 LED 라인)
 for sx in (CX - 4.3, CX + 4.3):
@@ -127,6 +145,12 @@ for sx in (CX - 4.3, CX + 4.3):
         zc = FRONT + 0.35 * (4 - k) - 0.175
         stage.add(box(3.0, h, 0.35), T(sx, h / 2, zc), M['stairBlue'], 1)
         emit.add(box(3.0, 0.02, 0.03), T(sx, h + 0.005, zc + 0.16), M['nosing'])
+# 무대 뒤 계단 (대기 천막 쪽, 무대 오른쪽 뒤)
+BACK = CZ - 4.5
+for k in (3, 2, 1):
+    h = 0.3 * k
+    zc = BACK - 0.35 * (4 - k) + 0.175
+    stage.add(box(2.4, h, 0.35), T(CX + 6.2, h / 2, zc), M['stairBlue'], 1)
 # LED월 (하단 로고 띠 포함 14.4 × 6.2 m)
 stage.add(bevel_box(14.8, 6.5, 0.35, 0.02), T(CX, TOP + 3.25, CZ - 3.9), M['ledFrame'])
 emit.add(plane(14.4, 6.2), T(CX, TOP + 3.1, CZ - 3.71), M['led'], tile=None)
@@ -200,7 +224,7 @@ for i in range(12):
     truss.add(bevel_box(0.34, 0.3, 0.3, 0.03), T(lx, HT + 0.38, ZF), M['black'])
     emit.add(cyl(0.12, 0.12, 0.02, 20), T(lx, HT + 0.38, ZF + 0.16, 0, PI / 2), M['washLens'])
     light(C_LIGHT, f'wash_{i}', 'SPOT', (lx, HT + 0.38, ZF + 0.2), (lx * 0.8 + CX * 0.2, TOP, CZ + 2.5),
-          energy=900, color=(1.0, 0.88, 0.72), spot=0.8, blend=0.5, size=0.12)
+          energy=520, color=(1.0, 0.88, 0.72), spot=0.8, blend=0.5, size=0.12)
 for i in range(14):
     lx = X0 + 1.0 + i * (X1 - X0 - 2.0) / 13
     truss.add(bevel_box(0.16, 0.22, 0.16, 0.02), T(lx, HT - 0.32, ZF), M['black'])  # 요크
@@ -213,13 +237,18 @@ truss.build(smooth=True)
 
 # ── 만찬 테이블 ────────────────────────────────────────────────
 tables = Assembly('tables', C_STATIC)
+# 가운데 동선(x≈6) 왼쪽(타워 쪽)에 엇갈린 격자, 오른쪽에 3열 — 잔디·타워 동선 안쪽만
 TABLES = []
-for row, tz in enumerate((-3, 2.5, 8, 13.5, 19)):
-    for tx in (-24, -17, -10, -3):
-        TABLES.append((tx + (3 if row % 2 else 0), tz))
-for tz in (-3, 2.5, 8):
-    for tx in (13.5, 20.5):
-        TABLES.append((tx, tz))
+for row, tz in enumerate((-3, 2.5, 8, 13.5)):
+    for tx in (-20, -14, -8, -2):
+        x = tx + (3 if row % 2 else 0)
+        if on_lawn(x, tz, 2.4):
+            TABLES.append((x, tz))
+for tz in (-3, 2.5, 8, 13.5):
+    for tx in (13, 19.5, 26):
+        if on_lawn(tx, tz, 2.4):
+            TABLES.append((tx, tz))
+print('tables', len(TABLES))
 
 
 def wine_glass(base, a, r):
@@ -235,7 +264,10 @@ for (tx, tz) in TABLES:
     tables.add(cyl(0.92, 0.92, 0.03, 48), base @ T(0, 0.755, 0), M['tableCloth'], 0.6)
     tables.add(cloth_skirt(0.93, 1.0, 0.74, folds=16, depth=0.02), base @ T(0, 0.37, 0, random.uniform(0, PI)),
                M['tableCloth'], 0.6)
-    tables.add(sphere(0.2, 2), base @ T(0, 0.84, 0, 0, 0, 0, 1, 0.55, 1), M['flower'])
+    # 가운데 유리 캔들 세 개 (드론 사진의 테이블 가운데 불빛)
+    for ci, (cx_, cz_, ch) in enumerate(((0, 0, 0.16), (0.13, 0.08, 0.11), (-0.12, 0.09, 0.13))):
+        glass.add(cyl(0.045, 0.045, ch, 16), base @ T(cx_, 0.77 + ch / 2, cz_), M['glass'])
+        emit.add(cyl(0.012, 0.018, 0.035, 8), base @ T(cx_, 0.77 + ch * 0.55, cz_), M['candle'])
     for i in range(10):
         a = i / 10 * 2 * PI + 0.16
         px, pz = math.sin(a) * 0.66, math.cos(a) * 0.66
@@ -246,21 +278,26 @@ for (tx, tz) in TABLES:
         chair_spots.append(base @ T(math.sin(a) * 1.32, 0, math.cos(a) * 1.32, a))
 tables.build(smooth=True)
 
-# 연회 의자 (검정 커버 + 샴페인 골드 등받이 커버). 로컬: 앞 = -z, 등받이 = +z
-chair = Assembly('banquet_chair', C_SRC)
-chair.add(bevel_box(0.47, 0.34, 0.47, 0.03), T(0, 0.2, 0), M['chairBlack'], 0.5)       # 커버 스커트
-chair.add(bevel_box(0.48, 0.1, 0.48, 0.035, 3), T(0, 0.42, 0), M['chairBlack'], 0.5)   # 좌판
-chair.add(bevel_box(0.46, 0.09, 0.075, 0.02), T(0, 0.52, 0.2), M['chairBlack'], 0.5)   # 등받이 아래 띠
-# 새틴 등받이 커버: 모서리를 크게 굴려 천을 씌운 느낌 + 위로 갈수록 살짝 얇게
-chair.add(bevel_box(0.45, 0.48, 0.085, 0.06, 5), T(0, 0.81, 0.21, 0, -0.08, 0, 1, 1, 1), M['chairGold'], 0.5)
-chair.add(bevel_box(0.47, 0.06, 0.1, 0.02, 3), T(0, 0.66, 0.205, 0, -0.08), M['chairBlack'], 0.5)  # 리본 띠
-chair_src = chair.build(smooth=True)
+# 연회 의자: 실제 의자 모델 + 바닥까지 내려오는 검은 스판 커버 + 금색 새틴 띠·리본 (banquet_chair.py)
+import banquet_chair  # noqa: E402
+importlib.reload(banquet_chair)
+chair_src = banquet_chair.build(C_SRC, M['chairBlack'], M['chairGold'])
 for i, spot in enumerate(chair_spots):
     instance(chair_src, C_DYNAMIC, f'chair_{i:03d}', spot)
 
 # ── 스테인리스 피라미드 히터 ───────────────────────────────────
-HEATERS = [(-20.5, -5.5), (-6.5, -5.5), (10, -5.5), (24, -5.5), (-27, 5), (-13.5, 5), (-0.5, 5.2), (17, 5.5),
-           (-20.5, 10.8), (-6.5, 10.8), (10.5, 11), (-27, 16.5), (-13.5, 16.5), (0, 16.5), (24, 11), (28, -1)]
+# 테이블 사이 빈자리에 고르게 (동선·잔디 밖 제외)
+HEATERS = []
+for hz in (-6.2, -0.2, 5.3, 10.8, 15.8):
+    for hx in range(-22, 34, 5):
+        if not on_lawn(hx, hz, 0.8) or abs(hx - MED[0]) < 2.2:
+            continue
+        if min(math.hypot(hx - tx, hz - tz) for tx, tz in TABLES) < 2.7:
+            continue
+        if min((math.hypot(hx - a, hz - b) for a, b in HEATERS), default=99) < 5.5:
+            continue
+        HEATERS.append((hx, hz))
+print('heaters', len(HEATERS))
 heaters = Assembly('heaters', C_STATIC)
 for (hx, hz) in HEATERS:
     base = T(hx, 0.12, hz)
@@ -279,7 +316,7 @@ heaters.build()
 glass.build(smooth=True)
 
 # ── 보라색 사인월 + 상단 투광등 4개 ─────────────────────────────
-SIGN = T(-19, 0.12, -21, 0.25)
+SIGN = T(-15.5, 0.12, -24.5, 0.55)   # 타워 기단 앞 동선 가 (드론 사진)
 sign = Assembly('sign', C_STATIC)
 sign.add(bevel_box(4.9, 0.3, 0.7, 0.02), SIGN @ T(0, 0.15, 0), M['black'])
 sign.add(bevel_box(4.7, 3.3, 0.3, 0.02), SIGN @ T(0, 1.95, -0.02), M['black'])
@@ -296,7 +333,7 @@ sign.build()
 
 # 석등
 lanterns = Assembly('lanterns', C_STATIC)
-for (lx, lz) in ((-26, -15), (-12.5, -20.5), (-28, 3)):
+for (lx, lz) in ((-14.8, -17.5), (-15.2, -3.0), (-19.5, 8.5)):
     base = T(lx, 0.12, lz)
     lanterns.add(bevel_box(0.8, 0.3, 0.8, 0.03), base @ T(0, 0.15, 0), M['stone'], 1)
     lanterns.add(cyl(0.16, 0.2, 1.0, 12), base @ T(0, 0.8, 0), M['stone'], 1)
@@ -309,16 +346,17 @@ emit.build()
 
 # ── 조명 ─────────────────────────────────────────────────────
 # 잔디를 노랗게 비추는 강한 투광 (사진의 나트륨빛 톤)
-light(C_LIGHT, 'flood_left', 'AREA', (-16, 25, 22.5), (-6, 0, 0), energy=42000, color=(1.0, 0.76, 0.46), size=5)
-light(C_LIGHT, 'flood_right', 'AREA', (22, 24, 22.5), (6, 0, 0), energy=30000, color=(1.0, 0.78, 0.5), size=5)
-light(C_LIGHT, 'stage_top', 'AREA', (CX, 8.2, CZ + 1), (CX, TOP, CZ + 1), energy=2500, color=(0.85, 0.9, 1.0), size=8)
+# 연수동 옥상(북서동 · 북동동 테라스 모서리)에서 잔디를 비추는 투광
+light(C_LIGHT, 'flood_left', 'AREA', (40, 19, -4), (4, 0, -2), energy=42000, color=(1.0, 0.76, 0.46), size=5)
+light(C_LIGHT, 'flood_right', 'AREA', (22, 19, 17), (0, 0, 0), energy=30000, color=(1.0, 0.78, 0.5), size=5)
+light(C_LIGHT, 'stage_top', 'AREA', (CX, 8.2, CZ + 1), (CX, TOP, CZ + 1), energy=1100, color=(0.85, 0.9, 1.0), size=8)
 world_hdri(f'{HDRI}/moonless_golf_1k.hdr', 0.35)
 
 # ── 카메라 (현장 사진과 비슷한 위치) ─────────────────────────────
 camera(C_CAM, 'cam_vip', (-2.2, 1.3, -0.4), (6, 4.0, -19), 50)       # 테이블에서 무대 (image36)
-camera(C_CAM, 'cam_side', (-24, 13, 16), (7, 4, -15), 40)           # 좌측 상단에서 무대 (image38)
+camera(C_CAM, 'cam_side', (26, 15.4, 22.5), (-10, 3, -15), 60)           # 좌측 상단에서 무대 (image38)
 camera(C_CAM, 'cam_front', (6, 7, 24), (6, 3, -13), 42)
-camera(C_CAM, 'cam_aerial', (-30, 18, 34), (4, 0, -6), 50)          # 전경 (image37)
+camera(C_CAM, 'cam_aerial', (-35, 60, 85), (8, 5, -8), 45)          # 전경 (image37)
 scene.camera = bpy.data.objects['cam_side']
 
 scene.render.engine = 'CYCLES'

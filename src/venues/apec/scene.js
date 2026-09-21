@@ -6,10 +6,10 @@ import { loadBakedScene } from '../../scene/baked.js';
 /*
  * 경주 황룡원 — APEC CEO Summit 특별만찬
  *
- * 만찬장(잔디·무대·테이블·히터·사인월)과 황룡원 시설(중도타워·일주문·회랑·정원·신평루·연수동)은
- * Blender 에서 현장 사진·공식 조감도를 기준으로 만들고 조명을 베이크한 장면(apec_stage.glb)을 불러온다.
- * 이 파일은 그 바깥의 주변부(광장·산 능선·숲·도시 불빛)와 실시간 광원만 담당한다.
- *   -x: 회랑·정원(길 쪽)   +x: 신평루   -z: 중도타워·무대   +z: 연수동(옥상 귀빈동 테라스)
+ * 만찬장(잔디·무대·테이블·히터·사인월)과 황룡원 시설(중도타워·일주문·회랑·수공간·신평루·연수동)은
+ * Blender 에서 위성사진 실측 배치(scripts/blender/site_survey.md)와 현장 사진으로 만들고
+ * 조명을 베이크한 장면(apec_stage.glb)을 불러온다. 이 파일은 바깥 주변부와 실시간 광원만 담당한다.
+ *   -x: 동남(중도타워·일주문)  +x: 북서(연수동 북서동)  -z: 남서(무대·신평루)  +z: 북동(회랑·수공간·길)
  */
 
 const PI = Math.PI;
@@ -26,8 +26,9 @@ export function build() {
   const b = new Builder();
   b.withLayer('context', () => {
     site(b, M);
-    for (let x = 6; x <= 36; x += 6) roundTree(b, M, x, -34 - (x % 3), 0.9 + (x % 4) * 0.08);
-    for (let z = -26; z <= 24; z += 7) roundTree(b, M, 54 + (z % 3), z, 1.1);
+    // 황룡원 둘레 숲 (남서쪽 산책로 너머 · 북서쪽 뒤)
+    for (let x = -40; x <= 60; x += 7) roundTree(b, M, x, -60 - (Math.abs(x) % 4), 1 + (Math.abs(x) % 3) * 0.1);
+    for (let z = -50; z <= 50; z += 8) roundTree(b, M, 76 + (Math.abs(z) % 3), z, 1.15);
   });
 
   const root = b.build();
@@ -35,7 +36,7 @@ export function build() {
   const lights = addLights(root);
 
   // Blender 에서 베이크한 만찬장·중도타워·한옥
-  loadBakedScene(root, 'apec_stage', { context: ['ground', 'pagoda', 'halls', 'garden', 'yeonsu', 'pines', 'lanterns'] }).catch((error) =>
+  loadBakedScene(root, 'apec_stage', { context: ['ground', 'pagoda', 'halls', 'garden', 'yeonsu_ne', 'yeonsu_nw', 'pines', 'lanterns'] }).catch((error) =>
     console.warn('[kyvikos] 베이크 장면 로드 실패', error),
   );
   return { root, lights };
@@ -44,8 +45,8 @@ export function build() {
 // ── 대지 / 원경 ───────────────────────────────────────────────
 function site(b, M) {
   b.add(G.box(900, 0.2, 900), M.plaza, T(0, -0.1, 0), { outline: false });
-  // 잔디 경계석 (잔디 자체는 베이크 장면)
-  for (const [x, z, w, d] of [[0, 22.1, 64.4, 0.4], [0, -24.1, 64.4, 0.4], [32.1, -1, 0.4, 46], [-32.1, -1, 0.4, 46]]) {
+  // 잔디 경계석 (잔디 x -25~35, z -33~17 — 남동쪽은 타워 원형 동선)
+  for (const [x, z, w, d] of [[5, 17.2, 60.4, 0.4], [5, -33.2, 60.4, 0.4], [35.2, -8, 0.4, 50]]) {
     b.add(G.box(w, 0.22, d), M.stone, T(x, 0.11, z), { outline: false });
   }
   // 경주 분지를 둘러싼 산 능선 (앞산 + 뒷산)
@@ -114,8 +115,8 @@ function addLights(root) {
     add(l, base);
   };
   // Blender 장면과 같은 위치·색의 노란 투광
-  spot([-16, 25, 22.5], [-6, 0, 0], 5200, '#ffc27a');
-  spot([22, 24, 22.5], [6, 0, 0], 3800, '#ffc680');
+  spot([40, 19, -4], [4, 0, -2], 5200, '#ffc27a');
+  spot([22, 19, 17], [0, 0, 0], 3800, '#ffc680');
   spot([6, 8.2, -15], [6, 1.2, -15], 900, '#d8e4ff', 0.9);
 
   const led = new THREE.RectAreaLight('#4a78ff', 1, 14.4, 6.2);

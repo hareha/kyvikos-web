@@ -1,34 +1,40 @@
 {
   "groups": {
     "ground": {
-      "scale": 6.1749984777492095,
+      "scale": 8.081938974235378,
       "size": 4096,
-      "mean": 0.6431215405464172,
+      "mean": 0.45039474964141846,
       "file": "apec_stage_ground.webp"
     },
     "objects": {
-      "scale": 6.1186744570732,
-      "size": 2048,
-      "mean": 0.5043155550956726,
+      "scale": 5.736023731853669,
+      "size": 4096,
+      "mean": 0.21231864392757416,
       "file": "apec_stage_objects.webp"
     },
     "pagoda": {
-      "scale": 1.703653121772021,
+      "scale": 1.6415853863177092,
       "size": 4096,
-      "mean": 0.08052945882081985,
+      "mean": 0.08267725259065628,
       "file": "apec_stage_pagoda.webp"
     },
     "halls": {
-      "scale": 2.5538791133009924,
+      "scale": 1.9510370201390748,
       "size": 4096,
-      "mean": 0.060293957591056824,
+      "mean": 0.04451838135719299,
       "file": "apec_stage_halls.webp"
     },
-    "yeonsu": {
-      "scale": 6.437840850456925,
+    "yeonsu_ne": {
+      "scale": 2.6323836782704304,
       "size": 4096,
-      "mean": 0.11776559799909592,
-      "file": "apec_stage_yeonsu.webp"
+      "mean": 0.05666690692305565,
+      "file": "apec_stage_yeonsu_ne.webp"
+    },
+    "yeonsu_nw": {
+      "scale": 5.3738720131957045,
+      "size": 4096,
+      "mean": 0.08322788029909134,
+      "file": "apec_stage_yeonsu_nw.webp"
     }
   },
   "materials": {
@@ -42,37 +48,43 @@
     "black": "objects",
     "roof": "objects",
     "tableCloth": "objects",
-    "flower": "objects",
     "plate": "objects",
     "napkin": "objects",
     "stainless": "objects",
     "sign": "objects",
     "stone": "objects",
-    "granite": "yeonsu",
+    "ballastTank": "objects",
+    "tentAlu": "objects",
+    "tentWhite": "objects",
+    "roadCase": "objects",
+    "drapeGreen": "objects",
+    "granite": "yeonsu_nw",
     "balustrade": "halls",
     "wallWood": "pagoda",
-    "vermilion": "yeonsu",
+    "vermilion": "yeonsu_nw",
     "bracket": "halls",
     "copperTile": "pagoda",
-    "deckWood": "yeonsu",
+    "deckWood": "yeonsu_nw",
     "goldRail": "halls",
     "finialGold": "pagoda",
     "gateDoor": "halls",
-    "tileGrey": "yeonsu",
+    "rafter": "yeonsu_nw",
+    "tileGrey": "yeonsu_nw",
     "plaque": "halls",
     "pillarStone": "halls",
-    "rafter": "yeonsu",
-    "fretRail": "yeonsu",
+    "fretRail": "yeonsu_nw",
+    "pathStone": "halls",
+    "stoneWall": "yeonsu_nw",
     "pond": "halls",
     "gardenRock": "halls",
-    "shrub": "halls",
+    "shrub": "yeonsu_nw",
     "pineBark": "halls",
-    "pineNeedle": "halls",
-    "stoneWall": "yeonsu",
-    "yeonsuFacade": "yeonsu",
-    "terraceStone": "yeonsu",
-    "steelRail": "yeonsu",
-    "parasol": "yeonsu"
+    "pineBarkRed": "halls",
+    "treeLeaf": "halls",
+    "graniteClad": "yeonsu_nw",
+    "terraceStone": "yeonsu_nw",
+    "steelRail": "yeonsu_nw",
+    "parasol": "yeonsu_ne"
   },
   "objects": {
     "ground": "ground",
@@ -82,10 +94,12 @@
     "heaters": "objects",
     "sign": "objects",
     "lanterns": "objects",
+    "backstage": "objects",
     "pagoda": "pagoda",
     "halls": "halls",
     "garden": "halls",
     "pines": "halls",
-    "yeonsu": "yeonsu"
+    "yeonsu_ne": "yeonsu_ne",
+    "yeonsu_nw": "yeonsu_nw"
   }
 }

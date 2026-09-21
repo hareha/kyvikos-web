@@ -32,10 +32,11 @@ bake.margin_type = 'EXTEND'
 
 GROUPS = {
     'ground': (['ground'], CFG.get('ground_size', 4096)),
-    'objects': (['stage', 'roof', 'tables', 'heaters', 'sign', 'lanterns'], CFG.get('objects_size', 2048)),
+    'objects': (['stage', 'roof', 'tables', 'heaters', 'sign', 'lanterns', 'backstage'], CFG.get('objects_size', 4096)),
     'pagoda': (['pagoda'], CFG.get('pagoda_size', 4096)),
     'halls': (['halls', 'garden', 'pines'], CFG.get('halls_size', 4096)),
-    'yeonsu': (['yeonsu'], CFG.get('yeonsu_size', 4096)),
+    'yeonsu_ne': (['yeonsu_ne'], CFG.get('yeonsu_size', 4096)),
+    'yeonsu_nw': (['yeonsu_nw'], CFG.get('yeonsu_size', 4096)),
 }
 
 
