@@ -1,0 +1,67 @@
+{
+  "groups": {
+    "ground": {
+      "scale": 4.340740079465131,
+      "size": 4096,
+      "mean": 0.4567457437515259,
+      "file": "apec_stage_ground.webp"
+    },
+    "objects": {
+      "scale": 4.718072603578147,
+      "size": 2048,
+      "mean": 0.3909163773059845,
+      "file": "apec_stage_objects.webp"
+    },
+    "pagoda": {
+      "scale": 1.830365724537683,
+      "size": 2048,
+      "mean": 0.3257763683795929,
+      "file": "apec_stage_pagoda.webp"
+    },
+    "halls": {
+      "scale": 7.1692594626675445,
+      "size": 2048,
+      "mean": 0.26043012738227844,
+      "file": "apec_stage_halls.webp"
+    }
+  },
+  "materials": {
+    "lawn": "ground",
+    "paver": "ground",
+    "stageBody": "objects",
+    "stageFloor": "objects",
+    "stairBlue": "objects",
+    "ledFrame": "objects",
+    "lectern": "objects",
+    "black": "objects",
+    "roof": "objects",
+    "tableCloth": "objects",
+    "flower": "objects",
+    "plate": "objects",
+    "napkin": "objects",
+    "stainless": "objects",
+    "sign": "objects",
+    "stone": "objects",
+    "granite": "halls",
+    "wood": "pagoda",
+    "woodRed": "halls",
+    "rail": "pagoda",
+    "tile": "halls",
+    "bronze": "pagoda",
+    "plaster": "halls",
+    "pineBark": "halls",
+    "pineNeedle": "halls"
+  },
+  "objects": {
+    "ground": "ground",
+    "stage": "objects",
+    "roof": "objects",
+    "tables": "objects",
+    "heaters": "objects",
+    "sign": "objects",
+    "lanterns": "objects",
+    "pagoda": "pagoda",
+    "halls": "halls",
+    "pines": "halls"
+  }
+}

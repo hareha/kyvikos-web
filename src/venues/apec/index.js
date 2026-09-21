@@ -9,4 +9,8 @@ export const env = {
   exposure: 1,
   hdri: 'moonless_golf',
   envIntensity: 1.5,
+  // Blender(AgX)에서 베이크한 장면
+  toneMapping: 'agx',
+  bloomThreshold: 2.6,
+  bloomStrength: 0.55,
 };

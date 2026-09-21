@@ -188,6 +188,8 @@ function applyEnv(env) {
   }
   stars.visible = env.stars;
   renderer.toneMappingExposure = env.exposure;
+  // Blender 에서 베이크한 공간은 Blender 와 같은 AgX 톤매핑으로 맞춘다
+  renderer.toneMapping = env.toneMapping === 'agx' ? THREE.AgXToneMapping : THREE.ACESFilmicToneMapping;
 
   gradientEnv?.dispose();
   gradientEnv = null;
@@ -529,8 +531,9 @@ function applyRevealState() {
   scene.fog.density = env.fog * k;
   grid.material.opacity = 0.35 * (1 - smoothstep(reveal.value, -1, 4));
   grid.visible = grid.material.opacity > 0.001;
-  bloom.strength = lerp(0.55, 0.7, k);
-  bloom.threshold = lerp(0.55, 0.85, k);
+  bloom.strength = lerp(0.55, env.bloomStrength ?? 0.7, k);
+  // 번짐은 실제 조명기구(밝기 1 이상)에만 — 흰 바닥·접시가 번지지 않게
+  bloom.threshold = lerp(0.55, env.bloomThreshold ?? 0.85, k);
   bloom.radius = lerp(0.3, 0.5, k);
   scene.environmentIntensity = k * (env.envIntensity ?? (env.sky ? 0.6 : 1.6));
 
