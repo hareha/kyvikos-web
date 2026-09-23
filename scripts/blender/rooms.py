@@ -68,6 +68,11 @@ def build(asm, rooms, doors, decals, h, t, default_mat, tile=2.0):
             for (p, q) in pieces:
                 if q - p > 0.05:
                     walls.append((axis, c, p, q, plus, minus))
+    # 같은 선 위에서 이어지는 조각끼리는 마구리를 만들지 않는다 (같은 면이 겹쳐 z-fighting)
+    ends = {}
+    for (axis, c, p, q, _pl, _mi) in walls:
+        for v in (p, q):
+            ends[(axis, round(c, 3), round(v, 3))] = ends.get((axis, round(c, 3), round(v, 3)), 0) + 1
     # 벽 조각 만들기: 면 = 양쪽 방 색, 그래픽은 해당 면으로
     for (axis, c, p, q, plus, minus) in walls:
         L = q - p
@@ -111,5 +116,7 @@ def build(asm, rooms, doors, decals, h, t, default_mat, tile=2.0):
         top = mat_of(plus) if plus else mat_of(minus)
         asm.add(plane(L, t), base @ T(0, wh, 0, 0, -PI / 2), default_mat, tile)
         for s in (-1, 1):
+            if ends.get((axis, round(c, 3), round(q if s > 0 else p, 3)), 0) > 1:
+                continue
             asm.add(plane(t, wh), base @ T(s * L / 2, wh / 2, 0, s * PI / 2), top, tile)
     return walls

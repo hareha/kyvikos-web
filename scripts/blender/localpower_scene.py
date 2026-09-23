@@ -6,7 +6,8 @@
 - 부지: 서울 성동구 성수이로18길 20. 카카오 스카이뷰(0.125m/px)·그림자·블록 줄눈(200mm)으로 측량.
   창고 34.0 × 12.2m, 박공면이 도로(성수이로18길, 차도 6.45m)를 보고 용마루는 도로와 직각. 처마 3.7m, 용마루 5.35m(15°).
   푸른 골강판 지붕, 흰 칠 벽돌 박공, 서쪽(마당 쪽) 크림색 벽과 흰 골강판, 청록 물받이.
-  서쪽 마당 25.2 × 10.5m (초록 철문 + 주황 메시, 블록 담 '20', 빨간 L자 길), 그 너머 흰 판자 2층집(검은 발코니).
+  서쪽 마당 25.2 × 10.5m (초록 철문 + 주황 메시, 블록 담 '20', 빨간 L자 길, 주황 가림막 4.7m + 가운데 출입문,
+  홍콩 간판 포토월 4.95 × 3.24m, 판자집 앞 포토 링, 체험 존), 그 너머 흰 판자 2층집(검은 발코니).
   길 건너 S-Factory(흰 블록, 주차장), 북쪽 가로수, 콘크리트 전봇대 3개(변압기·가로등·CCTV), 동쪽 푸른 박공 창고.
 - 전시장: 트러스 11개(2.78m 간격, 하현 3.7m), 시멘트 슬레이트 천장, 4-way 카세트 에어컨 4대, 흰 가벽 3.5m.
   URBAN JUNGLE 니트 8벌+실타래 탑 7개, 스카이라인 벽(백라이트 실루엣, 큐브 8개), 실 커튼 원기둥(5벌),
@@ -17,6 +18,7 @@
 import importlib
 import json
 import math
+import os
 import random
 import sys
 
@@ -124,11 +126,23 @@ M = {
     'runwayTop': material('lpRunwayTop', None, (0.02, 0.02, 0.022), 0.1, coat=1.0),
     'bench': material('lpBench', None, (0.9, 0.9, 0.88), 0.6),
     'hazard': material('lpHazard', None, (0.9, 0.75, 0.05), 0.5),
+    'slab': material('lpSlab', image_base=T_('floor_concrete'), color=srgb('#BEB9B0'), rough=0.9),          # 슬래브 콘크리트
+    'asphalt': material('lpAsphalt', None, srgb('#55534F'), 0.95),                                          # 주차선 남은 아스팔트
+    'drain': material('lpDrain', None, (0.18, 0.18, 0.18), 0.9),
+    'paleGrey': material('lpPaleGrey', None, (0.72, 0.72, 0.7), 0.85),
+    'pine': material('lpPine', 'dark_wooden_planks', (0.82, 0.68, 0.45), 0.9),                              # 생나무 팔레트
+    'darkWood': material('lpDarkWood', 'dark_wooden_planks', (0.22, 0.14, 0.1), 0.6),
+    'brass': material('lpBrass', None, (0.72, 0.56, 0.22), 0.3, 0.9),
+    'bamboo': material('lpBamboo', image_base=f'{SHOTS}/apec_leaves.png', color=(0.4, 0.52, 0.34), rough=0.85, alpha=True),
+    'rust': material('lpRust', None, srgb('#7A4A34'), 0.95),
+    'corrGreen': material('lpCorrGreen', 'corrugated_iron_02', srgb('#AFBFA6'), 0.65, 0.35),                # 창고 마당쪽 연녹색 골강판
+    'mesh': material('lpMesh', image_base=f'{SHOTS}/lp_t_gate.png', color=(0.42, 0.55, 0.4), rough=0.7, alpha=True),
+    'bulb': material('lpBulb', None, (1, 1, 1), emit=(1.0, 0.93, 0.82), emit_strength=6),
+    'bulbSoft': material('lpBulbSoft', None, (1, 1, 1), emit=(1.0, 0.94, 0.85), emit_strength=2.2),
 }
 
 
 def G(name, emit=0.0, alpha=False):
-    import os
     p = T_(name)
     if not os.path.exists(p):
         print('texture missing:', name)
@@ -320,12 +334,12 @@ gable_tri(shellOut, HX, 1, M['brick'])
 shellOut.add(plane(2 * HZ, EAVE), T(-HX, EAVE / 2, 0, -PI / 2), M['brick'], 1.5)
 gable_tri(shellOut, -HX, -1, M['brick'])
 shellOut.add(plane(2 * HX, EAVE), T(0, EAVE / 2, HZ), M['brick'], 1.5)
-# 마당 쪽 벽 (-z): 크림 미장 + 흰 골강판 칸, 방문객 문 x 2.45~4.65 (높이 2.4)
-DX0, DX1, DH = 2.45, 4.65, 2.4
-for (a_, b_, mat) in ((-HX, -9.0, M['creamWall']), (-9.0, -3.0, M['corrWhite']), (-3.0, DX0, M['creamWall']),
-                      (DX1, 9.5, M['creamWall']), (9.5, 14.5, M['corrWhite']), (14.5, HX, M['creamWall'])):
+# 마당 쪽 벽 (-z): 연녹색 골강판 (파묘 2024 사진), 미닫이 방문객 문
+DX0, DX1, DH = 5.5, 7.4, 2.4                                  # 가림막 출입 모듈(5.0~7.9) 과 맞춘 마당 문
+for (a_, b_, mat) in ((-HX, -9.0, M['corrGreen']), (-9.0, -3.0, M['corrGreen']), (-3.0, DX0, M['corrGreen']),
+                      (DX1, 9.5, M['corrGreen']), (9.5, 14.5, M['corrGreen']), (14.5, HX, M['corrGreen'])):
     shellOut.add(plane(b_ - a_, EAVE), T((a_ + b_) / 2, EAVE / 2, -HZ, PI), mat, 1.5)
-shellOut.add(plane(DX1 - DX0, EAVE - DH), T((DX0 + DX1) / 2, (EAVE + DH) / 2, -HZ, PI), M['creamWall'], 1.5)
+shellOut.add(plane(DX1 - DX0, EAVE - DH), T((DX0 + DX1) / 2, (EAVE + DH) / 2, -HZ, PI), M['corrGreen'], 1.5)
 # 문 (진회색 철문, 열린 한 짝)
 outer.add(box(1.05, DH, 0.05), T(DX0 + 0.5, DH / 2, -HZ - 0.55, PI / 2 + 0.3), M['steel'], 1)
 for x_ in (DX0 - 0.03, DX1 + 0.03):
@@ -641,7 +655,8 @@ FX = 17.6
 outer.add(box(0.3, 1.66, 1.5), T(FX, 0.83, Z(7.15)), M['block'], 0.4)
 outer.add(box(0.06, 1.29, 1.5), T(FX + 0.05, 1.66 + 0.645, Z(7.15)), M['corrGrey'], 1)
 outer.add(plane(0.28, 0.33), T(FX + 0.152, 1.5, Z(6.9), PI / 2), G('blockwall_20'), tile=None)
-outer.add(cyl(0.1, 0.1, 2.9, 12), T(FX, 1.45, Z(7.9)), M['steel'], 1)
+outer.add(box(0.25, 3.0, 0.25), T(FX, 1.5, Z(7.9)), M['rust'], 1)                            # 녹슨 문설주
+outer.add(plane(0.3, 0.11), T(FX + 0.152, 2.3, Z(6.8), PI / 2), material('lpStreetPlate', None, srgb('#1E4E9C'), 0.5), 1)
 for (z0, z1, open_) in ((7.9, 10.8, True), (10.8, 13.7, False)):                              # 철문 두 짝
     w_ = z1 - z0
     if open_:
@@ -689,7 +704,7 @@ g, m = tube(V((cx_ - 0.05, 6.6, cz_)), V((cx_ + 2.5, 7.0, cz_)), 0.04, 8, caps=T
 outer.add(g, m, M['steel'])
 outer.add(bevel_box(0.6, 0.12, 0.26, 0.02), T(cx_ + 2.7, 6.95, cz_), M['steel'], 1)
 outer.add(sphere(0.12, 2), T(cx_ + 0.2, 4.2, cz_), M['white'])                                   # CCTV
-outer.add(box(0.3, 0.45, 0.2), T(cx_ + 0.2, 2.2, cz_), material('lpBlueBox', None, (0.1, 0.25, 0.6), 0.5), 1)
+outer.add(box(0.3, 0.45, 0.2), T(cx_ + 0.2, 2.2, cz_ - 0.45), material('lpBlueBox', None, (0.1, 0.25, 0.6), 0.5), 1)
 order = sorted(POLES.values(), key=lambda p: p[1])
 ends = [(18.0, PZ0 + 0.5)] + order + [(18.0, PZ1 - 0.5)]
 for (dy, dx) in ((9.6, -0.3), (9.6, 0.3), (8.8, -0.5), (7.4, 0.2), (6.8, -0.2), (6.3, 0.25)):
@@ -765,97 +780,205 @@ for fl in (2.0, 5.5, 9.0, 12.5):
     nbrs.add(box(0.1, 1.4, 58.0), T(37.6, fl, -11.0), M['glassDark'], 1)
 nbrs.add(box(37.65 - 30.3, 0.05, 60.0), T((30.3 + 37.65) / 2, 0.025, -11.0), M['street'], 3)
 
-# ══ 입구 마당 (25.2 × 10.5m): 주황 가림막 · 빨간 길 · 포토월 · 포토 소품 · 체험 존 ══════════
+# ══ 입구 마당 (25.2 × 10.5m) ═══════════════════════════════════════════════════════════
+#    근거: assets-src/refs/localpower/yard_layout.md/json (2차 조사).
+#    높이는 수평선(소실선)법으로 다시 잼: 가림막 4.2m, 포토월 2.85m (1차의 4.7/3.24 는 12% 과대).
+#    바닥은 두 가지: x>4 슬래브 콘크리트(넓은 줄눈), x<4 주차선이 남은 아스팔트.
 YX0, YX1, YZ0, YZ1 = -7.55, 17.6, Z(16.55), Z(6.1)                      # 마당 범위 (웹)
-court.add(box(YX1 - YX0, 0.1, YZ1 - YZ0), T((YX0 + YX1) / 2, -0.05, (YZ0 + YZ1) / 2), M['yard'], 3)
-# 빨간 L자 길 (폭 1.45m): 문 → 창고 문 앞에서 꺾임
+SURF_X = 4.0                                                            # 바닥이 바뀌는 선
+court.add(box(YX1 - SURF_X, 0.1, YZ1 - YZ0), T((SURF_X + YX1) / 2, -0.05, (YZ0 + YZ1) / 2), M['slab'], 3)
+court.add(box(SURF_X - YX0, 0.1, YZ1 - YZ0), T((YX0 + SURF_X) / 2, -0.05, (YZ0 + YZ1) / 2), M['asphalt'], 3)
+for k in range(9):                                                      # 남아 있는 흰 주차선 (2.4m 간격)
+    x_ = SURF_X - 0.6 - k * 2.4
+    if x_ > YX0 + 0.3:
+        court.add(box(0.1, 0.04, 4.6), T(x_, 0.02, Z(11.9)), M['lineW'], 1)
+court.add(box(SURF_X - YX0 - 0.6, 0.04, 0.1), T((YX0 + SURF_X) / 2, 0.02, Z(9.6)), M['lineW'], 1)
+court.add(box(0.45, 0.06, YZ1 - YZ0 - 1.0), T(15.3, 0.01, (YZ0 + YZ1) / 2), M['drain'], 1)     # 문 안쪽 배수 홈
+court.add(cyl(0.325, 0.325, 0.03, 24), T(16.3, 0.02, Z(11.6)), M['steel'], 1)                  # 맨홀 뚜껑
+court.add(cyl(0.3, 0.3, 0.03, 24), T(5.4, 0.02, Z(14.9)), M['steel'], 1)
+# 빨간 길: 문 밖 노면에서 시작해 마당을 가로지른 뒤 가림막 문 앞에서 꺾인다 (폭 1.45m)
+court.add(box(18.6 - 17.45, 0.04, 1.45), T((17.45 + 18.6) / 2, 0.021, Z(10.175)), M['redPath'], 2)
 court.add(box(17.45 - 2.45, 0.04, 1.45), T((2.45 + 17.45) / 2, 0.02, Z(10.175)), M['redPath'], 2)
-court.add(box(2.2, 0.04, Z(7.35) - Z(9.45)), T(3.55, 0.02, (Z(7.35) + Z(9.45)) / 2), M['redPath'], 2)
-# 창고 쪽 주황 가림막 (높이 3.0m, 마당을 봄): 로고 · 안내 글 · 전시 안내 · 큰 로고
-HOARD_Z = Z(7.25)
-for (x0, x1, slug) in ((12.6, 16.5, 'hoarding_main'), (8.0, 12.6, 'hoarding_text'),
-                       (4.6, 8.0, 'hoarding_exhibition'), (1.0, 4.6, 'hoarding_logo')):
-    panel(court, x1 - x0, 3.0, T((x0 + x1) / 2, 1.5, HOARD_Z, PI), G(slug), M['orange'], 0.12)
-panel(court, 5.2, 3.0, T(14.6, 1.5, Z(13.6)), G('hoarding_text'), M['orange'], 0.12)          # 문 오른쪽 가림막
-# 홍콩 간판 포토월 (마당 끝, 문 쪽을 봄) + 위 흰 후원사 띠
-PWX = -5.2
-panel(court, 6.6, 3.0, T(PWX, 1.5, Z(11.3), PI / 2), G('photowall_front'), M['white'], 0.2)
-panel(court, 6.6, 0.55, T(PWX, 3.28, Z(11.3), PI / 2), G('hoarding_sponsor'), M['white'], 0.2)
-for zz in (Z(9.2), Z(13.4)):                                                                   # 뒤 버팀대
-    member(court, V((PWX - 0.12, 2.6, zz)), V((PWX - 1.4, 0.05, zz)), 0.035, M['steel'])
+court.add(box(7.9 - 5.0, 0.04, Z(7.6) - Z(9.45)), T(6.45, 0.02, (Z(7.6) + Z(9.45)) / 2), M['redPath'], 2)
 
-# ── 판자집 쪽 포토 소품 줄 (마당 축을 봄) ────────────────────────────
-PROP_Z = Z(14.6)
-panel(court, 2.6, 1.9, T(12.6, 1.35, PROP_Z), G('nightstreet_panel'), M['black'], 0.1)          # 홍콩 야경 패널
+# ── 주황 가림막 (z=7.4 평면, 높이 4.2m, 두께 0.25m, 5개 모듈) ─────────────────────────
+HOARD_Z, HOARD_H, HOARD_T = Z(7.4), 4.2, 0.25
+for (x0, x1, slug) in ((12.6, 17.45, 'hoarding_text'),        # 인사말 + 본문 4단
+                       (7.9, 12.6, 'hoarding_logo'),          # 세로 대형 워드마크
+                       (1.6, 5.0, 'hoarding_exhibition')):    # EXHIBITION IN SEOUL + 3개 존 설명
+    panel(court, x1 - x0, HOARD_H, T((x0 + x1) / 2, HOARD_H / 2, HOARD_Z, PI), G(slug), M['orange'], HOARD_T)
+DR0, DR1, DR_H, OP_W, OP_H = 5.0, 7.9, 3.9, 1.9, 2.6          # 창고 출입 모듈 (여기만 낮아진다: 개구부 2.6 + 후원사판 1.3)
+DRC = (DR0 + DR1) / 2
+for s in (-1, 1):                                              # 주황 문설주
+    jw = (DR1 - DR0 - OP_W) / 2
+    panel(court, jw, DR_H, T(DRC + s * (OP_W + jw) / 2, DR_H / 2, HOARD_Z, PI), M['orange'], M['orange'], HOARD_T)
+panel(court, OP_W, DR_H - OP_H, T(DRC, (OP_H + DR_H) / 2, HOARD_Z, PI), G('hoarding_sponsor'), M['white'], HOARD_T)
+for s in (-1, 1):                                              # 문 뒤 통로 (가림막 ~ 창고 벽)
+    court.add(plane(Z(6.1) - Z(7.4), OP_H), T(DRC + s * (OP_W / 2 - 0.12), OP_H / 2, Z(6.75), -s * PI / 2), M['orange'], 1)
+court.add(plane(OP_W - 0.24, Z(6.1) - Z(7.4)), T(DRC, OP_H, Z(6.75), 0, PI / 2), M['black'], 1)
+court.add(box(1.0, 0.02, 0.25), T(DRC, 0.03, Z(7.62)), M['hazard'], 1)                         # 문턱 위험 띠
+court.add(bevel_box(0.6, 1.05, 0.6, 0.03), T(8.4, 0.525, Z(7.95)), M['black'], 1)              # 검은 이동식 쓰레기통
+court.add(cyl(0.11, 0.12, 0.5, 16), T(4.6, 0.25, Z(7.85)), material('lpExtin', None, srgb('#B32019'), 0.5), 1)
+for x_ in (16.0, 11.5, 7.0, 2.5):                                                              # 가림막 뒤 구스넥 투광등 (5m 기둥)
+    court.add(cyl(0.05, 0.05, 5.0, 10), T(x_, 2.5, HOARD_Z + 0.5), M['black'], 1)
+    g, m = tube(V((x_, 5.0, HOARD_Z + 0.5)), V((x_, 5.05, HOARD_Z - 0.35)), 0.025, 6)
+    court.add(g, m, M['black'])
+    court.add(cyl(0.08, 0.1, 0.16, 12), T(x_, 4.95, HOARD_Z - 0.42, 0, 0.7), M['black'], 1)
+    emit.add(cyl(0.07, 0.07, 0.01, 12), T(x_, 4.87, HOARD_Z - 0.46, 0, 0.7), M['lens'])
+
+# ── 홍콩 간판 포토월 (앞면 x=6.3, z 11.0~15.3, 4.35 × 2.85m = 콜라주 2.50 + 흰 머리띠 0.35) ──
+PWX, PWH, PWT, PW_CAP = 6.3, 2.5, 0.25, 0.35
+pwf = T(PWX - PWT / 2, PWH / 2, Z(13.15), PI / 2)
+court.add(plane(4.35, PWH), pwf @ T(0, 0, PWT / 2), G('photowall_front'), tile=None)
+court.add(plane(4.35, PWH), pwf @ T(0, 0, -PWT / 2, PI), G('photowall_back'), tile=None)
 for s in (-1, 1):
-    member(court, V((12.6 + s * 1.2, 0.05, PROP_Z + 0.06)), V((12.6 + s * 1.2, 2.3, PROP_Z + 0.06)), 0.03, M['black'])
-tf = T(9.0, 0, PROP_Z)                                                                          # 트램 88 컷아웃
-court.add(box(1.45, 2.75, 0.06), tf @ T(0, 1.375, 0), M['white'], 1)
-court.add(plane(1.42, 2.72), tf @ T(0, 1.375, 0.035), G('tram_cutout', alpha=True), tile=None)
-court.add(box(1.6, 0.08, 0.5), tf @ T(0, 0.04, -0.2), M['black'], 1)
-gf = T(6.0, 0, PROP_Z)                                                                          # 금붕어 가게 부스
-court.add(box(2.4, 2.6, 0.08), gf @ T(0, 1.3, 0), M['white'], 1)
-court.add(plane(2.36, 2.56), gf @ T(0, 1.3, 0.045), G('goldfish_back'), tile=None)
+    court.add(plane(PWT, PWH), pwf @ T(s * 2.175, 0, 0, s * PI / 2), M['white'], 1)
+panel(court, 4.35, PW_CAP, T(PWX - PWT / 2 + 0.06, PWH + PW_CAP / 2, Z(13.15), PI / 2),        # 후원사 머리띠 (0.12 앞으로)
+      G('photowall_sponsor') if os.path.exists(T_('photowall_sponsor')) else M['white'], M['white'], PWT + 0.12)
+for s in (-1, 1):                                              # 양 끝 흰 리턴 (0.5m)
+    court.add(box(0.5, PWH + PW_CAP, PWT), T(PWX - PWT - 0.25, (PWH + PW_CAP) / 2, Z(13.15 + s * 2.05)), M['white'], 1)
+for zz in (Z(11.6), Z(14.7)):                                  # 뒤 투광등 (4m 기둥)
+    court.add(cyl(0.045, 0.045, 4.0, 10), T(PWX - 1.1, 2.0, zz), M['black'], 1)
+    g, m = tube(V((PWX - 1.1, 4.0, zz)), V((PWX - 0.15, 4.05, zz)), 0.022, 6)
+    court.add(g, m, M['black'])
+    court.add(cyl(0.075, 0.095, 0.15, 12), T(PWX - 0.05, 3.95, zz, 0, 0, -0.7), M['black'], 1)
+    emit.add(cyl(0.065, 0.065, 0.01, 12), T(PWX + 0.02, 3.88, zz, 0, 0, -0.7), M['lens'])
+
+# ── 서쪽 ㄱ자: 야경 패널 → 트램 컷아웃 → 금붕어 가게 → 붉은 대문 ──────────────────────
+NS_Z = Z(15.9)
+panel(court, 7.7, 2.4, T(2.45, 1.2, NS_Z), G('nightstreet_panel'), M['black'], 0.1)            # 홍콩 야경 두 장
 for s in (-1, 1):
-    court.add(box(0.08, 2.6, 1.1), gf @ T(s * 1.2, 1.3, 0.55), M['white'], 1)
-    court.add(plane(1.06, 2.56), gf @ T(s * 1.24, 1.3, 0.55, s * PI / 2), G('goldfish_left' if s < 0 else 'goldfish_right'), tile=None)
-court.add(box(1.2, 0.05, 0.6), gf @ T(0, 0.75, 0.6), M['white'], 1)                              # 흰 테이블
-for (sx, sz) in ((-0.5, -0.2), (0.5, -0.2), (-0.5, 0.2), (0.5, 0.2)):
-    court.add(cyl(0.02, 0.02, 0.75, 8), gf @ T(sx, 0.375, 0.6 + sz), M['white'], 1)
-rig.add(box(0.7, 0.4, 0.35), gf @ T(0, 0.98, 0.6), material('lpTank', None, (0.6, 0.8, 0.85), 0.1, transmission=0.9), 1)
-panel(court, 1.9, 2.3, T(3.0, 1.15, PROP_Z), G('red_door'), M['black'], 0.12)                    # 붉은 대문
-dm = T(0.3, 0, Z(15.2))                                                                          # 딤섬 테이블 + 용·봉황 배경
-panel(court, 2.3, 2.5, dm @ T(0, 1.25, -0.9), G('dimsum_dragon'), M['black'], 0.1)
-panel(court, 2.3, 2.5, dm @ T(2.6, 1.25, -0.9), G('dimsum_phoenix'), M['black'], 0.1)
-court.add(cyl(0.85, 0.85, 0.04, 40), dm @ T(0.9, 0.74, 0.6), material('lpRedCloth', 'cotton_jersey', (0.5, 0.05, 0.06), 0.9), 1)
-court.add(cyl(0.8, 0.85, 0.72, 40), dm @ T(0.9, 0.36, 0.6), material('lpRedCloth2', 'cotton_jersey', (0.45, 0.04, 0.05), 0.95), 1)
-for k in range(8):
-    a = k / 8 * 2 * PI
-    court.add(cyl(0.05, 0.05, 0.05, 16), dm @ T(0.9 + 0.5 * math.cos(a), 0.79, 0.6 + 0.5 * math.sin(a)), M['white'], 1)
-court.add(cyl(0.22, 0.22, 0.26, 24), dm @ T(0.9, 0.89, 0.6), M['steel'], 1)                      # 가운데 찜통
-for k in range(4):
-    ch = dm @ T(0.9 + 1.25 * math.cos(k / 4 * 2 * PI), 0, 0.6 + 1.25 * math.sin(k / 4 * 2 * PI), -k / 4 * 2 * PI)
-    court.add(box(0.42, 0.04, 0.42), ch @ T(0, 0.45, 0), M['black'], 1)
-    court.add(box(0.42, 0.5, 0.04), ch @ T(0, 0.7, 0.19), M['black'], 1)
+    member(court, V((2.45 + s * 3.6, 0.05, NS_Z - 0.45)), V((2.45 + s * 3.6, 2.25, NS_Z - 0.06)), 0.03, M['steel'])
+tf = T(2.6, 0, Z(14.4))                                                                        # 트램 88 얼굴 컷아웃
+panel(court, 1.25, 2.30, tf @ T(0, 1.15, 0), G('tram_cutout', alpha=True), M['white'], 0.07)
+panel(court, 0.9, 0.35, tf @ T(0, 2.48, 0), M['white'], M['white'], 0.07)
+court.add(box(1.4, 0.08, 0.5), tf @ T(0, 0.04, -0.3), M['black'], 1)
+GF_X0, GF_X1, GF_Z, GF_D = -7.4, -3.9, Z(15.9), 1.8                                            # 금붕어 가게 (2면, ≈100°)
+panel(court, GF_X1 - GF_X0, 2.4, T((GF_X0 + GF_X1) / 2, 1.2, GF_Z), G('goldfish_back'), M['white'], 0.08)
+panel(court, GF_D, 2.4, T(GF_X0, 1.2, GF_Z + GF_D / 2, PI / 2 + 0.17), G('goldfish_left'), M['white'], 0.08)
+court.add(box(GF_X1 - GF_X0, 0.05, 0.05), T((GF_X0 + GF_X1) / 2, 1.15, GF_Z - 0.06), M['white'], 1)   # 흰 가로 난간
+gt = T((GF_X0 + GF_X1) / 2 + 0.2, 0, GF_Z + 1.15)                                              # 흰 철제 테이블 + 실제 수조
+court.add(box(1.5, 0.04, 0.5), gt @ T(0, 0.78, 0), M['white'], 1)
+for (sx, sz) in ((-0.7, -0.21), (0.7, -0.21), (-0.7, 0.21), (0.7, 0.21)):
+    court.add(cyl(0.016, 0.016, 0.78, 8), gt @ T(sx, 0.39, sz), M['white'], 1)
+    court.add(box(0.03, 0.03, 0.44), gt @ T(sx, 0.12, 0), M['white'], 1)
+emit.add(box(1.46, 0.34, 0.39), gt @ T(0, 1.0, 0), material('lpTankLit', None, (0.3, 0.55, 0.62), 0.3, emit=(0.1, 0.3, 0.45), emit_strength=0.5), 1)
+court.add(box(1.5, 0.12, 0.45), gt @ T(0, 0.86, 0), material('lpGravel', None, (0.72, 0.68, 0.6), 0.9), 1)
+rig.add(box(1.5, 0.45, 0.45), gt @ T(0, 1.02, 0), material('lpTank', None, (0.6, 0.8, 0.85), 0.1, transmission=0.9), 1)
+# 붉은 대문: 조사 위치 x=-8.0 은 부지 밖이라 서쪽 경계에 붙여 +x 를 보게 세움 (사진의 연회색 곡면 판도 같이)
+rd = T(-7.05, 0, Z(13.6), PI / 2)
+court.add(box(3.4, 3.3, 0.12), rd @ T(0, 1.65, -0.09), M['paleGrey'], 1)                       # 기댄 연회색 판
+panel(court, 1.95, 2.90, rd @ T(0, 1.45, 0.08), G('red_door'), M['black'], 0.1)
+for j in range(36):                                                                             # 금색 문정 6 × 6
+    court.add(sphere(0.032, 2), rd @ T(-0.78 + (j % 6) * 0.31, 0.55 + (j // 6) * 0.41, 0.145, 0, 0, 0, 1, 1, 0.6), M['brass'])
+court.add(cyl(0.085, 0.085, 0.02, 20), rd @ T(-0.72, 1.10, 0.16, 0, PI / 2), M['brass'], 1)
+court.add(box(0.8, 0.06, 0.5), rd @ T(1.1, 0.03, 0.5, 0, 0, 0.2), M['gateGreen'], 1)           # 접힌 초록 펜스 조각
+court.add(sphere(0.2, 2), rd @ T(0.75, 0.16, 0.45, 0, 0, 0, 1.5, 0.7, 1.0), material('lpSandbag', 'cotton_jersey', (0.2, 0.42, 0.24), 0.9))
+
+# ── 딤섬 부스 (가림막 선을 잇는다, x 1.6 ~ -2.0, z=7.6, 2.6m, +z 로 열림) ───────────────
+DM_X0, DM_X1, DM_Z, DM_D = -2.0, 1.6, Z(7.6), 1.6
+panel(court, 1.8, 2.25, T(DM_X1 - 0.9, 1.125, DM_Z, PI), G('dimsum_dragon'), M['black'], 0.1)
+panel(court, 1.8, 2.25, T(DM_X0 + 0.9, 1.125, DM_Z, PI), G('dimsum_phoenix'), M['black'], 0.1)
+panel(court, DM_D, 2.25, T(DM_X0, 1.125, DM_Z - DM_D / 2, PI / 2), G('dimsum_phoenix'), M['black'], 0.1)
+dm = T((DM_X0 + DM_X1) / 2, 0, DM_Z - 0.95)                                                    # 연회 원탁 Ø1.5 + 의자 5
+court.add(cyl(0.75, 0.75, 0.05, 40), dm @ T(0, 0.735, 0), material('lpRedCloth', 'cotton_jersey', (0.5, 0.05, 0.06), 0.9), 1)
+court.add(cyl(0.7, 0.73, 0.72, 40), dm @ T(0, 0.36, 0), material('lpRedCloth2', 'cotton_jersey', (0.45, 0.04, 0.05), 0.95), 1)
+court.add(cyl(0.2, 0.2, 0.24, 24), dm @ T(0, 0.87, 0), material('lpCopper', None, (0.62, 0.38, 0.18), 0.35, 0.9), 1)
+for k in range(7):                                                                              # 대나무 찜통 · 흰 찻잔
+    a = k / 7 * 2 * PI
+    court.add(cyl(0.1, 0.1, 0.07, 16), dm @ T(0.45 * math.cos(a), 0.795, 0.45 * math.sin(a)), M['wood'], 1)
+    court.add(cyl(0.035, 0.04, 0.05, 12), dm @ T(0.66 * math.cos(a + 0.4), 0.785, 0.66 * math.sin(a + 0.4)), M['white'], 1)
+for k in range(5):
+    ch = dm @ T(1.12 * math.cos(k / 5 * 2 * PI + 0.7), 0, 1.12 * math.sin(k / 5 * 2 * PI + 0.7), -(k / 5 * 2 * PI + 0.7))
+    court.add(box(0.42, 0.04, 0.42), ch @ T(0, 0.45, 0), M['darkWood'], 1)
+    court.add(box(0.42, 0.55, 0.04), ch @ T(0, 0.73, 0.19), M['darkWood'], 1)
     for (lx, lz) in ((-0.18, -0.18), (0.18, -0.18), (-0.18, 0.18), (0.18, 0.18)):
-        court.add(cyl(0.015, 0.015, 0.45, 6), ch @ T(lx, 0.225, lz), M['black'], 1)
+        court.add(cyl(0.015, 0.015, 0.45, 6), ch @ T(lx, 0.225, lz), M['darkWood'], 1)
 
-# ── 체험 존: 베이지 캐노피 · 나무 상자 테이블 · 티셔츠 열프레스 · 전구 거울 · AI 포토부스 ─────────
-for (tx, tz) in ((-1.0, Z(13.8)), (-4.6, Z(13.8))):
-    gear.popup_tent(court, T(tx, 0.0, tz), {**M, 'tent': M['tentBeige']}, size=3.2, h=2.4, walls=(False, False, False, False))
-crate = material('lpCrate', 'dark_wooden_planks', (0.72, 0.55, 0.34), 0.85)
-for (cx, cz, n) in ((-1.0, Z(14.2), 3), (-4.6, Z(14.2), 3), (-6.6, Z(12.4), 2)):
-    for k in range(n):
-        f = T(cx - 0.55 + k * 0.55, 0, cz)
-        court.add(box(0.5, 0.42, 0.42), f @ T(0, 0.21, 0), crate, 1)
-        court.add(box(0.5, 0.42, 0.42), f @ T(0, 0.63, 0), crate, 1)
-    court.add(box(n * 0.56 + 0.2, 0.05, 0.62), T(cx, 0.87, cz), crate, 1)
-for k in range(2):                                                                              # 열프레스 두 대
-    f = T(-1.4 + k * 0.8, 0.9, Z(14.2))
-    court.add(bevel_box(0.4, 0.12, 0.4, 0.02), f, M['steel'], 1)
-    court.add(bevel_box(0.4, 0.1, 0.4, 0.02), f @ T(0, 0.28, -0.05, 0, -0.5), M['black'], 1)
-    court.add(cyl(0.02, 0.02, 0.3, 8), f @ T(0, 0.2, -0.24), M['steel'], 1)
-panel(court, 3.0, 2.6, T(-3.0, 1.3, Z(15.3)), G('tshirt_backdrop'), M['orange'], 0.1)
-vf = T(-6.9, 0, Z(14.0), PI / 2)                                                                # 전구 거울 뷰티존
-court.add(box(2.6, 0.06, 0.6), vf @ T(0, 0.78, 0), M['black'], 1)
-court.add(box(2.6, 1.5, 0.08), vf @ T(0, 1.55, -0.26), M['black'], 1)
-court.add(plane(2.3, 1.2), vf @ T(0, 1.55, -0.185), M['mirror'], 1)
-for k in range(14):
-    a = k / 14 * 2 * PI
-    emit.add(sphere(0.045, 2), vf @ T(1.2 * math.cos(a), 1.55 + 0.68 * math.sin(a), -0.2), M['lens'])
-kf = T(15.4, 0, Z(11.9), -PI / 2)                                                                # AI 포토부스
-court.add(bevel_box(0.9, 1.0, 0.7, 0.02), kf @ T(0, 0.5, 0), M['white'], 1)
-court.add(bevel_box(1.0, 1.3, 0.75, 0.02), kf @ T(0, 1.65, 0), M['white'], 1)
-emit.add(plane(0.66, 0.9), kf @ T(0, 1.7, 0.38), G('sign_aibooth', 1.0), tile=None)
-for (sx, sz, slug) in ((-6.6, Z(12.0), 'sign_beauty'), (-2.2, Z(12.2), 'sign_keyring')):
-    f = T(sx, 0, sz)
-    court.add(cyl(0.16, 0.18, 0.02, 20), f @ T(0, 0.01, 0), M['black'], 1)
-    court.add(cyl(0.018, 0.018, 1.1, 8), f @ T(0, 0.56, 0), M['black'], 1)
-    panel(court, 0.5, 0.7, f @ T(0, 1.3, 0), G(slug), M['black'], 0.03)
-f = T(16.4, 0, Z(9.4))                                                                           # 입구 안내 사인
-court.add(cyl(0.2, 0.22, 0.03, 20), f @ T(0, 0.015, 0), M['black'], 1)
-court.add(cyl(0.02, 0.02, 1.3, 8), f @ T(0, 0.66, 0), M['black'], 1)
-panel(court, 0.75, 1.05, f @ T(0, 1.55, 0, -PI / 2), G('info_sign'), M['black'], 0.04)
+# ── 체험 존: 주차선 아스팔트 위 베이지 차양(9.0 × 4.5) 아래로 모여 있다 ────────────────
+CAN_X0, CAN_X1, CAN_Z0, CAN_Z1, CAN_EAVE, CAN_RIDGE = -7.3, 1.7, Z(13.8), Z(9.3), 2.3, 2.9
+for x_ in (CAN_X0 + 0.15, (CAN_X0 + CAN_X1) / 2, CAN_X1 - 0.15):                               # 회색 기둥 + 모래주머니
+    for z_ in (CAN_Z0 + 0.15, CAN_Z1 - 0.15):
+        court.add(cyl(0.03, 0.03, CAN_EAVE, 10), T(x_, CAN_EAVE / 2, z_), M['steel'], 1)
+        court.add(sphere(0.17, 2), T(x_, 0.1, z_, 0, 0, 0, 1.4, 0.55, 1.0), M['black'])
+for s in (-1, 1):                                                                               # 박공형 차양 천
+    court.add(plane(CAN_X1 - CAN_X0, math.hypot(CAN_RIDGE - CAN_EAVE, (CAN_Z1 - CAN_Z0) / 2)),
+              T((CAN_X0 + CAN_X1) / 2, (CAN_EAVE + CAN_RIDGE) / 2, (CAN_Z0 + CAN_Z1) / 2 + s * (CAN_Z1 - CAN_Z0) / 4,
+                0, PI / 2 + s * math.atan2(CAN_RIDGE - CAN_EAVE, (CAN_Z1 - CAN_Z0) / 2)), M['tentBeige'], 2)
+for k in range(13):                                                                             # 가장자리 전구 줄
+    emit.add(sphere(0.045, 2), T(CAN_X0 + 0.3 + k * 0.7, CAN_EAVE - 0.12, CAN_Z0 + 0.12), M['bulb'])
+BACK_Z = Z(9.45)                                                                                # 뒤 라인아트 패널 (2.4m, 빨강·주황)
+panel(court, 3.6, 2.4, T(-5.3, 1.2, BACK_Z, PI), G('lineart_panel_red') if os.path.exists(T_('lineart_panel_red')) else G('tshirt_backdrop_lineart'), M['orange'], 0.08)
+panel(court, 3.4, 2.4, T(-1.4, 1.2, BACK_Z, PI), G('tshirt_backdrop'), M['orange'], 0.08)
+panel(court, 1.8, 2.4, T(1.35, 1.2, BACK_Z, PI), G('tshirt_backdrop_lineart'), M['orange'], 0.08)
+vf = T(-5.3, 0, Z(10.1), PI)                                                                    # 뷰티존: 3.3m 검은 테이블 + 전구 거울 2
+court.add(box(3.3, 0.06, 0.6), vf @ T(0, 0.75, 0), M['black'], 1)
+court.add(box(3.3, 0.72, 0.05), vf @ T(0, 0.36, -0.275), M['black'], 1)
+for s in (-1, 1):
+    court.add(box(0.05, 0.72, 0.55), vf @ T(s * 1.62, 0.36, 0), M['black'], 1)
+    mf = vf @ T(s * 0.8, 0, -0.18)
+    court.add(box(1.25, 0.85, 0.03), mf @ T(0, 1.2, 0.02), M['mirror'], 1)
+    for (bw, bh, by, bx) in ((1.35, 0.1, 0.475, 0.0), (1.35, 0.1, -0.475, 0.0), (0.1, 0.95, 0.0, 0.625), (0.1, 0.95, 0.0, -0.625)):
+        court.add(box(bw, bh, 0.06), mf @ T(bx, 1.2 + by, 0.0), M['black'], 1)
+    for j in range(14):
+        a = j / 14 * 2 * PI
+        emit.add(sphere(0.03, 2), mf @ T(0.62 * math.cos(a), 1.2 + 0.47 * math.sin(a), 0.04), M['bulbSoft'])
+for k in range(3):                                                                              # 검은 접이 감독 의자 3
+    cf = vf @ T(-1.0 + k * 1.0, 0, -0.95)
+    court.add(box(0.46, 0.05, 0.44), cf @ T(0, 0.46, 0), M['black'], 1)
+    court.add(box(0.46, 0.42, 0.05), cf @ T(0, 0.73, -0.2), M['black'], 1)
+    for (lx, lz) in ((-0.2, -0.18), (0.2, -0.18), (-0.2, 0.18), (0.2, 0.18)):
+        court.add(cyl(0.018, 0.018, 0.46, 6), cf @ T(lx, 0.23, lz), M['black'], 1)
+court.add(box(0.6, 0.8, 0.06), vf @ T(-2.1, 1.5, -0.4), M['white'], 1)                          # 흰 LED 소프트박스
+court.add(cyl(0.02, 0.02, 1.1, 8), vf @ T(-2.1, 0.55, -0.4), M['black'], 1)
+tsf = T(-1.4, 0, Z(10.2), PI)                                                                   # DIY 티셔츠: 팔레트 카운터 3.0m + 열프레스 3
+for k in range(5):
+    court.add(box(0.64, 0.42, 0.9), tsf @ T(-1.2 + k * 0.6, 0.21, 0), M['pine'], 1)
+    court.add(box(0.64, 0.44, 0.9), tsf @ T(-1.2 + k * 0.6, 0.63, 0), M['pine'], 1)
+court.add(box(3.0, 0.06, 1.0), tsf @ T(0, 0.92, 0), M['pine'], 1)
+for k in range(3):
+    f = tsf @ T(-0.95 + k * 0.95, 0.99, 0)
+    court.add(bevel_box(0.45, 0.14, 0.4, 0.02), f, M['white'], 1)
+    court.add(bevel_box(0.45, 0.1, 0.4, 0.02), f @ T(0, 0.3, -0.06, 0, -0.55), M['white'], 1)
+    court.add(cyl(0.02, 0.02, 0.32, 8), f @ T(0, 0.22, -0.24), M['steel'], 1)
+panel(court, 2.0, 1.6, T(-1.4, 1.6, BACK_Z - 0.16, PI), G('tshirt_pegboard') if os.path.exists(T_('tshirt_pegboard')) else M['white'], M['white'], 0.05)
+kf = T(0.9, 0, Z(10.3), PI / 2)                                                                 # AI 포토부스 (야외 1대)
+court.add(bevel_box(0.7, 0.95, 0.95, 0.02), kf @ T(0, 0.475, 0), M['white'], 1)
+court.add(bevel_box(0.78, 1.1, 0.88, 0.02), kf @ T(0, 1.5, -0.03), M['white'], 1)
+emit.add(plane(0.62, 0.78), kf @ T(0, 1.52, 0.47), G('ai_kiosk_front', 1.0), tile=None)
+for (bw, bh, by, bx) in ((0.78, 0.05, 0.55, 0.0), (0.78, 0.05, -0.55, 0.0), (0.05, 1.1, 0.0, 0.39), (0.05, 1.1, 0.0, -0.39)):
+    emit.add(box(bw, bh, 0.04), kf @ T(bx, 1.5 + by, 0.47), M['ledStrip'])
+emit.add(box(0.22, 0.03, 0.03), kf @ T(0, 0.75, 0.46), material('lpSlotRed', None, (1, 0.2, 0.15), 0.4, emit=(1, 0.15, 0.1), emit_strength=3), 1)
+# 팔레트 테이블 3 + 상자 스툴 10 (차양 아래 아스팔트)
+for (cx, cz, ry) in ((-4.6, Z(12.2), 0.2), (-2.6, Z(13.0), -0.35), (-0.6, Z(12.3), 0.1)):
+    f = T(cx, 0, cz, ry)
+    court.add(box(1.1, 0.30, 1.1), f @ T(0, 0.15, 0), M['pine'], 1)
+    court.add(box(1.16, 0.12, 1.16), f @ T(0, 0.34, 0), M['pine'], 1)
+for (sx, sz, sr) in ((-5.7, 12.2, 0.3), (-3.6, 12.3, -0.2), (-5.0, 13.3, 0.5), (-3.3, 13.7, 0.1),
+                     (-1.7, 13.2, -0.4), (-3.6, 12.9, 0.2), (0.3, 12.4, 0.35), (-2.3, 11.6, -0.1),
+                     (-6.0, 13.3, 0.15), (-0.5, 13.4, -0.3)):
+    court.add(box(0.42, 0.42, 0.42), T(sx, 0.21, Z(sz), sr), M['pine'], 1)
+
+
+def sign_stand(x, z, ry, slug, w=0.52, h=0.72, top=1.55):
+    """검은 철제 사각 프레임 + 다리 두 개 (조사 v2: A1 스탠드가 아니다)"""
+    f = T(x, 0, z, ry)
+    for s in (-1, 1):
+        court.add(box(0.03, top, 0.03), f @ T(s * (w / 2 + 0.03), top / 2, 0), M['black'], 1)
+    panel(court, w, h, f @ T(0, top - h / 2 - 0.04, 0), G(slug), M['black'], 0.03)
+
+
+sign_stand(-1.4, Z(11.4), PI, 'sign_tshirt' if os.path.exists(T_('sign_tshirt')) else 'sign_keyring')
+sign_stand(-5.3, Z(11.3), PI, 'sign_beauty')
+sign_stand(0.9, Z(11.5), PI, 'sign_aibooth')
+sign_stand(-3.0, Z(12.4), PI, 'sign_keyring')
+sign_stand(18.4, Z(8.6), PI / 2, 'info_sign', 0.55, 0.78, 1.60)        # 안내판은 문 밖 보도에 선다
+# 남쪽 끝: 가림막(2.7m)으로 막히고 그 뒤로 대나무·상록수 덤불, 서쪽 경계는 초록 철망 담
+court.add(plane(YZ1 - YZ0, 2.7), T(YX0 - 0.1, 1.35, (YZ0 + YZ1) / 2, PI / 2), M['paleGrey'], 2)
+court.add(plane(Z(6.1) - Z(16.55), 1.8), T(YX0 + 0.05, 0.9, (YZ0 + YZ1) / 2, -PI / 2), M['mesh'], tile=None)
+for pz in (8.0, 11.0, 14.0):
+    tree(YX0 - 2.4, Z(pz), 1.1, 0.0)
+    court.add(sphere(1.6, 3), T(YX0 - 1.2, 1.7, Z(pz + 1.4), 0, 0, 0, 1.0, 1.5, 1.0), M['bamboo'])
 
 # ══ 조명 · 빌드 · 카메라 ═══════════════════════════════════════════
 for x in (-12.5, -7.5, -2.5, 2.5, 7.5, 12.5):                                  # 전시장 트랙 조명 (밝은 흰 전시)
@@ -886,8 +1009,12 @@ camera(C_CAM, 'cam_hall_long', (-13.5, 1.6, 0.4), (16, 1.6, 0), 70)        # 긴
 camera(C_CAM, 'cam_exhibit', (14.3, 1.6, -1.2), (0, 1.5, 1.5), 64)          # 소개서 전시 사진
 camera(C_CAM, 'cam_curtain', (-4.0, 1.6, -2.6), (-4.0, 1.5, 3.2), 64)      # 소개서 커튼 사진
 camera(C_CAM, 'cam_music', (-8.0, 1.6, -0.5), (-16.3, 1.8, 1.0), 64)
-camera(C_CAM, 'cam_yard', (16.3, 1.65, Z(10.5)), (-5.0, 1.6, Z(11.5)), 66)          # 문 안쪽에서 마당 축 (현장 사진)
-camera(C_CAM, 'cam_photowall', (2.5, 1.6, Z(11.0)), (-5.2, 1.6, Z(11.3)), 58)
+camera(C_CAM, 'cam_yard', (16.0, 1.6, Z(12.3)), (6.3, 1.5, Z(13.15)), 62)          # 문 안쪽 → 포토월 정면 (보도자료 입면)
+camera(C_CAM, 'cam_photowall', (2.0, 1.6, Z(12.2)), (6.2, 1.5, Z(13.2)), 62)        # 포토 링 안 → 포토월 뒷면
+camera(C_CAM, 'cam_hoarding', (15.2, 1.6, Z(10.9)), (9.0, 2.3, Z(7.4)), 62)         # 주황 가림막 (yard_hoarding_run_full)
+camera(C_CAM, 'cam_doorway', (9.6, 1.6, Z(10.6)), (2.0, 1.5, Z(8.2)), 62)           # 출입 모듈 → 딤섬 부스
+camera(C_CAM, 'cam_yard_props', (-4.6, 1.55, Z(14.3)), (-6.2, 1.35, Z(15.8)), 72)   # 금붕어 가게 · 붉은 대문
+camera(C_CAM, 'cam_canopy', (3.2, 1.6, Z(12.6)), (-5.2, 1.4, Z(10.4)), 66)          # 체험 존 차양
 camera(C_CAM, 'cam_runway', (6.5, 1.8, 0.0), (-16.0, 2.0, 0.0), 58)         # 쇼 당일 (런웨이 끝)
 camera(C_CAM, 'cam_showtop', (5.5, 3.4, -3.0), (-12.0, 0.3, 0.5), 66)
 scene.camera = bpy.data.objects['cam_exhibit']
