@@ -65,14 +65,13 @@
     "lp_t_clapboard_siding.png",
     "lp_t_dimsum_dragon.png",
     "lp_t_dimsum_phoenix.png",
+    "lp_t_floor_concrete.png",
     "lp_t_floor_concrete_dark.png",
     "lp_t_gate.png",
     "lp_t_goldfish_back.png",
     "lp_t_goldfish_left.png",
-    "lp_t_goldfish_right.png",
     "lp_t_hoarding_exhibition.png",
     "lp_t_hoarding_logo.png",
-    "lp_t_hoarding_main.png",
     "lp_t_hoarding_sponsor.png",
     "lp_t_hoarding_text.png",
     "lp_t_info_sign.png",
@@ -84,6 +83,7 @@
     "lp_t_mirror_logo.png",
     "lp_t_music_disc_logo.png",
     "lp_t_nightstreet_panel.png",
+    "lp_t_photowall_back.png",
     "lp_t_photowall_front.png",
     "lp_t_red_door.png",
     "lp_t_roof_tile.png",
@@ -101,6 +101,7 @@
     "lp_t_street_banner.png",
     "lp_t_tram_cutout.png",
     "lp_t_tshirt_backdrop.png",
+    "lp_t_tshirt_backdrop_lineart.png",
     "lp_t_urbanjungle_screen.png"
   ]
 }
