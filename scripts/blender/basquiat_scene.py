@@ -280,16 +280,21 @@ def disp_of(s):
     return 'unframed_stretcher'
 
 
+# projections_v3.md: 아시아 인터뷰 영상은 액자가 아니라 바닥부터 천장까지 벽 전체를 덮는
+#   맨벽 프로젝션이다 (5.0 x 4.2, 밑단 0, 가로세로 1.19:1). layout_v2 의 3.9 x 2.4 는 너무 작다.
+PROJ_OVERRIDE = {'interview_projection': dict(u=2.7, y=2.1, w=5.0, h=4.2)}
 DECALS, ART, FREE, PROJ = [], [], [], []
 for w_ in LAY['works']:
     if w_['zone'] not in ROOMS:
         continue
     slug, d = ALIAS.get(w_['slug'], w_['slug']), w_['display']
+    if w_['slug'] in PROJ_OVERRIDE:
+        w_ = {**w_, **PROJ_OVERRIDE[w_['slug']]}
     if any(k in d for k in FLAT):
         lit = 'projection' in d or 'wall_wash' in d or 'monitor' in d
         # 실제 사진의 프로젝션은 방을 물들일 만큼 밝고 크다 (바닥·맞은편 벽까지 번진다)
         DECALS.append((w_['zone'], w_['face'], U(w_['zone'], w_['face'], w_['u']), w_['y'], w_['w'], w_['h'],
-                       gmat(slug, 3.2 if lit else 0.0)))
+                       gmat(slug, 2.2 if lit else 0.0)))
         if lit:
             PROJ.append((w_['zone'], w_['face'], w_['u'], w_['y'], w_['w'], w_['h'], slug))
     else:
@@ -324,7 +329,7 @@ for i, (room, side, u, y, w_, h_, slug) in enumerate(PROJ):
     ctr = f @ V((0, y, 0.15))
     aim = f @ V((0, y, 3.0))
     light(C_LIGHT, f'proj_{i}_{room}', 'AREA', tuple(ctr), tuple(aim),
-          energy=90 + w_ * h_ * 110, color=(1.0, 0.97, 0.9), size=max(w_, h_) * 0.8)
+          energy=60 + w_ * h_ * 45, color=(1.0, 0.97, 0.9), size=max(w_, h_) * 0.8)
     pj = f @ T(0, SOFFIT - 0.35, 4.2)                         # 천장에 매단 프로젝터
     rig.add(bevel_box(0.42, 0.16, 0.34, 0.02), pj, M['rig'], 1)
     g, m = tube(pj @ V((0, 0.08, 0)), f @ V((0, SOFFIT, 4.2)), 0.016, 6)
@@ -538,6 +543,31 @@ for rid, r in ROOMS.items():
     ch = cg.get('h', SOFFIT)
     cm = M['slot'] if cg.get('type') == 'dark_painted' else M['ceiling']
     ceil.add(plane(x1 - x0 + 0.6, z1 - z0 + 0.6), T((x0 + x1) / 2, ch, (z0 + z1) / 2, 0, PI / 2), cm, 2)
+
+# ── projections_v3: 남색 매입 모니터 세 대 + 숨겨진 상징 UV 헤일로 ────────────
+def navy_monitor(room, side, u, bottom, sw, sh, slug, reveal=0.07):
+    """짙은 남색 매입 상자 안의 평면 모니터 (드로잉 복도 끝 · 에필로그 · 해부학-아시아 사이)"""
+    f = face(room, side, u) @ T(0, bottom + sh / 2, 0)
+    works.add(box(sw + reveal * 2 + 0.06, sh + reveal * 2 + 0.06, 0.26), f @ T(0, 0, 0.13), M['frameBlack'], 1)
+    works.add(box(sw + reveal * 2, sh + reveal * 2, 0.2), f @ T(0, 0, 0.115), W['navy'], 1)
+    emit.add(plane(sw, sh), f @ T(0, 0, 0.021), gmat(slug, 1.6), tile=None)
+    light(C_LIGHT, f'mon_{room}_{u:.1f}', 'AREA', tuple(f @ V((0, 0, 0.25))), tuple(f @ V((0, 0, 2.2))),
+          energy=26 + sw * sh * 40, color=(0.86, 0.92, 1.0), size=max(sw, sh))
+
+
+navy_monitor('drawing', 'w', 2.0, 1.02, 1.3, 0.8, 'asia_projection_painting_head_still')   # 노트 번역 영상 (복도 끝)
+navy_monitor('epilogue', 'n', 1.2, 1.10, 0.73, 0.38, 'epilogue_exu_monitor_still')         # EXU 해설 모니터
+navy_monitor('asia', 'n', 6.0, 1.00, 0.6, 0.9, 'panel_basquiat_in_asia')                   # 해부학→아시아 사이 텍스트 카드
+
+# 숨겨진 상징: 천장 UV 바가 Emblem 을 비춰 검은 벽에 보랏빛 테두리가 번진다 (움직임 감지로 점등)
+hf = face('hidden', 'e', 1.6)
+rig.add(box(1.6, 0.09, 0.09), hf @ T(0, 2.95, 0.5), M['rig'], 1)                           # 천장 UV 배턴
+emit.add(box(1.5, 0.04, 0.05), hf @ T(0, 2.9, 0.5), material('bqUvTube', None, (0.55, 0.45, 1.0),
+         0.4, emit=(0.42, 0.3, 1.0), emit_strength=8))
+emit.add(plane(1.52 + 0.18, 1.34 + 0.18), hf @ T(0, 1.65, 0.008),                          # 작품 둘레 보랏빛 번짐
+         material('bqUvHalo', None, (0.35, 0.25, 0.9), 0.6, emit=(0.3, 0.2, 0.85), emit_strength=1.1), tile=None)
+light(C_LIGHT, 'uv_emblem', 'AREA', tuple(hf @ V((0, 2.85, 0.5))), tuple(hf @ V((0, 1.65, 0.05))),
+      energy=55, color=(0.42, 0.3, 1.0), size=1.4)
 
 # 큰 작품 앞 차단봉 (0.4m 기둥 + 바닥 레일)
 for (room, side, u, y, w, h, slug, disp) in ART:
