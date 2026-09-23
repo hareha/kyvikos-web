@@ -127,6 +127,7 @@ async function loadVenue(id) {
     project: mod.project,
     views: mod.views,
     viewById: Object.fromEntries(mod.views.map((v) => [v.id, v])),
+    onView: mod.onView,
     env,
     root,
     lights,
@@ -251,6 +252,8 @@ let flight = null;
 function goTo(id, { duration } = {}) {
   const view = venue.viewById[id];
   state.view = id;
+  // 공간별 시점 훅 (예: LOCAL POWER 는 런웨이 시점에서 쇼 당일 구성, 그 밖에는 전시 구성을 보여 준다)
+  venue.onView?.(view, venue.root);
   state.flying = true;
   controls.enabled = false;
   controls.autoRotate = false;

@@ -1,5 +1,5 @@
 export { project, views } from './data.js';
-export { build } from './scene.js';
+export { build, onView } from './scene.js';
 
 // 실내 창고 — 쇼장은 오렌지 조명, 전시장은 밝은 흰 조명
 export const env = {
