@@ -53,16 +53,17 @@ C_SRC.hide_viewport = True
 
 # ── 재질 ─────────────────────────────────────────────────────
 M = {
-    'lawn': material('lawn', 'leafy_grass', (0.46, 0.7, 0.3), 0.95),
+    'lawn': material('lawn', 'leafy_grass', (0.62, 0.56, 0.26), 0.95),          # 11월 마른 잔디 (현장 사진)
     'paver': material('paver', None, (0.74, 0.74, 0.72), 0.6),
     'plaza': material('plaza', 'asphalt_02', (0.35, 0.36, 0.38), 0.9),
     'stageFloor': material('stageFloor', image_base=f'{SHOTS}/apec_stage_floor.png', rough=0.25, coat=0.3),
-    'stageBody': material('stageBody', None, (0.02, 0.02, 0.03), 0.6),
-    'stairBlue': material('stairBlue', None, (0.04, 0.1, 0.45), 0.45),
+    'stageBody': material('stageBody', None, (0.035, 0.07, 0.24), 0.6),         # 남색 무대 몸통·치마
+    'stairBlue': material('stairBlue', None, (0.05, 0.11, 0.38), 0.55),         # 남색 계단
     'nosing': material('nosing', None, (0.8, 0.9, 1), emit=(0.7, 0.85, 1.0), emit_strength=6),
     'fascia': material('fascia', emit_image=f'{SHOTS}/apec_real_fascia.png', emit_strength=1.3, rough=0.4),
     'led': material('led', emit_image=f'{SHOTS}/apec_real_led.png', emit_strength=3.0, rough=0.25),
     'ledFrame': material('ledFrame', None, (0.015, 0.015, 0.02), 0.5),
+    'roofSkin': material('roofSkin', None, (0.88, 0.89, 0.88), 0.85),            # 흰 막지붕 (현장 사진)
     'lectern': material('lectern', None, (0.93, 0.94, 0.95), 0.3, coat=0.4),
     'lecternPanel': material('lecternPanel', None, (0.86, 0.88, 0.92), 0.12, coat=0.7),
     'roof': material('roof', None, (0.16, 0.17, 0.19), 0.55),
@@ -161,12 +162,11 @@ stage.add(bevel_box(18, TOP - 0.04, 9, 0.02), T(CX, (TOP - 0.04) / 2, CZ), M['st
 stage.add(box(18, 0.05, 9), T(CX, TOP - 0.025, CZ), M['stageFloor'], tile=None)   # 무대 상판 (윗면에 바닥 그래픽)
 emit.add(plane(18, 1.1), T(CX, 0.58, FRONT + 0.07), M['fascia'], tile=None)
 # 좌우 계단 (단 높이 0.3m, 앞끝에 흰 LED 라인)
-for sx in (CX - 4.3, CX + 4.3):
-    for k in (3, 2, 1):
-        h = 0.3 * k
-        zc = FRONT + 0.35 * (4 - k) - 0.175
-        stage.add(box(3.0, h, 0.35), T(sx, h / 2, zc), M['stairBlue'], 1)
-        emit.add(box(3.0, 0.07, 0.03), T(sx, h + 0.035, zc + 0.16), M['nosing'])
+STEP_W = 13.0                                                     # 앞면을 가로지르는 넓은 계단 (현장 사진)
+for k in (3, 2, 1):
+    h = TOP * k / 3
+    zc = FRONT + 0.4 * (4 - k) - 0.2
+    stage.add(box(STEP_W, h, 0.4), T(CX - 1.0, h / 2, zc), M['stairBlue'], 1)
 # 무대 뒤 계단 (대기 천막 쪽, 무대 오른쪽 뒤)
 BACK = CZ - 4.5
 for k in (3, 2, 1):
@@ -174,8 +174,11 @@ for k in (3, 2, 1):
     zc = BACK - 0.35 * (4 - k) + 0.175
     stage.add(box(2.4, h, 0.35), T(CX + 6.2, h / 2, zc), M['stairBlue'], 1)
 # LED월 (하단 로고 띠 포함 14.4 × 6.2 m)
-stage.add(bevel_box(14.8, 6.5, 0.35, 0.02), T(CX, TOP + 3.25, CZ - 3.9), M['ledFrame'])
-emit.add(plane(14.4, 6.2), T(CX, TOP + 3.1, CZ - 3.64), M['led'], tile=None)   # 프레임 앞면(-3.725)보다 앞
+stage.add(bevel_box(15.4, 5.0, 0.35, 0.02), T(CX, TOP + 2.55, CZ - 3.9), M['ledFrame'])
+emit.add(plane(15.0, 4.7), T(CX, TOP + 2.55, CZ - 3.64), M['led'], tile=None)   # 15.0 x 4.7 (사진 비율 3.2:1)
+stage.add(box(15.4, 0.9, 0.3), T(CX, TOP + 0.45, CZ - 3.88), M['stageBody'], 1)          # LED 아래 남색 로고 띠
+for k in range(8):                                                                        # APEC · 경상북도 번갈아
+    stage.add(plane(1.5, 0.46), T(CX - 6.6 + k * 1.9, TOP + 0.45, CZ - 3.72), M['sign'], tile=None)
 # 흰 아크릴 연설대 2개 (gear.lectern)
 for lx, lz in ((CX - 4.6, CZ + 2.2), (CX + 1.4, CZ + 1.3)):
     gear.lectern(stage, T(lx, TOP, lz), M)
@@ -235,18 +238,18 @@ for rx in (X0, CX, X1):
 theta = math.atan2(HR - HT, ZR - ZB)
 slope = math.hypot(HR - HT, ZR - ZB) + 0.6
 roof = Assembly('roof', C_STATIC)
-roof.add(gable_skin(X1 - X0 + 1.2, slope), T(CX, (HT + HR) / 2 + 0.28, (ZB + ZR) / 2, 0, -theta), M['roof'], 3)
-roof.add(gable_skin(X1 - X0 + 1.2, slope), T(CX, (HT + HR) / 2 + 0.28, (ZF + ZR) / 2, PI, -theta), M['roof'], 3)
+roof.add(gable_skin(X1 - X0 + 1.2, slope), T(CX, (HT + HR) / 2 + 0.28, (ZB + ZR) / 2, 0, -theta), M['roofSkin'], 3)
+roof.add(gable_skin(X1 - X0 + 1.2, slope), T(CX, (HT + HR) / 2 + 0.28, (ZF + ZR) / 2, PI, -theta), M['roofSkin'], 3)
 roof.build(smooth=True)
 
-# 전면 트러스 조명 두 줄: 위 워시 12개, 아래 파란 무빙라이트 14개
-for i in range(12):
-    lx = X0 + 1.4 + i * (X1 - X0 - 2.8) / 11
+# 전면 트러스 조명 두 줄 (현장 사진: 위 따뜻한 워시, 아래 파란 무빙이 촘촘히 번갈아)
+for i in range(18):
+    lx = X0 + 1.2 + i * (X1 - X0 - 2.4) / 17
     truss.add(mesh_source(SRC_WASH), T(lx, HT + 0.21, ZF, 0, PI / 2 + 0.45), list(SRC_WASH.data.materials))   # 워시: 현장 사진처럼 객석(+z)·아래를 봄
     light(C_LIGHT, f'wash_{i}', 'SPOT', (lx, HT + 0.3, ZF + 0.25), (lx * 0.8 + CX * 0.2, 0, 6),
           energy=900, color=(1.0, 0.92, 0.8), spot=0.7, blend=0.6, size=0.12)
-for i in range(14):
-    lx = X0 + 1.0 + i * (X1 - X0 - 2.0) / 13
+for i in range(20):
+    lx = X0 + 0.9 + i * (X1 - X0 - 1.8) / 19
     truss.add(mesh_source(SRC_MOVER), T(lx, HT - 0.21, ZF, 0, PI), list(SRC_MOVER.data.materials))   # 무빙헤드 (거꾸로 매달림)
     light(C_LIGHT, f'mover_{i}', 'SPOT', (lx, HT - 0.75, ZF + 0.15),
           (lx + random.uniform(-2, 2), 0.1, -5 + random.uniform(-2, 3)),
