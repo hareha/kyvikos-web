@@ -80,7 +80,7 @@ def gm(slug, emit=0.0, fallback=(0.5, 0.5, 0.5)):
 
 
 M = {
-    'floor': material('hyFloor', image_base=f'{SHOTS}/hy_t_floor_concrete.png', rough=0.2),                 # 연마 콘크리트 (현장 사진에서 편 타일)         # 따뜻한 회색 연마 콘크리트
+    'floor': material('hyFloor', image_base=f'{SHOTS}/hy_t_floor_concrete.png', color=(0.55, 0.55, 0.54), rough=0.22),   # 연마 콘크리트 (사진보다 밝던 것을 낮춤)
     'slabEdge': material('hySlabEdge', None, (0.05, 0.05, 0.055), 0.7),
     'slabUnder': material('hySlabUnder', None, (0.02, 0.02, 0.022), 0.8),           # 강관 루버 위 검은 슬래브
     'pipe': material('hyPipe', None, (0.6, 0.62, 0.64), 0.45, 0.55),                # 아연도 강관 (무광, 사진)
@@ -408,7 +408,7 @@ fx, fz = SC['facing_dir_xz']
 ry_sc = math.atan2(fx, fz)
 sf = T(scx, 0, scz, ry_sc)
 bld.add(box(SC['width_m'] + 0.2, SC['height_m'] + 0.2, 0.25), sf @ T(0, (SC['bottom_m'] + SC['top_m']) / 2, -0.17), M['black'], 1)
-emit.add(plane(SC['width_m'], SC['height_m']), sf @ T(0, (SC['bottom_m'] + SC['top_m']) / 2, 0.0), gm('mediawall_still', 1.6), tile=None)
+emit.add(plane(SC['width_m'], SC['height_m']), sf @ T(0, (SC['bottom_m'] + SC['top_m']) / 2, 0.0), gm('mediawall_production', 2.2), tile=None)
 light(C_LIGHT, 'screen_glow', 'AREA', tuple(sf @ V((0, 5.1, 1.0))), tuple(sf @ V((0, 3.0, 6.0))), energy=900, color=(0.85, 0.9, 1.0), size=8)
 
 # 2024 전시 그래픽: 모따기 유리 바깥면 흰 글씨 (투명 배경 → 알파 카드)
@@ -632,9 +632,12 @@ for _ in range(2):                                            # 사진의 레일
 for a, b in zip(RP, RP[1:]):
     rig.add(box((b - a).length + 0.02, 0.10, 0.055), T((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2,
             math.atan2(-(b.z - a.z), b.x - a.x), 0, math.atan2(b.y - a.y, math.hypot(b.x - a.x, b.z - a.z))), M['aluRail'], 1)
-for k, a in enumerate(RP[:-1]):
-    if k % 2 == 0:
-        g, m = tube(a + V((0, 0.09, 0)), V((a.x, 7.1, a.z)), 0.015, 6)
+acc_ = 99.0
+for a, b in zip(RP, RP[1:]):
+    acc_ += (b - a).length
+    if acc_ >= 1.6:                                           # 1.6m 간격으로만 천장에 매단다
+        acc_ = 0.0
+        g, m = tube(a + V((0, 0.05, 0)), V((a.x, 7.1, a.z)), 0.012, 6)
         rig.add(g, m, M['steelGrey'])
 BODY_COLS = {'red': '#B81D24', 'white': '#EDEDEB', 'navy/black': '#161A2A', 'silver': '#B8BCC0', 'yellow': '#E8C21C',
              'light blue': '#8EB9D8', 'teal-blue': '#2A7A8C', 'orange-gold': '#C8862A', 'burgundy': '#5C1622',
@@ -1004,6 +1007,7 @@ camera(C_CAM, 'cam_overview', (-42, 34, -40), (1, 8, 1), 40)
 camera(C_CAM, 'cam_street', (-31, 1.7, -25), (-3, 11, -3), 58)                               # ext_facade_full-dusk
 camera(C_CAM, 'cam_1f', (5.0, 1.45, -9.3), (-4.3, 1.1, -3.6), 72)                            # 1F_overview_entrance-view
 camera(C_CAM, 'cam_2f_top', (1.3, LV['2F'] + 1.2, -2.6), (-4.6, 0.3, -4.8), 76)              # 2F_view_topdown-arch-cortina
+camera(C_CAM, 'cam_media', (-6.395 + 0.7 * 10.5, 5.2, -6.569 + 0.714 * 10.5), (-6.395, 5.1, -6.569), 64)   # 대형 미디어월 정면
 camera(C_CAM, 'cam_conveyor', (3.0, LV['2F'] + 1.5, -7.0), (-6.4, 5.4, -6.4), 76)            # 2F_view_conveyor-from-2F
 camera(C_CAM, 'cam_2f_dark', (-6.0, LV['2F'] + 1.6, 5.0), (-6.6, LV['2F'] + 0.9, 12.8), 76)  # 2F_center_dark-room-overview
 camera(C_CAM, 'cam_3f', (-6.2, LV['3F'] + 1.35, 2.6), (3.0, LV['3F'] + 1.0, -6.0), 72)        # 3F_overview_scoupe-toward-archive
