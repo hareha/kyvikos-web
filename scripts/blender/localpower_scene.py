@@ -136,6 +136,7 @@ M = {
     'bamboo': material('lpBamboo', image_base=f'{SHOTS}/apec_leaves.png', color=(0.4, 0.52, 0.34), rough=0.85, alpha=True),
     'rust': material('lpRust', None, srgb('#7A4A34'), 0.95),
     'corrGreen': material('lpCorrGreen', 'corrugated_iron_02', srgb('#AFBFA6'), 0.65, 0.35),                # 창고 마당쪽 연녹색 골강판
+    'orangeMesh': material('lpOrangeMesh', None, srgb('#E86A26'), 0.75),
     'mesh': material('lpMesh', image_base=f'{SHOTS}/lp_t_gate.png', color=(0.42, 0.55, 0.4), rough=0.7, alpha=True),
     'bulb': material('lpBulb', None, (1, 1, 1), emit=(1.0, 0.93, 0.82), emit_strength=6),
     'bulbSoft': material('lpBulbSoft', None, (1, 1, 1), emit=(1.0, 0.94, 0.85), emit_strength=2.2),
@@ -668,6 +669,7 @@ for (z0, z1, open_) in ((7.9, 10.8, True), (10.8, 13.7, False)):                
     for s in (-1, 1):
         outer.add(box(0.06, 2.2, 0.06), f @ T(s * (w_ / 2 - 0.03), 1.1, 0), M['gateGreen'], 1)
     court.add(plane(w_ - 0.1, 2.05), f @ T(0, 1.12, 0.05), G('gate', alpha=True), tile=None)
+    court.add(plane(w_ - 0.3, 1.85), f @ T(0, 1.12, 0.02), M['orangeMesh'], 1)          # 짝에 덧댄 주황 메시
 outer.add(box(0.3, 1.66, 16.55 - 13.7), T(FX, 0.83, Z((13.7 + 16.55) / 2)), M['block'], 0.4)
 # 도로 (성수이로18길): 건물 선 0.3m 콘크리트 측구, 평행주차 칸(2m), 차도 6.45m, 북쪽 측구·가로수 띠
 PZ0, PZ1 = -48.0, 44.0
@@ -827,17 +829,17 @@ for x_ in (16.0, 11.5, 7.0, 2.5):                                               
     emit.add(cyl(0.07, 0.07, 0.01, 12), T(x_, 4.87, HOARD_Z - 0.46, 0, 0.7), M['lens'])
 
 # ── 홍콩 간판 포토월 (앞면 x=6.3, z 11.0~15.3, 4.35 × 2.85m = 콜라주 2.50 + 흰 머리띠 0.35) ──
-PWX, PWH, PWT, PW_CAP = 6.3, 2.5, 0.25, 0.35
-pwf = T(PWX - PWT / 2, PWH / 2, Z(13.15), PI / 2)
+PWX, PWH, PWT, PW_CAP = 11.0, 2.5, 0.25, 0.35
+pwf = T(PWX - PWT / 2, PWH / 2, Z(13.75), PI / 2)
 court.add(plane(4.35, PWH), pwf @ T(0, 0, PWT / 2), G('photowall_front'), tile=None)
 court.add(plane(4.35, PWH), pwf @ T(0, 0, -PWT / 2, PI), G('photowall_back'), tile=None)
 for s in (-1, 1):
     court.add(plane(PWT, PWH), pwf @ T(s * 2.175, 0, 0, s * PI / 2), M['white'], 1)
-panel(court, 4.35, PW_CAP, T(PWX - PWT / 2 + 0.06, PWH + PW_CAP / 2, Z(13.15), PI / 2),        # 후원사 머리띠 (0.12 앞으로)
+panel(court, 4.35, PW_CAP, T(PWX - PWT / 2 + 0.06, PWH + PW_CAP / 2, Z(13.75), PI / 2),        # 후원사 머리띠 (0.12 앞으로)
       G('photowall_sponsor') if os.path.exists(T_('photowall_sponsor')) else M['white'], M['white'], PWT + 0.12)
 for s in (-1, 1):                                              # 양 끝 흰 리턴 (0.5m)
-    court.add(box(0.5, PWH + PW_CAP, PWT), T(PWX - PWT - 0.25, (PWH + PW_CAP) / 2, Z(13.15 + s * 2.05)), M['white'], 1)
-for zz in (Z(11.6), Z(14.7)):                                  # 뒤 투광등 (4m 기둥)
+    court.add(box(0.5, PWH + PW_CAP, PWT), T(PWX - PWT - 0.25, (PWH + PW_CAP) / 2, Z(13.75 + s * 2.05)), M['white'], 1)
+for zz in (Z(12.2), Z(15.3)):                                  # 뒤 투광등 (4m 기둥)
     court.add(cyl(0.045, 0.045, 4.0, 10), T(PWX - 1.1, 2.0, zz), M['black'], 1)
     g, m = tube(V((PWX - 1.1, 4.0, zz)), V((PWX - 0.15, 4.05, zz)), 0.022, 6)
     court.add(g, m, M['black'])
@@ -1009,7 +1011,7 @@ camera(C_CAM, 'cam_hall_long', (-13.5, 1.6, 0.4), (16, 1.6, 0), 70)        # 긴
 camera(C_CAM, 'cam_exhibit', (14.3, 1.6, -1.2), (0, 1.5, 1.5), 64)          # 소개서 전시 사진
 camera(C_CAM, 'cam_curtain', (-4.0, 1.6, -2.6), (-4.0, 1.5, 3.2), 64)      # 소개서 커튼 사진
 camera(C_CAM, 'cam_music', (-8.0, 1.6, -0.5), (-16.3, 1.8, 1.0), 64)
-camera(C_CAM, 'cam_yard', (16.0, 1.6, Z(12.3)), (6.3, 1.5, Z(13.15)), 62)          # 문 안쪽 → 포토월 정면 (보도자료 입면)
+camera(C_CAM, 'cam_yard', (17.3, 1.55, Z(10.6)), (10.6, 1.5, Z(13.6)), 62)         # 문 안쪽 → 가림막·포토월 깔때기 (yard_entrance_overview_1)
 camera(C_CAM, 'cam_photowall', (2.0, 1.6, Z(12.2)), (6.2, 1.5, Z(13.2)), 62)        # 포토 링 안 → 포토월 뒷면
 camera(C_CAM, 'cam_hoarding', (15.2, 1.6, Z(10.9)), (9.0, 2.3, Z(7.4)), 62)         # 주황 가림막 (yard_hoarding_run_full)
 camera(C_CAM, 'cam_doorway', (9.6, 1.6, Z(10.6)), (2.0, 1.5, Z(8.2)), 62)           # 출입 모듈 → 딤섬 부스

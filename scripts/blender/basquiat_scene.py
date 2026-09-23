@@ -280,16 +280,18 @@ def disp_of(s):
     return 'unframed_stretcher'
 
 
-DECALS, ART, FREE = [], [], []
+DECALS, ART, FREE, PROJ = [], [], [], []
 for w_ in LAY['works']:
     if w_['zone'] not in ROOMS:
         continue
     slug, d = ALIAS.get(w_['slug'], w_['slug']), w_['display']
-    rec = (w_['zone'], w_['face'], w_['u'], w_['y'], w_['w'], w_['h'], slug, d)
     if any(k in d for k in FLAT):
-        emit_k = 1.2 if ('projection' in d or 'wall_wash' in d or 'monitor' in d) else 0.0
+        lit = 'projection' in d or 'wall_wash' in d or 'monitor' in d
+        # 실제 사진의 프로젝션은 방을 물들일 만큼 밝고 크다 (바닥·맞은편 벽까지 번진다)
         DECALS.append((w_['zone'], w_['face'], U(w_['zone'], w_['face'], w_['u']), w_['y'], w_['w'], w_['h'],
-                       gmat(slug, emit_k)))
+                       gmat(slug, 3.2 if lit else 0.0)))
+        if lit:
+            PROJ.append((w_['zone'], w_['face'], w_['u'], w_['y'], w_['w'], w_['h'], slug))
     else:
         ART.append((w_['zone'], w_['face'], w_['u'], w_['y'], w_['w'], w_['h'], slug, disp_of(d)))
 FS = {(f['zone'], f['kind']): f for f in LAY['freestanding']}
@@ -315,6 +317,18 @@ def hang(frame, w, h, y, slug, display, spot=True, cap=True):
 
 for (room, side, u, y, w, h, slug, disp) in ART:
     hang(face(room, side, u), w, h, y, slug, disp)
+
+# 프로젝션: 화면만 발광시키면 방이 어둡다 -> 화면 앞 면광원 + 천장 프로젝터 본체
+for i, (room, side, u, y, w_, h_, slug) in enumerate(PROJ):
+    f = face(room, side, u)
+    ctr = f @ V((0, y, 0.15))
+    aim = f @ V((0, y, 3.0))
+    light(C_LIGHT, f'proj_{i}_{room}', 'AREA', tuple(ctr), tuple(aim),
+          energy=90 + w_ * h_ * 110, color=(1.0, 0.97, 0.9), size=max(w_, h_) * 0.8)
+    pj = f @ T(0, SOFFIT - 0.35, 4.2)                         # 천장에 매단 프로젝터
+    rig.add(bevel_box(0.42, 0.16, 0.34, 0.02), pj, M['rig'], 1)
+    g, m = tube(pj @ V((0, 0.08, 0)), f @ V((0, SOFFIT, 4.2)), 0.016, 6)
+    rig.add(g, m, M['rig'])
 
 # 서문 벽에 끼운 양면 창문 작품 (앞: 서문 쪽, 뒤: 빨간 스튜디오 쪽) — layout_v2 Z01
 fw = face('preface', 'w', 6.9) @ T(0, 1.55, 0)
