@@ -57,11 +57,14 @@ M = {
     'paver': material('paver', None, (0.74, 0.74, 0.72), 0.6),
     'plaza': material('plaza', 'asphalt_02', (0.35, 0.36, 0.38), 0.9),
     'stageFloor': material('stageFloor', image_base=f'{SHOTS}/apec_stage_floor.png', rough=0.25, coat=0.3),
-    'stageBody': material('stageBody', None, (0.035, 0.07, 0.24), 0.6),         # 남색 무대 몸통·치마
+    'stageBody': material('stageBody', None, (0.017, 0.026, 0.100), 0.7),             # 남색 치마 (#232A55)
+    'deckCarpet': material('deckCarpet', None, (0.700, 0.682, 0.639), 0.9),            # 연회색 니들펀치 갑판
+    'redStrip': material('redStrip', None, (1, 0.1, 0.1), 0.4, emit=(1.0, 0.08, 0.06), emit_strength=3),
+    'scafTube': material('scafTube', None, (0.6, 0.61, 0.59), 0.45, 0.7),        # 시스템 비계 파이프
     'stairBlue': material('stairBlue', None, (0.05, 0.11, 0.38), 0.55),         # 남색 계단
     'nosing': material('nosing', None, (0.8, 0.9, 1), emit=(0.7, 0.85, 1.0), emit_strength=6),
     'fascia': material('fascia', emit_image=f'{SHOTS}/apec_real_fascia.png', emit_strength=1.3, rough=0.4),
-    'led': material('led', emit_image=f'{SHOTS}/apec_real_led.png', emit_strength=3.0, rough=0.25),
+    'led': material('led', emit_image=f'{SHOTS}/apec_real_led.png', emit_strength=1.8, rough=0.25),
     'ledFrame': material('ledFrame', None, (0.015, 0.015, 0.02), 0.5),
     'roofSkin': material('roofSkin', None, (0.88, 0.89, 0.88), 0.85),            # 흰 막지붕 (현장 사진)
     'lectern': material('lectern', None, (0.93, 0.94, 0.95), 0.3, coat=0.4),
@@ -155,30 +158,49 @@ outer.add(box(160, 0.1, 140), T(0, -0.06, 0), M['plaza'], tile=4)
 outer.build()
 
 # ── 무대 ─────────────────────────────────────────────────────
-CX, CZ, TOP = 6, -16, 1.2
+CX, CZ, TOP = 6, -16, 0.55                      # 갑판 높이 0.55m (IBC·접이의자 두 자로 실측)
 FRONT = CZ + 4.5  # 무대 앞면 z = -11.5
 stage = Assembly('stage', C_STATIC)
-stage.add(bevel_box(18, TOP - 0.04, 9, 0.02), T(CX, (TOP - 0.04) / 2, CZ), M['stageBody'])
-stage.add(box(18, 0.05, 9), T(CX, TOP - 0.025, CZ), M['stageFloor'], tile=None)   # 무대 상판 (윗면에 바닥 그래픽)
+stage.add(bevel_box(18.2, TOP - 0.04, 9, 0.02), T(CX, (TOP - 0.04) / 2, CZ), M['stageBody'])
+for k in range(8):                                                                # 치마의 APEC·경상북도 로고와 아래 빨간 LED 띠
+    stage.add(plane(1.6, 0.3), T(CX - 6.65 + k * 1.9, TOP - 0.28, FRONT + 0.005), M['sign'], tile=None)
+emit.add(box(17.6, 0.035, 0.03), T(CX, 0.07, FRONT + 0.02), M['redStrip'])
+stage.add(box(18.2, 0.05, 9), T(CX, TOP - 0.025, CZ), M['deckCarpet'], 2)         # 연회색 카펫 갑판
 emit.add(plane(18, 1.1), T(CX, 0.58, FRONT + 0.07), M['fascia'], tile=None)
 # 좌우 계단 (단 높이 0.3m, 앞끝에 흰 LED 라인)
-STEP_W = 13.0                                                     # 앞면을 가로지르는 넓은 계단 (현장 사진)
-for k in (3, 2, 1):
-    h = TOP * k / 3
-    zc = FRONT + 0.4 * (4 - k) - 0.2
-    stage.add(box(STEP_W, h, 0.4), T(CX - 1.0, h / 2, zc), M['stairBlue'], 1)
+def step_unit(cx_, cz_, w_, ry_=0.0):
+    """3단 계단 (남색 챌판 + 연회색 카펫 디딤판, 난간 없음) — layout_v2 rear_stairs"""
+    f = T(cx_, 0, cz_, ry_)
+    for k in (3, 2, 1):
+        h = TOP * k / 3
+        zc = 0.3 * (4 - k) - 0.15
+        stage.add(box(w_, h, 0.3), f @ T(0, h / 2, zc), M['stairBlue'], 1)
+        stage.add(box(w_, 0.03, 0.3), f @ T(0, h + 0.015, zc), M['deckCarpet'], 1)
+
+
+step_unit(CX, FRONT + 0.45, 3.5)                                   # 앞 가운데 한 짝 (3.0~4.0m)
 # 무대 뒤 계단 (대기 천막 쪽, 무대 오른쪽 뒤)
-BACK = CZ - 4.5
-for k in (3, 2, 1):
-    h = 0.3 * k
-    zc = BACK - 0.35 * (4 - k) + 0.175
-    stage.add(box(2.4, h, 0.35), T(CX + 6.2, h / 2, zc), M['stairBlue'], 1)
+for (sx_, sz_, sry) in ((13.5, -21.0, PI), (1.5, -21.0, PI), (-3.5, -18.0, -PI / 2)):
+    step_unit(sx_, sz_, 1.5, sry)                                  # 무대 뒤·옆 계단 세 짝
 # LED월 (하단 로고 띠 포함 14.4 × 6.2 m)
-stage.add(bevel_box(15.4, 5.0, 0.35, 0.02), T(CX, TOP + 2.55, CZ - 3.9), M['ledFrame'])
-emit.add(plane(15.0, 4.7), T(CX, TOP + 2.55, CZ - 3.64), M['led'], tile=None)   # 15.0 x 4.7 (사진 비율 3.2:1)
-stage.add(box(15.4, 0.9, 0.3), T(CX, TOP + 0.45, CZ - 3.88), M['stageBody'], 1)          # LED 아래 남색 로고 띠
-for k in range(8):                                                                        # APEC · 경상북도 번갈아
-    stage.add(plane(1.5, 0.46), T(CX - 6.6 + k * 1.9, TOP + 0.45, CZ - 3.72), M['sign'], tile=None)
+# LED 는 갑판에 놓인 상자가 아니라, 잔디에 선 8.5m 시스템 비계 앞면에 매달린다 (layout_v2 led_wall)
+LEDZ, LED_W, LED_H, LED_B = -20.2, 16.0, 5.5, 0.55
+for bx in range(10):                                                                # 베이 1.8m x 10, 단높이 1.7m x 5
+    px = CX - 9.0 + bx * 1.8
+    for zz in (LEDZ - 0.12, LEDZ - 2.3):
+        stage.add(cyl(0.024, 0.024, 8.5, 8), T(px, 4.25, zz), M['scafTube'], 1)
+        if bx < 9:
+            for by in range(1, 6):
+                g_, m_ = tube(V((px, by * 1.7, zz)), V((px + 1.8, by * 1.7, zz)), 0.02, 6)
+                stage.add(g_, m_, M['scafTube'])
+    for by in range(1, 6):                                                          # 앞뒤 연결재
+        g_, m_ = tube(V((px, by * 1.7, LEDZ - 0.12)), V((px, by * 1.7, LEDZ - 2.3)), 0.02, 6)
+        stage.add(g_, m_, M['scafTube'])
+stage.add(bevel_box(LED_W + 0.4, LED_H + 0.3, 0.3, 0.02), T(CX, LED_B + LED_H / 2, LEDZ - 0.15), M['ledFrame'])
+emit.add(plane(LED_W, LED_H), T(CX, LED_B + LED_H / 2, LEDZ + 0.01), M['led'], tile=None)
+for sgn in (-1, 1):                                                                 # LED 양 끝 남색 마스킹 플랫 6 x 4.5
+    stage.add(box(0.12, 4.5, 6.0), T(CX + sgn * (LED_W / 2 + 0.6), TOP + 2.25, LEDZ + 3.1), M['stageBody'], 1)
+
 # 흰 아크릴 연설대 2개 (gear.lectern)
 for lx, lz in ((CX - 4.6, CZ + 2.2), (CX + 1.4, CZ + 1.3)):
     gear.lectern(stage, T(lx, TOP, lz), M)
@@ -189,7 +211,7 @@ stage.build()
 
 # ── 지붕 · 트러스 타워 · 조명 ──────────────────────────────────
 X0, X1, ZB, ZF = -5.2, 17.2, -21.4, -10.6
-HT, HR, ZR, TOWER = 8.6, 10.8, -16, 14.2
+HT, HR, ZR, TOWER = 7.5, 9.0, -16, 10.0    # layout_v2: 처마 7.5 · 용마루 9.0 · 타워 10.0
 truss = Assembly('truss', C_DYNAMIC)
 
 
@@ -229,17 +251,17 @@ box_truss(V((X0, HT, ZF)), V((X1, HT, ZF)))
 box_truss(V((X0, HT, ZB)), V((X1, HT, ZB)))
 box_truss(V((X0, HT, ZB)), V((X0, HT, ZF)))
 box_truss(V((X1, HT, ZB)), V((X1, HT, ZF)))
-box_truss(V((X0, HR, ZR)), V((X1, HR, ZR)), 0.36)
-for rx in (X0, CX, X1):
-    box_truss(V((rx, HT, ZB)), V((rx, HR, ZR)), 0.3)
-    box_truss(V((rx, HT, ZF)), V((rx, HR, ZR)), 0.3)
+box_truss(V((CX, HR, ZB)), V((CX, HR, ZF)), 0.36)                     # 용마루는 앞뒤(z) 방향 — 객석이 박공 끝면을 본다
+for rz in (ZB, (ZB + ZF) / 2, ZF):
+    box_truss(V((X0, HT, rz)), V((CX, HR, rz)), 0.3)
+    box_truss(V((X1, HT, rz)), V((CX, HR, rz)), 0.3)
 
 # 회색 박공 지붕 막
-theta = math.atan2(HR - HT, ZR - ZB)
-slope = math.hypot(HR - HT, ZR - ZB) + 0.6
+theta = math.atan2(HR - HT, CX - X0)
+slope = math.hypot(HR - HT, CX - X0) + 0.6
 roof = Assembly('roof', C_STATIC)
-roof.add(gable_skin(X1 - X0 + 1.2, slope), T(CX, (HT + HR) / 2 + 0.28, (ZB + ZR) / 2, 0, -theta), M['roofSkin'], 3)
-roof.add(gable_skin(X1 - X0 + 1.2, slope), T(CX, (HT + HR) / 2 + 0.28, (ZF + ZR) / 2, PI, -theta), M['roofSkin'], 3)
+roof.add(gable_skin(ZF - ZB + 1.2, slope), T((X0 + CX) / 2, (HT + HR) / 2 + 0.28, (ZB + ZF) / 2, -PI / 2, -theta), M['roofSkin'], 3)
+roof.add(gable_skin(ZF - ZB + 1.2, slope), T((X1 + CX) / 2, (HT + HR) / 2 + 0.28, (ZB + ZF) / 2, PI / 2, -theta), M['roofSkin'], 3)
 roof.build(smooth=True)
 
 # 전면 트러스 조명 두 줄 (현장 사진: 위 따뜻한 워시, 아래 파란 무빙이 촘촘히 번갈아)
@@ -309,11 +331,17 @@ def marquee(f, w, d, eave=2.6, ridge=3.6, walls=True):
     for sx in (-w / 2, 0, w / 2):
         for sz in (-d / 2, d / 2):
             boh.add(cyl(0.05, 0.05, eave, 10), f @ T(sx, eave / 2, sz), M['tentAlu'], 1)
-    sl = math.hypot(ridge - eave, d / 2)
-    for sgn in (-1, 1):
+    for sgn in (-1, 1):                                              # 네 모임지붕 (사각뿔)
+        sl = math.hypot(ridge - eave, d / 2)
         boh.add(plane(w, sl), f @ T(0, (eave + ridge) / 2, sgn * d / 4, 0,
                 PI / 2 + sgn * math.atan2(ridge - eave, d / 2)), M['tentFab'], 2)
-    boh.add(plane(w, 0.28), f @ T(0, eave - 0.14, -d / 2), M['tentFab'], 1)      # 앞 처마 밸런스
+        sl2 = math.hypot(ridge - eave, w / 2)
+        boh.add(plane(d, sl2), f @ T(sgn * w / 4, (eave + ridge) / 2, 0, sgn * PI / 2,
+                PI / 2 + math.atan2(ridge - eave, w / 2)), M['tentFab'], 2)
+    boh.add(plane(w, 0.22), f @ T(0, eave - 0.11, -d / 2), M['tentFab'], 1)      # 처마 밸런스
+    for sx in (-w / 2, w / 2):                                       # 다리마다 검은 모래주머니
+        for sz in (-d / 2, d / 2):
+            boh.add(sphere(0.16, 2), f @ T(sx, 0.1, sz, 0, 0, 0, 1.3, 0.6, 1.0), M['black'])
     if walls:
         for sgn in (-1, 1):
             boh.add(plane(d, eave), f @ T(sgn * w / 2, eave / 2, 0, sgn * PI / 2), M['tentFab'], 2)
@@ -366,9 +394,8 @@ clad_tower(T(-8.5, 0, -5.0, -0.5))
 clad_tower(T(20.5, 0, -5.0, 0.5))
 # 정면(테이블 끝)에서 무대를 마주 보는 중계카메라 단상은 옆 두 기둥보다 낮고 옆으로 넓다
 clad_tower(T(CX + 1.0, 0, FRONT + 21.0, PI), w=5.4, d=2.4, h=2.3, lights=4)   # 테이블 밭 뒤쪽 중앙 축
-for (mx, mz, mw, md) in ((CX - 6.5, ZB - 8.5, 12.0, 9.0), (CX + 7.5, ZB - 8.0, 10.0, 8.0),
-                         (CX - 14.5, ZB - 6.0, 8.0, 7.0)):
-    marquee(T(mx, 0, mz), mw, md)
+for k in range(5):                                                  # 5 x 5m 몽골텐트 (실측), 무대 뒤에 맞붙여 다섯 동
+    marquee(T(CX - 10.4 + k * 5.2, 0, ZB - 4.6), 5.0, 5.0, eave=2.2, ridge=3.3)
 boh.build()
 
 # ── 만찬 테이블 ────────────────────────────────────────────────

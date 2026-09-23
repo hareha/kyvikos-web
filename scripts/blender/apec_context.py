@@ -952,6 +952,78 @@ needles.build()
 leaves.build()
 glow.build()
 
+# ── 잔디에서 보이는 석조물 (assets-src/refs/apec/_notes_site_permanent.md) ────────
+#    황룡원에 해태상은 없다. 잔디에서 보이는 사자 조각은 쌍사자 석등 하나뿐이고,
+#    그 밖에 석양(石羊) 한 점, 탑 앞 당간지주형 표석, 북동 모서리 연못의 금룡이 있다.
+stones = Assembly('site_stones', C_STATIC)
+stones_glow = Assembly('site_stones_emissive', C_EMIT)
+M_STONE = mat('siteGranite', None, (0.62, 0.61, 0.58), 0.85)
+M_GOLD = mat('siteGold', None, (0.66, 0.5, 0.18), 0.35, 0.85)
+M_REDBAR = mat('siteRedBar', None, (0.42, 0.07, 0.06), 0.8)
+M_LGLOW = mat('siteLanternGlow', None, (1, 0.8, 0.55), 0.5, emit=(1.0, 0.75, 0.45), emit_strength=4)
+
+
+def lion_lantern(x, z, h=3.1):
+    """쌍사자 석등 — 등을 맞댄 사자 두 마리가 화사석을 인다 (법주사 쌍사자석등 사본)"""
+    f = T(x, 0, z)
+    stones.add(cyl(0.62, 0.62, 0.12, 8), f @ T(0, 0.06, 0), M_STONE, 1)              # 팔각 지대석
+    stones.add(cyl(0.44, 0.5, 0.26, 8), f @ T(0, 0.25, 0), M_STONE, 1)               # 하대석 (연꽃)
+    for sgn in (-1, 1):                                                              # 사자 두 마리
+        lf = f @ T(sgn * 0.17, 0.38, 0, 0, 0, sgn * 0.08)
+        stones.add(bevel_box(0.26, 0.82, 0.4, 0.06), lf @ T(0, 0.41, 0), M_STONE, 1)
+        stones.add(sphere(0.17, 3), lf @ T(0, 0.92, 0.06, 0, 0, 0, 0.9, 1.0, 1.1), M_STONE)
+        stones.add(cyl(0.07, 0.05, 0.34, 6), lf @ T(0, 0.3, -0.24, 0.5), M_STONE, 1)  # 꼬리
+    stones.add(cyl(0.42, 0.42, 0.14, 8), f @ T(0, 1.36, 0), M_STONE, 1)              # 상대석
+    stones.add(cyl(0.4, 0.4, 0.62, 8), f @ T(0, 1.74, 0), M_STONE, 1)                # 화사석 (불집)
+    stones.add(cyl(0.72, 0.28, 0.3, 8), f @ T(0, 2.2, 0), M_STONE, 1)                # 옥개석
+    stones.add(sphere(0.13, 3), f @ T(0, 2.46, 0), M_STONE)                          # 보주
+    stones_glow.add(cyl(0.3, 0.3, 0.5, 8), f @ T(0, 1.74, 0), M_LGLOW, 1)
+
+
+def stone_ram(x, z, ry=0.0):
+    """석양(石羊) — 낮은 받침 위 웅크린 돌 양, 전체 약 0.85m"""
+    f = T(x, 0, z, ry)
+    stones.add(bevel_box(1.2, 0.22, 0.7, 0.03), f @ T(0, 0.11, 0), M_STONE, 1)
+    stones.add(bevel_box(0.9, 0.36, 0.42, 0.1), f @ T(0, 0.4, 0), M_STONE, 1)
+    stones.add(sphere(0.16, 3), f @ T(0.46, 0.58, 0, 0, 0, 0, 1.1, 0.9, 0.9), M_STONE)
+    for sgn in (-1, 1):
+        stones.add(cyl(0.05, 0.03, 0.2, 6), f @ T(0.46, 0.7, sgn * 0.11, 0, 0, sgn * 0.7), M_STONE, 1)
+
+
+def danggan_marker(x, z, ry=0.0, h=2.0):
+    """당간지주형 표석 — 화강석 기둥 두 개 + 붉은 목재 가로대, 구름무늬 기단"""
+    f = T(x, 0, z, ry)
+    stones.add(bevel_box(2.4, 0.3, 0.9, 0.04), f @ T(0, 0.15, 0), M_STONE, 1)
+    for sgn in (-1, 1):
+        stones.add(bevel_box(0.3, h, 0.42, 0.03), f @ T(sgn * 0.78, 0.3 + h / 2, 0), M_STONE, 1)
+    for yy in (h * 0.45, h * 0.82):
+        stones.add(box(1.86, 0.11, 0.16), f @ T(0, 0.3 + yy, 0.22), M_REDBAR, 1)
+
+
+def gold_dragon_pool(x, z):
+    """북동 모서리 반사 연못 위 검은 화강석 대 + 금룡 (약 4m)"""
+    f = T(x, 0, z, 0.5)
+    stones.add(box(7.0, 0.2, 4.2), f @ T(0, 0.1, 0), mat('poolEdge', None, (0.3, 0.3, 0.29), 0.7), 1)
+    stones.add(box(6.4, 0.06, 3.6), f @ T(0, 0.19, 0), mat('poolWater', None, (0.06, 0.09, 0.1), 0.05, 0.2), 1)
+    stones.add(bevel_box(2.2, 0.55, 1.1, 0.03), f @ T(0, 0.35, 0), mat('poolBlock', None, (0.09, 0.09, 0.1), 0.5), 1)
+    prev = None
+    for k in range(13):                                                              # 굽이치는 금룡 몸통
+        t_ = k / 12
+        p = f @ V((-1.9 + t_ * 3.8, 0.95 + 0.34 * math.sin(t_ * 5.0), 0.34 * math.cos(t_ * 4.2)))
+        if prev is not None:
+            g_, m_ = tube(prev, p, 0.11 - 0.045 * t_, 8)
+            stones.add(g_, m_, M_GOLD)
+        prev = p
+    stones.add(sphere(0.2, 3), f @ T(-2.0, 1.05, 0.0, 0, 0, 0, 1.3, 0.9, 0.9), M_GOLD)
+
+
+lion_lantern(1.0, 14.2)                    # 잔디 북동쪽 가장자리, 신평루 쪽 — 만찬석에서 보인다
+stone_ram(-16.5, 11.0, 0.6)                # 잔디 동남 모서리 화강석 보도 위
+danggan_marker(-21.5, -11.0, 1.57)         # 중도타워 잔디 쪽 기단 정면 축
+gold_dragon_pool(24.0, 16.5)               # 잔디 북동 모서리 반사 연못
+stones.build()
+stones_glow.build()
+
 # 귀빈동(연수동 북동동 옥상) 테라스 — 실제 만찬 사진을 찍은 자리
 camera(C_CAM, 'cam_terrace', (26.5, 14.6, 20.1), (-10.1, 23.4, -26.5), 84)   # 현장 사진에서 역산 (아이폰 광각, 위로 약 9°)
 # 신평루 콘솔 부스 — 콘솔 뒤에서 무대 쪽 (소개서 18p 사진)
