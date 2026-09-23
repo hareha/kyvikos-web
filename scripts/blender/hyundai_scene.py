@@ -41,6 +41,12 @@ from gallery import srgb  # noqa: E402
 
 REFS = '/Users/hare/Documents/큐비크스홈페이지/assets-src/refs/hyundai'
 B = json.load(open(f'{REFS}/building_layout.json'))
+L2 = json.load(open(f'{REFS}/layout_v2.json'))                  # 2차 실측 (layout_v2.md §1 교정표)
+B['main_stair_1F_2F']['bottom_xz'] = L2['main_stair_1F_2F']['bottom_1F_xz']     # 계단 방향이 반대였다
+B['main_stair_1F_2F']['top_xz'] = L2['main_stair_1F_2F']['top_landing_2F_xz']
+B['screen']['bottom_m'] = L2['screen']['bottom_m']
+B['screen']['top_m'] = L2['screen']['top_m']
+B['screen']['height_m'] = L2['screen']['height_m']
 E = json.load(open(f'{REFS}/exhibition_layout.json'))
 random.seed(7)
 reset()
@@ -83,6 +89,7 @@ M = {
     'floor': material('hyFloor', image_base=f'{SHOTS}/hy_t_floor_concrete.png', color=(0.55, 0.55, 0.54), rough=0.22),   # 연마 콘크리트 (사진보다 밝던 것을 낮춤)
     'slabEdge': material('hySlabEdge', None, (0.05, 0.05, 0.055), 0.7),
     'slabUnder': material('hySlabUnder', None, (0.02, 0.02, 0.022), 0.8),           # 강관 루버 위 검은 슬래브
+    'soffit': material('hySoffit', None, (0.78, 0.78, 0.77), 0.85),                # 메자닌 아래 평평한 석고 천장
     'pipe': material('hyPipe', None, (0.6, 0.62, 0.64), 0.45, 0.55),                # 아연도 강관 (무광, 사진)
     'pipeDark': material('hyPipeDark', None, (0.16, 0.16, 0.17), 0.4, 0.6),        # 3~5층 천장 강관 (사진: 짙은 회색)
     'stone': material('hyStone', image_base=f'{SHOTS}/hy_t_stone_core.png', rough=0.45),                    # 인산염 코팅 강판 (아연 결정 무늬) 코어
@@ -256,7 +263,7 @@ CH_D = (0.714, -0.700)        # 모따기 방향
 CH_N = (0.700, 0.714)         # 안쪽 법선
 
 
-def pipe_ceiling(poly, y, pitch=0.115, r=0.018, battens=True, mat='pipe'):
+def pipe_ceiling(poly, y, pitch=0.105, r=0.025, battens=True, mat='pipe'):
     ins = inset(poly, 0.15)
     for k in range(-240, 240):
         off = k * pitch
@@ -290,7 +297,18 @@ def pipe_ceiling(poly, y, pitch=0.115, r=0.018, battens=True, mat='pipe'):
 pipe_ceiling(VOID, 7.1)
 UNDER2 = [(-11.349, 4.17), (-6.729, 4.17), (-3.719, 3.26), (2.756, -2.97), (3.771, -3.88), (-2.144, -11.37), (10.736, -11.37),
           (10.736, 3.61), (5.906, 3.61), (0.026, 9.385), (-11.349, 9.385)]
-pipe_ceiling(UNDER2, 3.25)
+# 메자닌 아래는 강관 루버가 아니라 평평한 연한 석고 천장 + 표면부착 라인 조명 (layout_v2 §1-4)
+prism(ceil, inset(UNDER2, 0.05), 3.25, 3.27, M['soffit'], 3, top=False, sides=False)
+for k in range(-10, 10):
+    off = k * 2.6
+    p0 = (CH_D[0] * off, CH_D[1] * off)
+    for (t0, t1) in clip_line(inset(UNDER2, 0.6), p0, CH_N):
+        a = V((p0[0] + CH_N[0] * t0, 3.22, p0[1] + CH_N[1] * t0))
+        b = V((p0[0] + CH_N[0] * t1, 3.22, p0[1] + CH_N[1] * t1))
+        Lb = (b - a).length
+        if Lb > 0.8:
+            mid = (a + b) / 2
+            emit.add(box(Lb - 0.2, 0.04, 0.07), T(mid.x, mid.y, mid.z, math.atan2(-CH_N[1], CH_N[0])), M['ledStrip'])
 for f in ('3F', '4F', '5F'):
     pipe_ceiling(TYP, LV[f] + 4.2, mat='pipeDark')
     prism(ceil, inset(TYP, 0.1), LV[f] + 4.35, LV[f] + 4.36, M['slabUnder'], 3, top=False, sides=False)
@@ -365,8 +383,8 @@ side = V((-sd.y, sd.x, 0))
 for sgn in (-1, 1):                                                      # 계단 옆 판 + 강관 난간 5줄
     a0 = sb + side * sgn * 0.72
     a1 = st_ + side * sgn * 0.72
-    for k in range(5):
-        h = 0.25 + k * 0.21
+    for k in range(6):
+        h = 0.22 + k * 0.178
         g, m = tube(V((a0.x, h, a0.y)), V((a1.x, LV['2F'] + h, a1.y)), 0.02, 6)
         rig.add(g, m, M['pipe'])
     for k in range(6):
