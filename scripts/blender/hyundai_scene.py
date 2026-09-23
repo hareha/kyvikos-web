@@ -83,7 +83,7 @@ M = {
     'floor': material('hyFloor', image_base=f'{SHOTS}/hy_t_floor_concrete.png', rough=0.2),                 # 연마 콘크리트 (현장 사진에서 편 타일)         # 따뜻한 회색 연마 콘크리트
     'slabEdge': material('hySlabEdge', None, (0.05, 0.05, 0.055), 0.7),
     'slabUnder': material('hySlabUnder', None, (0.02, 0.02, 0.022), 0.8),           # 강관 루버 위 검은 슬래브
-    'pipe': material('hyPipe', None, (0.62, 0.64, 0.66), 0.3, 0.9),                 # 아연도 강관
+    'pipe': material('hyPipe', None, (0.6, 0.62, 0.64), 0.45, 0.55),                # 아연도 강관 (무광, 사진)
     'pipeDark': material('hyPipeDark', None, (0.16, 0.16, 0.17), 0.4, 0.6),        # 3~5층 천장 강관 (사진: 짙은 회색)
     'stone': material('hyStone', image_base=f'{SHOTS}/hy_t_stone_core.png', rough=0.45),                    # 인산염 코팅 강판 (아연 결정 무늬) 코어
     'render': material('hyRender', None, (0.86, 0.86, 0.84), 0.8),                  # 남쪽 흰 미장
@@ -97,11 +97,12 @@ M = {
     'aluRail': material('hyAluRail', None, (0.6, 0.61, 0.63), 0.35, 0.8),
     'cage': material('hyCage', None, srgb('#F4C430'), 0.45),
     'ledStrip': material('hyLedStrip', None, (1, 1, 1), emit=(1.0, 0.97, 0.92), emit_strength=14),
+    'tube': material('hyTube', None, (1, 1, 1), emit=(1.0, 0.96, 0.9), emit_strength=6),
     'lightbox': material('hyLightbox', None, (1, 1, 1), emit=(0.96, 0.98, 1.0), emit_strength=2.2),
     'lampLens': material('hyLampLens', None, (1, 1, 1), emit=(1.0, 0.93, 0.82), emit_strength=30),
     'walnut': material('hyWalnut', 'dark_wooden_planks', (0.55, 0.38, 0.25), 0.5),
     'greyMat': material('hyGreyMat', None, (0.3, 0.3, 0.3), 0.9),
-    'blueFloor': material('hyBlueFloor', None, (0.02, 0.05, 0.35), 0.15, coat=0.8),
+    'blueFloor': material('hyBlueFloor', None, (0.015, 0.03, 0.14), 0.6),                # 무광 남색 매트 (사진)
     'blueWall': material('hyBlueWall', None, (0.02, 0.05, 0.33), 0.6),
     'ribbon': material('hyRibbon', None, srgb('#1C2F8F'), 0.4, 0.3),
     'carpetDark': material('hyCarpetDark', None, (0.03, 0.03, 0.035), 0.95),
@@ -255,7 +256,7 @@ CH_D = (0.714, -0.700)        # 모따기 방향
 CH_N = (0.700, 0.714)         # 안쪽 법선
 
 
-def pipe_ceiling(poly, y, pitch=0.15, r=0.022, battens=True, mat='pipe'):
+def pipe_ceiling(poly, y, pitch=0.115, r=0.018, battens=True, mat='pipe'):
     ins = inset(poly, 0.15)
     for k in range(-240, 240):
         off = k * pitch
@@ -268,8 +269,8 @@ def pipe_ceiling(poly, y, pitch=0.15, r=0.022, battens=True, mat='pipe'):
                 ceil.add(g, m, M[mat])
     # LED 바: 강관과 직교, 2.4m 간격
     if battens:
-        for k in range(-12, 12):
-            off = k * 2.4
+        for k in range(-6, 6):
+            off = k * 4.8
             p0 = (CH_D[0] * off, CH_D[1] * off)
             for (t0, t1) in clip_line(ins, p0, CH_N):
                 a = V((p0[0] + CH_N[0] * t0, y - 0.05, p0[1] + CH_N[1] * t0))
@@ -277,7 +278,12 @@ def pipe_ceiling(poly, y, pitch=0.15, r=0.022, battens=True, mat='pipe'):
                 L = (b - a).length
                 if L > 0.5:
                     mid = (a + b) / 2
-                    emit.add(box(L, 0.03, 0.06), T(mid.x, mid.y, mid.z, math.atan2(-CH_N[1], CH_N[0])), M['ledStrip'])
+                    ang = math.atan2(-CH_N[1], CH_N[0])
+                    emit.add(cyl(0.026, 0.026, L, 10), T(mid.x, mid.y - 0.06, mid.z, ang, 0, PI / 2), M['tube'])
+                    for e_ in (-1, 1):                       # 매다는 가는 봉
+                        pt = a + (b - a) * (0.5 + e_ * 0.42)
+                        g2, m2 = tube(V((pt.x, y + 0.02, pt.z)), V((pt.x, y - 0.06, pt.z)), 0.008, 5)
+                        rig.add(g2, m2, M['black'])
 
 
 # 1F 보이드 천장(+7.1) + 메자닌 아래(+3.25), 3~5F(FL+4.2)
@@ -540,10 +546,25 @@ def rounded_rect(w, d, r, seg=6):
     return pts
 
 
-def light_box(cx, cz, yaw_deg, y_under, w=6.0, d=3.0, r=0.9, th=0.28):
-    """둥근 사각 백라이트 천 조명 박스 (아랫면 발광)"""
+def blob_plan(w, d, seed, n=6):
+    """부드러운 자유 곡선 평면 (사진의 천 조명은 둥근 사각형이 아니라 유기적인 덩어리다)"""
+    rnd = random.Random(seed)
+    pts = [((w / 2) * math.cos(k / n * 2 * PI) * rnd.uniform(0.72, 1.12),
+            (d / 2) * math.sin(k / n * 2 * PI) * rnd.uniform(0.72, 1.12)) for k in range(n)]
+    for _ in range(3):                                     # 채이킨으로 매끈하게
+        q = []
+        for i in range(len(pts)):
+            p0, p1 = pts[i], pts[(i + 1) % len(pts)]
+            q += [(0.75 * p0[0] + 0.25 * p1[0], 0.75 * p0[1] + 0.25 * p1[1]),
+                  (0.25 * p0[0] + 0.75 * p1[0], 0.25 * p0[1] + 0.75 * p1[1])]
+        pts = q
+    return pts
+
+
+def light_box(cx, cz, yaw_deg, y_under, w=6.4, d=3.4, r=0.9, th=0.32):
+    """천을 씌운 대형 백라이트 조명 (아랫면 발광, 평면은 유기적인 자유 형태)"""
     f = T(cx, 0, cz, yaw_deg * DEG)
-    pts = [tuple((f @ V((px, 0, pz))).xz) for px, pz in rounded_rect(w, d, r)]
+    pts = [tuple((f @ V((px, 0, pz))).xz) for px, pz in blob_plan(w, d, int(abs(cx) * 100 + abs(cz) * 7 + y_under))]
     pts = [(p[0], p[1]) for p in pts]
     prism(expo, pts, y_under + 0.02, y_under + th, M['white'], 2, bottom=False)
     prism(emit, pts, y_under, y_under + 0.02, M['lightbox'], 2, top=False, sides=False)
@@ -606,8 +627,10 @@ for side, slug in ((1, 'arch_front'), (-1, 'arch_back')):
 
 # 천장 컨베이어: 폐루프 레일 + 노란 걸이 24개 + 1:4 차체
 RP = [V((p[0], p[1], p[2])) for p in X1['conveyor']['rail']['path_xyz']]
+for _ in range(2):                                            # 사진의 레일은 꺾이지 않고 부드럽게 휜다
+    RP = [RP[0]] + [q for a_, b_ in zip(RP, RP[1:]) for q in (a_ * 0.75 + b_ * 0.25, a_ * 0.25 + b_ * 0.75)] + [RP[-1]]
 for a, b in zip(RP, RP[1:]):
-    rig.add(box((b - a).length + 0.02, 0.18, 0.08), T((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2,
+    rig.add(box((b - a).length + 0.02, 0.10, 0.055), T((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2,
             math.atan2(-(b.z - a.z), b.x - a.x), 0, math.atan2(b.y - a.y, math.hypot(b.x - a.x, b.z - a.z))), M['aluRail'], 1)
 for k, a in enumerate(RP[:-1]):
     if k % 2 == 0:
@@ -624,15 +647,13 @@ for h in X1['conveyor']['hangers']['items']:
     tx, tz = h['tangent_xz']
     ry = math.atan2(-tz, tx)
     f = T(p.x, p.y - 0.25, p.z, ry)
-    g, m = tube(V((p.x, p.y - 0.09, p.z)), V((p.x, p.y - 0.25, p.z)), 0.012, 6)
+    g, m = tube(V((p.x, p.y - 0.09, p.z)), V((p.x, p.y - 0.25, p.z)), 0.011, 6)
     rig.add(g, m, M['cage'])
-    for (a_, b_) in (((-0.575, 0, -0.275), (0.575, 0, -0.275)), ((-0.575, 0, 0.275), (0.575, 0, 0.275)),
-                     ((-0.575, -0.7, -0.275), (0.575, -0.7, -0.275)), ((-0.575, -0.7, 0.275), (0.575, -0.7, 0.275)),
-                     ((-0.575, 0, -0.275), (-0.575, -0.7, -0.275)), ((0.575, 0, -0.275), (0.575, -0.7, -0.275)),
-                     ((-0.575, 0, 0.275), (-0.575, -0.7, 0.275)), ((0.575, 0, 0.275), (0.575, -0.7, 0.275)),
-                     ((-0.575, -0.7, -0.275), (-0.575, -0.7, 0.275)), ((0.575, -0.7, -0.275), (0.575, -0.7, 0.275)),
-                     ((0, 0, -0.275), (0, 0, 0.275))):
-        g, m = tube(f @ V(a_), f @ V(b_), 0.0125, 6)
+    # 걸이는 상자가 아니라 차체 길이 방향의 납작한 노란 프레임 한 장 + 아래 받침 두 개 (사진)
+    for (a_, b_) in (((-0.60, 0.0, 0), (0.60, 0.0, 0)), ((-0.60, 0.0, 0), (-0.60, -0.72, 0)),
+                     ((0.60, 0.0, 0), (0.60, -0.72, 0)), ((-0.60, -0.72, 0), (0.60, -0.72, 0)),
+                     ((-0.36, -0.72, -0.28), (-0.36, -0.72, 0.28)), ((0.36, -0.72, -0.28), (0.36, -0.72, 0.28))):
+        g, m = tube(f @ V(a_), f @ V(b_), 0.009, 6)
         rig.add(g, m, M['cage'])
     col = BODY_COLS.get(h.get('body_colour', 'white'), '#CCCCCC')
     if col not in body_mats:
@@ -903,9 +924,9 @@ for FL, X, keys in (('4F', X4, ('santafe', 'kona', 'casper')), ('5F', X5, ('ioni
         cx, cz = c['centre_xz']
         yaw = c['yaw_deg']
         cf_ = T(cx, 0, cz, yaw * DEG)
-        prism(expo, [tuple((cf_ @ V((px, 0, pz))).xz) for px, pz in ((-3.1, -1.6), (3.1, -1.6), (3.1, 1.6), (-3.1, 1.6))],
-              Y, Y + 0.03, M['blueFloor'], 2, bottom=False)
-        place_car(k_, cx, Y + 0.03, cz, yaw, f'car_{k_}')
+        prism(expo, [tuple((cf_ @ V((px, 0, pz))).xz) for px, pz in ((-2.7, -1.25), (2.7, -1.25), (2.7, 1.25), (-2.7, 1.25))],
+              Y, Y + 0.012, M['blueFloor'], 2, bottom=False)
+        place_car(k_, cx, Y + 0.012, cz, yaw, f'car_{k_}')
         # 차 뒤(꽁무니 쪽) 곡면 파란 배경 3.5m (사진)
         bk = [cf_ @ V((-3.3 - 0.35 * math.cos((i - 5) / 5 * PI / 2), 0, -1.9 + i * 0.38)) for i in range(11)]
         for a, b in zip(bk, bk[1:]):
