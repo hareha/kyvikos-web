@@ -253,6 +253,81 @@ for i in range(14):
           energy=700, color=(0.3, 0.5, 1.0), spot=0.28, blend=0.35, size=0.04)
 truss.build(smooth=True)
 
+# ── 백스테이지 · 설치장비 (현장 사진 assets-src/refs/apec/onsite/) ─────────────
+#    트러스 타워 발치의 IBC 물탱크 밸러스트, 라인어레이 스택, 카메라 중계대, 대기실 천막.
+#    정확한 평면 위치는 onsite 사진 실측(layout_v2) 나오면 다시 잡는다.
+boh = Assembly('backstage', C_STATIC)
+M['ibc'] = material('apIbc', None, (0.86, 0.87, 0.84), 0.35, transmission=0.25)
+M['ibcCage'] = material('apIbcCage', None, (0.55, 0.56, 0.58), 0.45, 0.7)
+M['ibcPallet'] = material('apIbcPallet', None, (0.45, 0.33, 0.2), 0.9)
+M['speakerBox'] = material('apSpeaker', None, (0.045, 0.045, 0.05), 0.55)
+M['scaffold'] = material('apScaffold', None, (0.62, 0.63, 0.6), 0.45, 0.7)
+M['tentFab'] = material('apTentFab', 'cotton_jersey', (0.9, 0.9, 0.88), 0.85, normal=0.4)
+M['tentAlu'] = material('apTentAlu', None, (0.72, 0.73, 0.75), 0.4, 0.8)
+
+
+def ibc_tote(f):
+    """1.2 × 1.0 × 1.16m IBC 물탱크 (트러스 타워 밸러스트) — 현장 사진에 네 타워 발치마다"""
+    boh.add(box(1.2, 0.14, 1.0), f @ T(0, 0.07, 0), M['ibcPallet'], 1)
+    boh.add(box(1.14, 1.0, 0.94), f @ T(0, 0.64, 0), M['ibc'], 1)
+    for k in range(7):                                                   # 철망 케이지 가로살
+        boh.add(box(1.18, 0.03, 0.98), f @ T(0, 0.18 + k * 0.155, 0), M['ibcCage'], 1)
+    for sx in (-0.57, -0.19, 0.19, 0.57):
+        boh.add(box(0.03, 1.0, 0.98), f @ T(sx, 0.64, 0), M['ibcCage'], 1)
+
+
+def line_array(f, n=8):
+    """지상 적재 라인어레이 + 서브우퍼 3통 (무대 양옆)"""
+    for k in range(3):
+        boh.add(box(1.25, 0.72, 0.9), f @ T(0, 0.36 + k * 0.72, 0), M['speakerBox'], 1)
+    y0 = 3 * 0.72 + 0.1
+    for k in range(n):                                                    # 살짝 뒤로 젖혀 쌓는다
+        boh.add(box(1.1, 0.33, 0.72), f @ T(0, y0 + 0.17 + k * 0.34, 0.02 * k, 0, -0.045 * k), M['speakerBox'], 1)
+
+
+def camera_tower(f, h=2.6):
+    """비계 카메라 중계대: 발판 + 난간 + 위에 카메라"""
+    for (sx, sz) in ((-0.85, -0.85), (0.85, -0.85), (-0.85, 0.85), (0.85, 0.85)):
+        boh.add(cyl(0.024, 0.024, h, 8), f @ T(sx, h / 2, sz), M['scaffold'], 1)
+        for k in range(1, 4):
+            boh.add(cyl(0.02, 0.02, 1.7, 8), f @ T(sx, k * h / 4, 0, 0, 0, PI / 2), M['scaffold'], 1)
+    boh.add(box(1.8, 0.06, 1.8), f @ T(0, h, 0), M['scaffold'], 1)
+    for k in (0, 1):                                                      # 상부 난간 두 줄
+        for (a_, b_) in (((-0.9, 0.9), (0.9, 0.9)), ((-0.9, -0.9), (-0.9, 0.9)), ((0.9, -0.9), (0.9, 0.9))):
+            g, m = tube(f @ V((a_[0], h + 0.55 + k * 0.5, a_[1])), f @ V((b_[0], h + 0.55 + k * 0.5, b_[1])), 0.018, 6)
+            boh.add(g, m, M['scaffold'])
+    boh.add(cyl(0.03, 0.03, 1.45, 8), f @ T(0, h + 0.73, 0), M['black'], 1)     # 삼각대 기둥
+    boh.add(bevel_box(0.26, 0.2, 0.55, 0.02), f @ T(0, h + 1.55, 0), M['black'], 1)
+    boh.add(cyl(0.085, 0.09, 0.3, 16), f @ T(0, h + 1.57, 0.4, 0, PI / 2), M['black'], 1)
+
+
+def marquee(f, w, d, eave=2.6, ridge=3.6, walls=True):
+    """대기실용 대형 천막 (박공 막 + 철제 기둥). 무대 뒤쪽을 거의 덮고 있었다 (클라이언트)"""
+    for sx in (-w / 2, 0, w / 2):
+        for sz in (-d / 2, d / 2):
+            boh.add(cyl(0.05, 0.05, eave, 10), f @ T(sx, eave / 2, sz), M['tentAlu'], 1)
+    sl = math.hypot(ridge - eave, d / 2)
+    for sgn in (-1, 1):
+        boh.add(plane(w, sl), f @ T(0, (eave + ridge) / 2, sgn * d / 4, 0,
+                PI / 2 + sgn * math.atan2(ridge - eave, d / 2)), M['tentFab'], 2)
+    boh.add(plane(w, 0.28), f @ T(0, eave - 0.14, -d / 2), M['tentFab'], 1)      # 앞 처마 밸런스
+    if walls:
+        for sgn in (-1, 1):
+            boh.add(plane(d, eave), f @ T(sgn * w / 2, eave / 2, 0, sgn * PI / 2), M['tentFab'], 2)
+        boh.add(plane(w, eave), f @ T(0, eave / 2, d / 2, PI), M['tentFab'], 2)
+
+
+for (tx, tz) in ((X0 + 0.9, ZB + 0.9), (X1 - 0.9, ZB + 0.9), (X0 + 0.9, ZF - 0.9), (X1 - 0.9, ZF - 0.9)):
+    for sgn in (-1, 1):                                                   # 타워마다 IBC 두 통
+        ibc_tote(T(tx, 0, tz + sgn * 0.75))
+line_array(T(X0 + 1.2, 0, FRONT - 1.0))
+line_array(T(X1 - 1.2, 0, FRONT - 1.0))
+camera_tower(T(CX - 1.5, 0, FRONT + 13.5))
+for (mx, mz, mw, md) in ((CX - 6.5, ZB - 8.5, 12.0, 9.0), (CX + 7.5, ZB - 8.0, 10.0, 8.0),
+                         (CX - 14.5, ZB - 6.0, 8.0, 7.0)):
+    marquee(T(mx, 0, mz), mw, md)
+boh.build()
+
 # ── 만찬 테이블 ────────────────────────────────────────────────
 tables = Assembly('tables', C_STATIC)
 # 가운데 동선(x≈6) 왼쪽(타워 쪽)에 엇갈린 격자, 오른쪽에 3열 — 잔디·타워 동선 안쪽만
