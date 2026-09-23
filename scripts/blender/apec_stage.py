@@ -322,7 +322,47 @@ for (tx, tz) in ((X0 + 0.9, ZB + 0.9), (X1 - 0.9, ZB + 0.9), (X0 + 0.9, ZF - 0.9
         ibc_tote(T(tx, 0, tz + sgn * 0.75))
 line_array(T(X0 + 1.2, 0, FRONT - 1.0))
 line_array(T(X1 - 1.2, 0, FRONT - 1.0))
-camera_tower(T(CX - 1.5, 0, FRONT + 13.5))
+def clad_tower(f, w=3.0, d=2.6, h=3.6, lights=1, cam=True, face_graphic=True):
+    """남색 천으로 감싼 비계 기둥 + 윗면 발판에 무빙라이트·중계카메라
+       (현장 사진 client_cladtower_8/9/10.jpg: 무대를 보는 양옆에 하나씩, 정면에 한 대)"""
+    boh.add(bevel_box(w, h, d, 0.02), f @ T(0, h / 2, 0), M['black'], 1)
+    if face_graphic:                                                   # 무대 반대쪽(관객이 보는 면)에 APEC·경상북도
+        boh.add(plane(w - 0.12, h - 0.5), f @ T(0, h / 2 + 0.1, d / 2 + 0.012), M['sign'], tile=None)
+    boh.add(box(0.9, 2.0, 0.04), f @ T(w / 2 - 0.55, 1.0, -d / 2 - 0.022), M['black'], 1)   # 옆면 출입문
+    boh.add(cyl(0.02, 0.02, 0.12, 8), f @ T(w / 2 - 0.15, 1.05, -d / 2 - 0.05, 0, PI / 2), M['scaffold'], 1)
+    for (sx, sz) in ((-w / 2 + 0.12, -d / 2 + 0.12), (w / 2 - 0.12, -d / 2 + 0.12),
+                     (-w / 2 + 0.12, d / 2 - 0.12), (w / 2 - 0.12, d / 2 - 0.12)):
+        boh.add(cyl(0.024, 0.024, h + 1.3, 8), f @ T(sx, (h + 1.3) / 2, sz), M['scaffold'], 1)
+    for k in range(12):                                                 # 윗면 그레이팅 발판
+        boh.add(box(w - 0.2, 0.04, (d - 0.2) / 12 - 0.02), f @ T(0, h + 0.02, -d / 2 + 0.14 + k * (d - 0.2) / 12), M['scaffold'], 1)
+    for k in (0, 1):                                                    # 상부 난간 두 줄 (무대 쪽은 비워 둔다)
+        yy = h + 0.55 + k * 0.5
+        for (a_, b_) in (((-w / 2, -d / 2), (w / 2, -d / 2)), ((-w / 2, -d / 2), (-w / 2, d / 2)), ((w / 2, -d / 2), (w / 2, d / 2))):
+            g, m = tube(f @ V((a_[0], yy, a_[1])), f @ V((b_[0], yy, b_[1])), 0.018, 6)
+            boh.add(g, m, M['scaffold'])
+    if lights > 2:                                                      # 낮은 단상: 발판 위 가로 조명 바
+        boh.add(box(w - 0.6, 0.08, 0.08), f @ T(0, h + 1.15, 0.25), M['scaffold'], 1)
+    for k in range(lights):                                             # 무빙라이트 / 투광등
+        lx = (k - (lights - 1) / 2) * (0.75 if lights <= 2 else (w - 1.2) / max(1, lights - 1))
+        boh.add(bevel_box(0.3, 0.22, 0.28, 0.02), f @ T(lx, h + 0.17, 0.35), M['black'], 1)
+        boh.add(bevel_box(0.26, 0.46, 0.3, 0.02), f @ T(lx, h + 0.5, 0.35, 0, 0, -0.5), M['black'], 1)
+        emit.add(cyl(0.1, 0.1, 0.02, 16), f @ T(lx + 0.18, h + 0.65, 0.35, 0, PI / 2, -0.5), M['blueLens'])
+    if cam:                                                             # 중계카메라 (삼각대 + 본체 + 렌즈 후드)
+        boh.add(cyl(0.035, 0.035, 1.25, 8), f @ T(-0.5, h + 0.65, -0.5), M['black'], 1)
+        for sgn in (-1, 1):
+            g, m = tube(f @ V((-0.5, h + 0.9, -0.5)), f @ V((-0.5 + sgn * 0.35, h + 0.04, -0.5 + sgn * 0.2)), 0.016, 6)
+            boh.add(g, m, M['black'])
+        cf = f @ T(-0.5, h + 1.42, -0.5)
+        boh.add(bevel_box(0.3, 0.26, 0.62, 0.02), cf, M['black'], 1)
+        boh.add(cyl(0.1, 0.11, 0.34, 16), cf @ T(0, 0.02, 0.44, 0, PI / 2), M['black'], 1)
+        boh.add(box(0.2, 0.14, 0.02), cf @ T(0.2, 0.06, -0.1, 0, 0, 0.25), M['black'], 1)
+
+
+# 무대를 보는 양옆에 하나씩 + 정면(테이블 끝)에 중계카메라 단상
+clad_tower(T(-8.5, 0, -5.0, -0.5))
+clad_tower(T(20.5, 0, -5.0, 0.5))
+# 정면(테이블 끝)에서 무대를 마주 보는 중계카메라 단상은 옆 두 기둥보다 낮고 옆으로 넓다
+clad_tower(T(CX + 1.0, 0, FRONT + 21.0, PI), w=5.4, d=2.4, h=2.3, lights=4)   # 테이블 밭 뒤쪽 중앙 축
 for (mx, mz, mw, md) in ((CX - 6.5, ZB - 8.5, 12.0, 9.0), (CX + 7.5, ZB - 8.0, 10.0, 8.0),
                          (CX - 14.5, ZB - 6.0, 8.0, 7.0)):
     marquee(T(mx, 0, mz), mw, md)
