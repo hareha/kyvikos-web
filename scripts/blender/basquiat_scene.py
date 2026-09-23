@@ -479,11 +479,29 @@ tf_ = face('temple', 'n', 8.4)                                      # Tar Tax �
 works.add(box(0.7, 0.7, 0.3), tf_ @ T(0, 1.6, 0.15), M['frameBlack'], 1)
 works.add(cyl(0.225, 0.225, 0.02, 48), tf_ @ T(0, 1.6, 0.31, 0, PI / 2), gmat('tar_tax_disc'), tile=None)
 spots.append((tf_, 0.5, 0.5, 1.6, 0.3))
-# 검은 주름 커튼 (Museum Security → Temple): msec 남쪽 문 자리
-dsec = next(d for d in LAY['doors'] if d['frm'] == 'msec')
-cx0 = mx1 - dsec['u1']
-for k in range(16):
-    works.add(box(0.1, 3.4, 0.13), T(cx0 + 0.1 + k * 0.22, 1.7, mz1 + (0.04 if k % 2 else -0.04)), M['curtain'], 1)
+# 검은 주름 커튼: 단어의 신전은 커튼으로 닫힌 암실이라 들어갈 때와 나올 때 두 번 지난다.
+#   후기 다수 증언 — ze126 "다시 커튼을 통해 다음 구역으로", a4b4 "검은 암막속의 다음 공간으로",
+#   rnswk378 "유일하게 커튼이 설치되어있고". IN = Museum Security 남쪽 문, OUT = Temple 서쪽 문.
+def pleated_curtain(x0, x1, z0, z1, h=3.4):
+    horiz = abs(x1 - x0) >= abs(z1 - z0)
+    L = abs(x1 - x0) if horiz else abs(z1 - z0)
+    n = max(6, int(L / 0.22))
+    for k in range(n):
+        t_ = (k + 0.5) / n
+        off = 0.04 if k % 2 else -0.04
+        if horiz:
+            works.add(box(L / n + 0.02, h, 0.13), T(min(x0, x1) + t_ * L, h / 2, (z0 + z1) / 2 + off), M['curtain'], 1)
+        else:
+            works.add(box(0.13, h, L / n + 0.02), T((x0 + x1) / 2 + off, h / 2, min(z0, z1) + t_ * L), M['curtain'], 1)
+
+
+for _frm in ('msec', 'temple'):
+    _d = next(d for d in LAY['doors'] if d['frm'] == _frm)
+    _x0, _x1, _z0, _z1 = ROOMS[_d['zone']]['rect']
+    if _d['face'] == 's':
+        pleated_curtain(_x1 - _d['u1'], _x1 - _d['u0'], _z1, _z1, _d['h'] + 0.2)
+    elif _d['face'] == 'w':
+        pleated_curtain(_x0, _x0, _z1 - _d['u1'], _z1 - _d['u0'], _d['h'] + 0.2)
 
 # It's All Drawing: 반구대 탁본 앞 낮은 흰 선반 (곡벽 감실의 연석)
 dx0, dx1, dz0, dz1 = ROOMS['drawing']['rect']
