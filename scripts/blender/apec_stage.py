@@ -54,7 +54,8 @@ C_SRC.hide_viewport = True
 # ── 재질 ─────────────────────────────────────────────────────
 M = {
     'lawn': material('lawn', 'leafy_grass', (0.62, 0.56, 0.26), 0.95),          # 11월 마른 잔디 (현장 사진)
-    'paver': material('paver', None, (0.74, 0.74, 0.72), 0.6),
+    # 디딤돌이 잔디보다 밝아서 하얀 덩어리로 떠 보였다. 사진에서는 잔디보다 어두운 회색 석재다.
+    'paver': material('paver', 'rock_tile_floor_02', (0.30, 0.30, 0.285), 0.85, normal=0.5),
     'plaza': material('plaza', 'asphalt_02', (0.35, 0.36, 0.38), 0.9),
     'stageFloor': material('stageFloor', image_base=f'{SHOTS}/apec_stage_floor.png', rough=0.25, coat=0.3),
     'stageBody': material('stageBody', None, (0.017, 0.026, 0.100), 0.7),             # 남색 치마 (#232A55)
@@ -168,11 +169,11 @@ CX, CZ, TOP = 6, -16, 0.55                      # 갑판 높이 0.55m (IBC·접�
 FRONT = CZ + 4.5  # 무대 앞면 z = -11.5
 stage = Assembly('stage', C_STATIC)
 stage.add(bevel_box(18.2, TOP - 0.04, 9, 0.02), T(CX, (TOP - 0.04) / 2, CZ), M['stageBody'])
-for k in range(8):                                                                # 치마의 APEC·경상북도 로고와 아래 빨간 LED 띠
-    stage.add(plane(1.6, 0.3), T(CX - 6.65 + k * 1.9, TOP - 0.28, FRONT + 0.005), M['sign'], tile=None)
+# 치마의 APEC·경상북도 로고 띠. fascia 판이 1.1m 짜리라 갑판(0.55m) 위로 0.58m 솟아 있었고,
+# 무대 위에서는 그 뒷면이 보여 글씨가 거울상으로 뒤집혀 나왔다. 치마 높이에 맞춰 눕힌다.
+emit.add(plane(18.0, TOP - 0.06), T(CX, (TOP - 0.06) / 2 + 0.02, FRONT + 0.006), M['fascia'], tile=None)
 emit.add(box(17.6, 0.035, 0.03), T(CX, 0.07, FRONT + 0.02), M['redStrip'])
 stage.add(box(18.2, 0.05, 9), T(CX, TOP - 0.025, CZ), M['deckCarpet'], 2)         # 연회색 카펫 갑판
-emit.add(plane(18, 1.1), T(CX, 0.58, FRONT + 0.07), M['fascia'], tile=None)
 # 좌우 계단 (단 높이 0.3m, 앞끝에 흰 LED 라인)
 def step_unit(cx_, cz_, w_, ry_=0.0):
     """3단 계단 (남색 챌판 + 연회색 카펫 디딤판, 난간 없음) — layout_v2 rear_stairs"""
@@ -224,7 +225,8 @@ for bx in range(10):                                                            
 stage.add(bevel_box(LED_W + 0.4, LED_H + 0.3, 0.3, 0.02), T(CX, LED_B + LED_H / 2, LEDZ - 0.15), M['ledFrame'])
 emit.add(plane(LED_W, LED_H), T(CX, LED_B + LED_H / 2, LEDZ + 0.01), M['led'], tile=None)
 for sgn in (-1, 1):                                                                 # LED 양 끝 남색 마스킹 플랫 6 x 4.5
-    stage.add(box(0.12, 4.5, 6.0), T(CX + sgn * (LED_W / 2 + 0.6), TOP + 2.25, LEDZ + 3.1), M['stageBody'], 1)
+    # 날개 깊이가 6m 라 객석에서 보면 거대한 파란 벽처럼 보였다 (사진은 2~3m).
+    stage.add(box(0.12, 4.5, 2.6), T(CX + sgn * (LED_W / 2 + 0.6), TOP + 2.25, LEDZ + 1.4), M['stageBody'], 1)
 
 # 무대 위 (onsite_085952_003 확대): 호두나무색 창살 병풍 다섯 폭 + 그 앞 목재 연설대.
 # 전에는 병풍이 무늬 없는 판 네 장, 연설대가 흰 상자, 그 옆에 붉은 상자였다.
