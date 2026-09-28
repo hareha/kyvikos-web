@@ -39,3 +39,5 @@
 
 ## Site layout reference
 - The 황룡원 layout was measured from satellite imagery and the official facility aerial photo (`scripts/blender/site_survey.md`).
+- "Banquet Chair WITH COVER" by Event help (@sajan2) — https://sketchfab.com/3d-models/banquet-chair-with-cover-17b52cddff214f14a3903175a339d939 — CC BY 4.0 (연회 의자 커버)
+- "ribbon" by deokpal — https://sketchfab.com/3d-models/ribbon-7bd3f139c8684d719084944ea9b5b518 — CC BY 4.0 (의자 리본 나비 고리)

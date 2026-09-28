@@ -570,37 +570,17 @@ boh.build()
 # ── 만찬 테이블 ────────────────────────────────────────────────
 tables = Assembly('tables', C_STATIC)
 # 가운데 동선(x≈6) 왼쪽(타워 쪽)에 엇갈린 격자, 오른쪽에 3열 — 잔디·타워 동선 안쪽만
-TABLES = []
-# 항공 사진: 원탁 22개가 잔디 전체가 아니라 가운데(중도타워 쪽으로 치우친 블록)에 모여 있고,
-# 무대 앞과 좌우 가장자리에는 넓은 빈 잔디가 남는다. 전에는 잔디를 꽉 채워 놨었다.
-FIELD_X0, FIELD_X1, FIELD_Z0, FIELD_Z1 = -12.8, 5.6, -7.5, 12.0   # 벽체(x -16.6) 앞에서 시작
-jit = random.Random(11)
-
-
-def place(x, z):
-    if len(TABLES) >= 22:
-        return
-    for r in (0.0, 1.0, 1.8, 2.6):
-        for k in range(12):
-            a_ = k * PI / 6
-            nx, nz = x + r * math.cos(a_), z + r * math.sin(a_)
-            if on_lawn(nx, nz, 2.3) and all(math.hypot(nx - p, nz - q) > 3.5 for p, q in TABLES):
-                TABLES.append((nx, nz))
-                return
-
-
-# 항공 사진의 배치: 반듯한 격자가 아니라 무대 쪽으로 약간 기울어진 줄이고,
-# 줄마다 개수가 다르며(뒤로 갈수록 짧다) 줄 간격도 고르지 않다.
-TILT = -0.19                                                 # 줄이 무대 쪽으로 기운 각
-ROWS = ((3, 0.36), (4, 0.20), (5, 0.06), (5, -0.10), (5, -0.24))   # (개수, 줄의 x 오프셋 비율)
-for ri, (cnt, off) in enumerate(ROWS):
-    tz = FIELD_Z0 + ri * (FIELD_Z1 - FIELD_Z0) / (len(ROWS) - 1)
-    span = (FIELD_X1 - FIELD_X0) * (0.62 + 0.09 * ri)
-    x0 = FIELD_X0 + (FIELD_X1 - FIELD_X0 - span) * (0.5 + off)
-    for c in range(cnt):
-        tx = x0 + (c + 0.5) * span / cnt
-        dz = (tx - (FIELD_X0 + FIELD_X1) / 2) * TILT
-        place(tx + jit.uniform(-0.5, 0.5), tz + dz + jit.uniform(-0.45, 0.45))
+# 항공 사진(클라이언트 제공)에서 원탁 하나하나의 화면 좌표를 찍어 잔디 좌표로 환산한 값.
+# 격자를 파라미터로 만들던 것을 버리고 사진의 배치를 그대로 옮긴다.
+#   화면 x 450→월드 x -12.8 / 화면 x 1280→+5.6, 화면 y 375→월드 z -7.0 / 화면 y 700→+12.0
+TABLES = [(-3.9, -7.0), (-1.5, -5.8), (1.3, -5.3),
+          (-9.5, -4.4), (-6.5, -3.2),
+          (-12.7, -0.9), (-7.5, -0.9), (-3.3, -1.4), (0.6, -0.9), (5.3, -0.9),
+          (-10.7, 2.9), (-5.9, 2.9), (-0.4, 2.6), (5.5, 3.5),
+          (-12.8, 7.3), (-7.3, 7.3), (-1.2, 7.6), (5.3, 7.9),
+          (-1.5, 11.6)]
+FIELD_X0, FIELD_X1 = min(t[0] for t in TABLES), max(t[0] for t in TABLES)
+FIELD_Z0, FIELD_Z1 = min(t[1] for t in TABLES), max(t[1] for t in TABLES)
 print('tables', len(TABLES))
 
 
@@ -645,24 +625,13 @@ for i, spot in enumerate(glass_spots):
 
 # ── 스테인리스 피라미드 히터 ───────────────────────────────────
 # 테이블 사이 빈자리에 고르게 (동선·잔디 밖 제외)
-HEATERS = []
-# 사진: 난로는 테이블 사이사이가 아니라 테이블 블록 바깥 둘레(특히 앞·좌우)로 빠져 있다.
-RING = []
-for k in range(9):                                          # 앞쪽(객석 뒤) 한 줄
-    RING.append((FIELD_X0 - 1.2 + k * (FIELD_X1 - FIELD_X0 + 2.4) / 8, FIELD_Z1 + 2.6))
-# 무대 쪽 한 줄은 두지 않는다 — 무대 앞을 가로막는다 (사진에도 무대 바로 앞엔 없다)
-for k in range(6):                                          # 좌우 두 줄
-    zz = FIELD_Z0 - 1.0 + k * (FIELD_Z1 - FIELD_Z0 + 2.0) / 5
-    RING.append((FIELD_X0 - 3.0, zz))
-    RING.append((FIELD_X1 + 3.0, zz))
-for (hx, hz) in RING:
-    if not on_lawn(hx, hz, 0.8):
-        continue
-    if min((math.hypot(hx - tx, hz - tz) for tx, tz in TABLES), default=99) < 2.4:
-        continue
-    if min((math.hypot(hx - a_, hz - b_) for a_, b_ in HEATERS), default=99) < 2.8:
-        continue
-    HEATERS.append((hx, hz))
+# 난로도 같은 사진에서 찍었다. 테이블 사이가 아니라 중도타워 쪽(왼쪽)과
+# 테이블 밭 가장자리에 몰려 있고, 무대 쪽에는 오른쪽 끝에만 있다.
+HEATERS = [(-15.9, -9.5), (-11.4, -9.8), (-7.7, -9.8), (-5.2, -10.0),
+           (-16.4, -5.6), (-18.0, -3.0), (-17.6, 1.2), (-15.2, 4.6),
+           (-14.1, 10.6), (-8.4, 10.2), (-2.6, 13.4),
+           (2.6, 11.0), (8.6, 8.0), (9.6, 12.0)]
+HEATERS = [(hx, hz) for hx, hz in HEATERS if on_lawn(hx, hz, 0.7)]
 print('heaters', len(HEATERS))
 heaters = Assembly('heaters', C_STATIC)
 for k, (hx, hz) in enumerate(HEATERS):

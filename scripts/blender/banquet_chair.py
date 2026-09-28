@@ -1,13 +1,11 @@
-"""연회 의자 — 검은 스판 커버를 씌운 연회 의자 + 샴페인 골드 새틴 띠 (apec_stage.py 에서 사용)
+"""연회 의자 — 커버가 씌워진 실제 모델을 그대로 쓰고, 새틴 띠 색만 맞춘다.
 
-전에는 불러온 의자 모델을 볼록 껍질 → 복셀 리메시 → 스무딩 → 감축으로 감싸 커버를 만들었는데,
-어떤 값을 써도 등받이 각과 좌판 선이 뭉개져 둥근 덩어리가 됐다. 사진의 커버는 몸에 딱 맞는
-스판이라 면이 평평하고 모서리가 살아 있다. 그래서 형태를 직접 깎는다.
+프리미티브를 이어 붙여 커버를 흉내 내 봤지만(볼록 껍질+리메시, 상자 조립, 띠 면 스윕)
+어느 쪽도 천으로 보이지 않았다. 커버가 씌워진 실제 모델을 쓰는 게 맞다.
 
-사진(APEC 만찬) 기준 치수
-  전체 높이 0.95m · 좌판 높이 0.46m · 좌판 0.46 x 0.46 · 등받이 0.44 x 0.49 (두께 0.07)
-  커버 자락은 좌판에서 바닥까지 곧게 떨어지며 아래로 아주 조금 퍼진다
-  등받이 위쪽을 두른 새틴 띠 + 뒤에서 묶은 리본
+  "Banquet Chair WITH COVER" by Event help (@sajan2) — CC-BY-4.0
+  https://sketchfab.com/3d-models/banquet-chair-with-cover-17b52cddff214f14a3903175a339d939
+  assets-src/models/banquet_chair_cover/scene.gltf
 """
 import math
 
@@ -15,100 +13,196 @@ import bmesh
 import bpy
 from mathutils import Matrix, Vector
 
-from lib import PI, T, bevel_box, box, cyl, sphere
-
-SEAT_H, SEAT_W, SEAT_D = 0.46, 0.46, 0.46
-BACK_H, BACK_T = 0.49, 0.075
-SASH = (0.63, 0.80)
+SRC = '/Users/hare/Documents/큐비크스홈페이지/assets-src/models/banquet_chair_cover/scene.gltf'
+BOW = '/Users/hare/Documents/큐비크스홈페이지/assets-src/models/ribbon_bow/scene.gltf'   # 나비 고리만 쓴다
+HEIGHT = 0.97          # 실제 연회 의자 높이 (m)
 
 
-def _skirt(w0, d0, w1, d1, h, y0):
-    """아래로 살짝 퍼지는 네 면 자락 (윗면 w0 x d0 -> 밑면 w1 x d1)"""
-    def build(bm):
-        top = [(-w0 / 2, y0 + h, -d0 / 2), (w0 / 2, y0 + h, -d0 / 2), (w0 / 2, y0 + h, d0 / 2), (-w0 / 2, y0 + h, d0 / 2)]
-        bot = [(-w1 / 2, y0, -d1 / 2), (w1 / 2, y0, -d1 / 2), (w1 / 2, y0, d1 / 2), (-w1 / 2, y0, d1 / 2)]
-        tv = [bm.verts.new(p) for p in top]
-        bv = [bm.verts.new(p) for p in bot]
-        for i in range(4):
-            j = (i + 1) % 4
-            bm.faces.new((tv[i], tv[j], bv[j], bv[i]))
-        bm.faces.new(tv[::-1])
-        bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-        bmesh.ops.bevel(bm, geom=list(bm.edges), offset=0.012, segments=2, affect='EDGES', profile=0.6)
-    return build
-
-
-def build(coll, cover_mat, sash_mat, name='banquet_chair'):
-    bm_by_mat = {}
-
-    def add(builder, matrix, mat):
-        tmp = bmesh.new()
-        tmp.loops.layers.uv.new('UVMap')
-        builder(tmp)
-        bmesh.ops.transform(tmp, matrix=matrix, verts=tmp.verts)
-        me = bpy.data.meshes.new('t')
-        tmp.to_mesh(me)
-        tmp.free()
-        bm_by_mat.setdefault(mat, bmesh.new()).from_mesh(me)
-        bpy.data.meshes.remove(me)
-
-    # 근접 사진 기준: 평범한 연회 의자에 검은 천 커버를 씌우고, 등받이 윗부분을
-    # 샴페인 골드 새틴 띠로 묶어 뒤에서 리본을 매고 꼬리를 길게 아래로 늘어뜨린다.
-    # 등받이는 웹 +z 쪽 (apec_stage 의 의자 배치가 그 전제로 각을 준다).
-    BZ = SEAT_D / 2 - BACK_T / 2 - 0.01
-    BY0 = SEAT_H + 0.01                                             # 등받이 밑
-    add(_skirt(SEAT_W - 0.04, SEAT_D - 0.04, SEAT_W + 0.04, SEAT_D + 0.04, SEAT_H - 0.06, 0.0), Matrix(), cover_mat)
-    for sx in (-1, 1):                                              # 자락에 잡히는 세로 주름
-        for dz in (-0.28, 0.0, 0.28):
-            add(bevel_box(0.035, SEAT_H - 0.09, 0.035, 0.012),
-                T(sx * (SEAT_W / 2 + 0.012), (SEAT_H - 0.09) / 2, dz * SEAT_D), cover_mat)
-            add(bevel_box(0.035, SEAT_H - 0.09, 0.035, 0.012),
-                T(dz * SEAT_W, (SEAT_H - 0.09) / 2, sx * (SEAT_D / 2 + 0.012)), cover_mat)
-    add(bevel_box(SEAT_W, 0.07, SEAT_D, 0.02), T(0, SEAT_H - 0.035, 0), cover_mat)                # 좌판
-    add(bevel_box(SEAT_W - 0.04, BACK_H - 0.09, BACK_T, 0.022), T(0, BY0 + (BACK_H - 0.09) / 2, BZ, 0, 0.05), cover_mat)
-    add(cyl(BACK_T / 2, BACK_T / 2, SEAT_W - 0.04, 12),                                            # 둥근 등받이 윗마구리
-        T(0, BY0 + BACK_H - 0.045, BZ + 0.002, 0, 0, PI / 2), cover_mat)
-    add(bevel_box(0.075, 0.075, SEAT_D - 0.08, 0.025), T(0, SEAT_H + 0.07, 0.0), cover_mat)        # 좌판 뒤 턱
-
-    # 새틴 띠 — 등받이 윗부분 (사진: 등받이 꼭대기 바로 아래)
-    ym, sh = BY0 + BACK_H * 0.70, BACK_H * 0.26
-    add(box(SEAT_W - 0.03, sh, 0.013), T(0, ym, BZ - BACK_T / 2 - 0.007), sash_mat)
-    add(box(SEAT_W - 0.03, sh, 0.013), T(0, ym, BZ + BACK_T / 2 + 0.007), sash_mat)
-    for sx in (-1, 1):
-        add(box(0.014, sh, BACK_T + 0.027), T(sx * (SEAT_W / 2 - 0.021), ym, BZ), sash_mat)
-    rz = BZ + BACK_T / 2 + 0.028
-    add(bevel_box(0.075, 0.075, 0.05, 0.02), T(0, ym, rz + 0.012), sash_mat)                       # 매듭
-    for sx in (-1, 1):                                                                              # 리본 고리
-        add(sphere(0.052, 3), T(sx * 0.072, ym + 0.012, rz + 0.026, 0, 0, sx * 0.55, 1.35, 0.85, 0.42), sash_mat)
-        # 길게 늘어뜨린 꼬리: 좌판 아래까지 내려오며 살짝 벌어지고 끝이 꺾인다
-        prev_y = ym - 0.03
-        for k in range(5):
-            t = k / 4
-            yy = prev_y - 0.085
-            add(box(0.072 - 0.006 * k, 0.095, 0.012),
-                T(sx * (0.055 + 0.030 * t), yy, rz + 0.020 + 0.012 * t, 0, 0, sx * (0.16 + 0.10 * t)), sash_mat)
-            prev_y = yy
-        add(box(0.058, 0.055, 0.012), T(sx * 0.098, prev_y - 0.055, rz + 0.034, 0, 0, sx * 0.55), sash_mat)   # 꼬리 끝
-
-    mats = list(bm_by_mat.keys())
-    out = bmesh.new()
-    me = bpy.data.meshes.new(name)
-    for mi, m in enumerate(mats):
-        tmp = bpy.data.meshes.new('t')
-        bm_by_mat[m].to_mesh(tmp)
-        bm_by_mat[m].free()
-        start = len(out.faces)
-        out.from_mesh(tmp)
-        out.faces.ensure_lookup_table()
-        for f in out.faces[start:]:
-            f.material_index = mi
-        bpy.data.meshes.remove(tmp)
-    bmesh.ops.transform(out, matrix=Matrix.Rotation(PI / 2, 4, 'X'), verts=out.verts)   # 웹 Y-up -> 블렌더
-    out.to_mesh(me)
-    out.free()
-    for m in mats:
-        me.materials.append(m)
-    obj = bpy.data.objects.new(name, me)
+def _link_only(obj, coll):
+    for c in list(obj.users_collection):
+        c.objects.unlink(obj)
     coll.objects.link(obj)
-    print('banquet chair %d faces, seat %.2f' % (len(me.polygons), SEAT_H))
+
+
+def _bow_mesh(width=0.23):
+    """받아온 리본 모델에서 나비 고리 부분을 가져온다 (고리가 ±y 로 퍼지고 매듭이 가운데).
+       의자에 맞게 고리가 좌우(블렌더 x)로 퍼지도록 돌리고 실제 크기로 줄인다."""
+    import os
+    if not os.path.exists(BOW):
+        return None
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=BOW)
+    new = [o for o in bpy.data.objects if o not in before]
+    src = max((o for o in new if o.type == 'MESH'), key=lambda o: len(o.data.polygons), default=None)
+    bm = bmesh.new()
+    if src is not None:
+        bm.from_mesh(src.data)
+        bm.transform(src.matrix_world)
+    for o in new:
+        bpy.data.objects.remove(o, do_unlink=True)
+    if not bm.verts:
+        bm.free()
+        return None
+    bm.transform(Matrix.Rotation(-math.pi / 2, 4, 'Z'))          # 고리가 퍼지는 축(y) -> 좌우(x)
+    vs = [v.co for v in bm.verts]
+    span = max(v.x for v in vs) - min(v.x for v in vs)
+    bm.transform(Matrix.Diagonal((width / span,) * 3 + (1,)))
+    vs = [v.co for v in bm.verts]
+    bm.transform(Matrix.Translation((-(min(v.x for v in vs) + max(v.x for v in vs)) / 2,
+                                     -(min(v.y for v in vs) + max(v.y for v in vs)) / 2,
+                                     -(min(v.z for v in vs) + max(v.z for v in vs)) / 2)))
+    return bm
+
+
+def _add_sash(me, sash_mat, at=0.76, band=0.092):
+    """등받이 단면을 실제로 재서 그 둘레에 새틴 띠를 감고, 뒤에 리본과 늘어뜨린 꼬리를 단다.
+       (이 모델에는 리본이 없다. 커버만 씌워져 있다.)"""
+    zs = [v.co.z for v in me.vertices]
+    top = max(zs)
+    zm = top * at
+    sl = [v.co for v in me.vertices if abs(v.co.z - zm) < 0.012]
+    if len(sl) < 8:
+        return
+    cx = sum(v.x for v in sl) / len(sl)
+    cy = sum(v.y for v in sl) / len(sl)
+    # 등받이는 납작한 판이다. 윤곽을 각도로 추적하면 점이 성겨 띠가 들쭉날쭉해지니,
+    # 단면의 가로·세로만 재서 상자 하나로 두른다 (밖에서 보면 감긴 띠로 읽힌다).
+    bx0, bx1 = min(v.x for v in sl), max(v.x for v in sl)
+    by0, by1 = min(v.y for v in sl), max(v.y for v in sl)
+
+    bm = bmesh.new()
+
+    def emit(builder):
+        tmp = bmesh.new()
+        builder(tmp)
+        t = bpy.data.meshes.new('t')
+        tmp.to_mesh(t)
+        tmp.free()
+        bm.from_mesh(t)
+        bpy.data.meshes.remove(t)
+
+    # 띠는 도형을 덧대지 않고 의자 표면 자체를 칠한다.
+    # (상자든 스윕이든 덧대면 등받이보다 넓게 떠서 챙처럼 보였다.)
+    cx, ry = (bx0 + bx1) / 2, by0 - 0.010               # 등받이 뒷면 (블렌더 -y = 웹 +z)
+    bow = _bow_mesh(width=0.15)                          # 나비 고리는 받아온 모델 (deokpal, CC-BY)
+    if bow is not None:
+        bow.transform(Matrix.Translation((cx, ry - 0.022, zm - 0.008)))
+        t = bpy.data.meshes.new('t')
+        bow.to_mesh(t)
+        bow.free()
+        bm.from_mesh(t)
+        bpy.data.meshes.remove(t)
+    for sx in (-1, 1):
+        tail, tw = [], []
+        for k in range(10):                              # 좌판 아래까지 늘어뜨린 꼬리
+            t = k / 9
+            tail.append((cx + sx * (0.030 + 0.085 * t * t), ry - 0.014 - 0.030 * math.sin(t * 2.3),
+                         zm - 0.020 - 0.050 * k))
+            tw.append(0.072 - 0.026 * t)
+        emit(_ribbon_bl(tail, tw, 0.007))
+
+    sm = bpy.data.meshes.new('sash')
+    bm.to_mesh(sm)
+    bm.free()
+    n0 = len(me.polygons)
+    j = bmesh.new()
+    j.from_mesh(me)
+    j.from_mesh(sm)
+    j.to_mesh(me)
+    j.free()
+    bpy.data.meshes.remove(sm)
+    for f in list(me.polygons)[n0:]:
+        f.material_index = 1
+    # 면의 중심만 보면 큰 면이 통째로 칠해져 삼각형 얼룩이 된다. 모든 꼭짓점이 띠 안일 때만.
+    for f in me.polygons:
+        if all(abs(me.vertices[i].co.z - zm) <= band / 2 for i in f.vertices):
+            f.material_index = 1
+
+
+def build(coll, cover_mat, sash_mat, name='banquet_chair', decimate=0.22):
+    """모델 안에는 같은 의자가 여섯 개와 원탁(Cylinder001) 하나가 들어 있다. 의자 하나만 쓴다.
+    재질이 하나뿐이라 리본은 색이 분리돼 있지 않다 — 등받이 뒤로 튀어나온 부분(묶은 띠와
+    늘어뜨린 꼬리)을 위치로 골라내 금색 새틴 재질을 입힌다."""
+    if name in bpy.data.objects:
+        bpy.data.objects.remove(bpy.data.objects[name], do_unlink=True)
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=SRC)
+    new = [o for o in bpy.data.objects if o not in before]
+    chairs = [o for o in new if o.type == 'MESH' and len(o.data.polygons) > 5000]
+    src = max(chairs, key=lambda o: len(o.data.polygons))
+    bm = bmesh.new()
+    bm.from_mesh(src.data)
+    bm.transform(src.matrix_world)
+    for o in new:
+        bpy.data.objects.remove(o, do_unlink=True)
+
+    def ext():
+        vs = [v.co for v in bm.verts]
+        return [(min(v[i] for v in vs), max(v[i] for v in vs)) for i in range(3)]
+
+    e = ext()
+    up = max(range(3), key=lambda i: e[i][1] - e[i][0])
+    if up == 0:
+        bm.transform(Matrix.Rotation(-math.pi / 2, 4, 'Y'))
+    elif up == 1:
+        bm.transform(Matrix.Rotation(math.pi / 2, 4, 'X'))
+    e = ext()
+    bm.transform(Matrix.Diagonal((HEIGHT / (e[2][1] - e[2][0]),) * 3 + (1,)))
+    e = ext()
+    bm.transform(Matrix.Translation((-(e[0][0] + e[0][1]) / 2, -(e[1][0] + e[1][1]) / 2, -e[2][0])))
+    # 등받이 쪽을 블렌더 -y(웹 +z)로: 위쪽 절반의 무게중심이 치우친 방향을 뒤로 돌린다
+    hi = [v.co for v in bm.verts if v.co.z > HEIGHT * 0.66]
+    if hi:
+        cx_ = sum(v.x for v in hi) / len(hi)
+        cy_ = sum(v.y for v in hi) / len(hi)
+        if math.hypot(cx_, cy_) > 1e-4:
+            bm.transform(Matrix.Rotation(-math.atan2(cy_, cx_) - math.pi / 2, 4, 'Z'))
+        e = ext()
+        bm.transform(Matrix.Translation((-(e[0][0] + e[0][1]) / 2, -(e[1][0] + e[1][1]) / 2, 0)))
+
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(cover_mat)
+    me.materials.append(sash_mat)
+    for f in me.polygons:
+        f.use_smooth = True
+    obj = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(obj)
+    if decimate and decimate < 1.0:
+        m = obj.modifiers.new('dec', 'DECIMATE')
+        m.ratio = decimate
+        dg = bpy.context.evaluated_depsgraph_get()
+        nm = bpy.data.meshes.new_from_object(obj.evaluated_get(dg))
+        obj.modifiers.clear()
+        obj.data = nm
+        bpy.data.meshes.remove(me)
+    _add_sash(obj.data, sash_mat)          # 감축 뒤에 띠를 칠해야 얼룩이 안 생긴다
+    _link_only(obj, coll)
+    print('banquet chair %d faces (커버 씌워진 실제 모델)' % len(obj.data.polygons))
     return obj
+
+
+def _ribbon_bl(pts, widths, thick=0.006):
+    """중심선을 따라 이어진 납작한 띠 (블렌더 좌표, z 가 위).
+       상자를 여러 개 쌓으면 마디가 생겨 계단처럼 보이므로 한 장의 면으로 뽑는다."""
+    def build(bm):
+        rows = []
+        for i, (p, w) in enumerate(zip(pts, widths)):
+            p = Vector(p)
+            t = Vector(pts[min(i + 1, len(pts) - 1)]) - Vector(pts[max(i - 1, 0)])
+            t = t.normalized() if t.length > 1e-6 else Vector((0, 0, -1))
+            side = t.cross(Vector((0, 1, 0)))
+            if side.length < 1e-6:
+                side = t.cross(Vector((1, 0, 0)))
+            side = side.normalized() * (w / 2)
+            nrm = side.cross(t).normalized() * (thick / 2)
+            rows.append([bm.verts.new(p - side + nrm), bm.verts.new(p + side + nrm),
+                         bm.verts.new(p + side - nrm), bm.verts.new(p - side - nrm)])
+        for a_, b_ in zip(rows[:-1], rows[1:]):
+            for k in range(4):
+                bm.faces.new((a_[k], a_[(k + 1) % 4], b_[(k + 1) % 4], b_[k]))
+        bm.faces.new(rows[0][::-1])
+        bm.faces.new(rows[-1])
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return build
