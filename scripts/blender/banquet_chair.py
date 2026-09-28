@@ -43,7 +43,9 @@ def _bow_mesh(width=0.23):
     if not bm.verts:
         bm.free()
         return None
-    bm.transform(Matrix.Rotation(-math.pi / 2, 4, 'Z'))          # 고리가 퍼지는 축(y) -> 좌우(x)
+    # 모델 축: y = 고리가 퍼지는 방향(7.11), x = 고리의 넓은 쪽(3.28), z = 두께(1.75).
+    # y->좌우(x), x->위아래(z), z->앞뒤(y) 로 돌려야 고리가 서고 납작해지지 않는다.
+    bm.transform(Matrix(((0, 1, 0, 0), (0, 0, 1, 0), (1, 0, 0, 0), (0, 0, 0, 1))))
     vs = [v.co for v in bm.verts]
     span = max(v.x for v in vs) - min(v.x for v in vs)
     bm.transform(Matrix.Diagonal((width / span,) * 3 + (1,)))
@@ -84,7 +86,7 @@ def _add_sash(me, sash_mat, at=0.76, band=0.092):
     # 띠는 도형을 덧대지 않고 의자 표면 자체를 칠한다.
     # (상자든 스윕이든 덧대면 등받이보다 넓게 떠서 챙처럼 보였다.)
     cx, ry = (bx0 + bx1) / 2, by0 - 0.010               # 등받이 뒷면 (블렌더 -y = 웹 +z)
-    bow = _bow_mesh(width=0.15)                          # 나비 고리는 받아온 모델 (deokpal, CC-BY)
+    bow = _bow_mesh(width=0.135)                          # 나비 고리는 받아온 모델 (deokpal, CC-BY)
     if bow is not None:
         bow.transform(Matrix.Translation((cx, ry - 0.022, zm - 0.008)))
         t = bpy.data.meshes.new('t')
