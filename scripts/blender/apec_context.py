@@ -570,7 +570,7 @@ def south_row():
     for k in range(24):
         a = k / 24 * 2 * PI
         halls.add(box(0.5, 0.05, 1.1), T(cx + math.cos(a) * (r - 0.8), 0.32, cz + math.sin(a) * (r - 0.8), PI / 2 - a), M['granite'], 1)   # 광장에 박힘
-    halls.add(cyl(0.9, 0.9, 0.3, 24), T(cx, 0.42, cz), M['balustrade'], 1)
+    # 광장 가운데 원형 좌대는 석불관이 앉는 자리라 여기서는 그리지 않는다
     # 한옥 별채 (용마루 x 방향)
     hanok(halls, -32.0, -41.0, 14.0, 6.0, ry=0.0, y0=0.0, wall_h=3.4, veranda=False, base_h=0.8, label='annex', lamp=300)
 
@@ -620,8 +620,7 @@ def strip(pts, width, h):
 
 def garden_block():
     pond_c, pond_r = V((6, 0, 33)), (14.5, 8.5)
-    # 이 원판은 연못이 아니라 석굴암형 돔이 앉는 자리다 (수면을 빼고 포장면으로 둔다)
-    garden.add(cyl(1, 1, 0.12, 48), T(pond_c.x, 0.06, pond_c.z, sx=pond_r[0], sz=pond_r[1]), M['terrace'], 1.6)
+    garden.add(cyl(1, 1, 0.1, 48), T(pond_c.x, 0.05, pond_c.z, sx=pond_r[0], sz=pond_r[1]), M['water'], None)
     garden.add(cyl(1, 1, 0.1, 48), T(pond_c.x, -0.02, pond_c.z, sx=pond_r[0] + 1.0, sz=pond_r[1] + 1.0), M['granite'], 1.5)   # 윗면 0.03 (수면 0.1)
     for k in range(40):
         a = k / 40 * 2 * PI
@@ -1114,8 +1113,7 @@ for k in range(11):                                           # 파티션 위에
 
 gear.road_case(foh, T(FOH_X - 2.6, FOH_Y, FOH_Z + 0.1), M, 1.35, 0.72, 0.78)   # 콘솔 받침 케이스
 gear.lighting_console(foh, T(FOH_X - 2.6, FOH_Y + 0.72, FOH_Z + 0.1, PI), M, foh_glow)
-gear.program_monitor(foh, T(FOH_X - 5.0, FOH_Y, PZ + 0.5), M, foh_glow, M['uiVideo'],
-                     height=1.62, w=1.18, hgt=0.68, facing=0.0)                # 스탠드 PGM 모니터
+# 회랑 앞 스탠드 PGM 모니터는 뺀다 — 잔디 한가운데 기둥에 판때기가 달린 꼴로 서 있었다
 for (tx, tz, tw) in ((FOH_X + 0.6, FOH_Z + 0.2, 1.5), (FOH_X + 2.3, FOH_Z + 0.35, 1.5),
                      (FOH_X - 4.9, FOH_Z + 0.5, 1.2)):
     foh_table(T(tx, FOH_Y, tz))
@@ -1337,31 +1335,23 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
        줄눈이 위로 모이는 돔 / 꼭대기에 밖으로 뻗은 동틀돌 두 단 / 원형 천개석 /
        옆으로 붙은 기와지붕 통로."""
     f = T(x, 0, z, ry)
-    S = mat('seokbulStone', 'granite_tile_03', (0.44, 0.44, 0.43), 0.84, normal=0.35)
-    SD = mat('seokbulJoint', None, (0.20, 0.20, 0.197), 0.92)   # 줄눈은 가늘고 어둡게
-    y0 = 0.62
-    stones.add(cyl(r + 2.4, r + 2.4, 0.34, 64), f @ T(0, 0.17, 0), M['terrace'], 1.6)          # 기단 포장
-    stones.add(cyl(r + 1.35, r + 1.35, 0.32, 64), f @ T(0, 0.46, 0), M['granite'], 1.5)
-    for k in range(26):                                                                         # 앞쪽 돌난간
-        a_ = -PI * 0.62 + PI * 1.24 * k / 25
-        px, pz = (r + 1.9) * math.sin(a_), (r + 1.9) * math.cos(a_)
-        stones.add(bevel_box(0.22, 0.95, 0.22, 0.03), f @ T(px, 0.48 + 0.47, pz, -a_), S, 1)
-        if k:
-            stones.add(box(0.52, 0.62, 0.10), f @ T((r + 1.9) * math.sin(a_ - PI * 1.24 / 50),
-                       0.48 + 0.34, (r + 1.9) * math.cos(a_ - PI * 1.24 / 50), -a_), S, 1)
-    stones.add(cyl(r, r, drum, 72), f @ T(0, y0 + drum / 2, 0), S, 2.4)                          # 드럼
-    for k in range(18):                                                                          # 드럼 세로 줄눈
-        a_ = 2 * PI * k / 18
-        stones.add(box(0.026, drum - 0.2, 0.04), f @ T(r * math.sin(a_), y0 + drum / 2, r * math.cos(a_), -a_), SD, 1)
-    for t in (0.40, 0.76):                                                                       # 드럼 가로 코스
-        stones.add(cyl(r + 0.018, r + 0.018, 0.045, 72), f @ T(0, y0 + drum * t, 0), SD, 1.2)
+    S = mat('seokbulStone', 'granite_tile_03', (0.66, 0.66, 0.645), 0.84, normal=0.3)
+    SD = mat('seokbulJoint', None, (0.40, 0.40, 0.392), 0.93)   # 줄눈은 선이 아니라 그림자로 읽히게
+    y0 = 0.69
+    # 기단은 이미 있는 원형 광장(반경 5.5, 윗면 0.3)이다. 그 위에 낮은 굄돌만 얹는다.
+    stones.add(cyl(r + 0.55, r + 0.55, 0.26, 64), f @ T(0, 0.43, 0), M['granite'], 1.5)
+    # 줄눈을 도형으로 붙이면 빛을 받아 흰 선으로 번쩍인다.
+    # 드럼을 세 단으로 쌓아 실제 턱에서 그림자가 지게 한다 (사진의 가로 코스).
+    for k, (hh, dr) in enumerate(((drum * 0.42, 0.0), (drum * 0.34, 0.022), (drum * 0.24, 0.044))):
+        base = y0 + sum(x[0] for x in ((drum * 0.42, 0), (drum * 0.34, 0), (drum * 0.24, 0))[:k])
+        stones.add(cyl(r - dr, r - dr, hh, 72), f @ T(0, base + hh / 2, 0), S, 2.4)
     stones.add(cyl(r + 0.42, r + 0.42, 0.40, 72), f @ T(0, y0 + drum + 0.20, 0), S, 1.4)         # 처마 돌림띠 1단
     stones.add(cyl(r + 0.22, r + 0.14, 0.26, 72), f @ T(0, y0 + drum + 0.53, 0), S, 1.2)         # 2단
 
     dy = y0 + drum + 0.64
 
     # 정반구를 쓰면 위가 뾰족하다. 사진의 돔은 밑이 불룩하고 위로 갈수록 평평해진다.
-    TCUT = 0.86                                        # 동틀돌이 앉는 자리에서 자른다
+    TCUT = 0.60                                        # 동틀돌이 앉는 자리에서 자른다 (0.86 은 윗면이 0.7m 밖에 안 나와 동틀돌이 묻혔다)
 
     def prof(t):
         return r * 0.99 * math.cos(t * PI / 2) ** 1.25, rise * math.sin(t * PI / 2) ** 0.62
@@ -1380,27 +1370,15 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
 
     stones.add(dome_shell, f @ T(0, dy, 0), S, 2.6)
-    for t in (0.28, 0.54, 0.76):                                                                 # 돔 가로 코스
-        rr, hh = prof(t * TCUT)
-        stones.add(cyl(rr + 0.016, rr + 0.016, 0.04, 64), f @ T(0, dy + hh, 0), SD, 1.2)
-    for k in range(14):                                                                          # 돔 방사 줄눈 (위로 모인다)
-        a_ = 2 * PI * k / 14
-        prev = None
-        for j in range(7):
-            rr, hh = prof(j / 6 * TCUT)
-            pt = f @ V((rr * math.sin(a_), dy + hh, rr * math.cos(a_)))
-            if prev is not None:
-                g_, m_ = tube(prev, pt, 0.017, 4)
-                stones.add(g_, m_, SD)
-            prev = pt
+    # 돔 줄눈도 같은 이유로 도형을 붙이지 않는다 (화강석 텍스처와 코스 턱으로 읽힌다)
     tr, th = prof(TCUT)
     ty = dy + th                                                                                 # 동틀돌이 앉는 높이
-    for tier, (nb, rad, out, up) in enumerate(((12, tr + 0.75, 1.75, 0.0), (12, tr + 0.10, 1.60, 0.70))):
+    for tier, (nb, rad, out, up) in enumerate(((12, tr + 1.30, 2.10, 0.0), (12, tr + 0.55, 1.85, 0.66))):
         for k in range(nb):
             a_ = 2 * PI * (k + (0.5 if tier else 0.0)) / nb
             bf = f @ T((rad - out / 2) * math.sin(a_), ty + up + 0.20, (rad - out / 2) * math.cos(a_), -a_)
-            stones.add(bevel_box(0.54, 0.40, out, 0.05), bf, S, 1)                               # 밖으로 뻗은 동틀돌
-            stones.add(bevel_box(0.48, 0.26, 0.34, 0.04), bf @ T(0, -0.28, out / 2 - 0.17), S, 1)   # 끝의 턱
+            stones.add(bevel_box(0.62, 0.48, out, 0.05), bf, S, 1)                               # 밖으로 뻗은 동틀돌
+            stones.add(bevel_box(0.56, 0.32, 0.40, 0.05), bf @ T(0, -0.34, out / 2 - 0.20), S, 1)   # 끝의 턱
     stones.add(cyl(tr + 0.95, tr + 0.95, 0.30, 48), f @ T(0, ty + 1.24, 0), S, 1.4)              # 천개석
     stones.add(cyl(tr * 0.50, tr * 0.60, 0.20, 32), f @ T(0, ty + 1.49, 0), S, 1.2)
 
@@ -1415,7 +1393,8 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
           energy=2400, color=(1.0, 0.94, 0.82), spot=0.7, blend=0.5, size=0.3)
 
 
-stone_dome(6.0, 33.0, r=5.5, ry=0.35)      # 바닥 원판(중심 6,33 / 반경 14.5 x 8.5) 위. 기단 포함 반경 7.9m
+stone_dome(-17.0, -42.0, r=4.6, ry=0.0)    # 무대 뒤편 원형 광장(중심 -17,-42 / 반경 5.5) 위,
+                                           # 신평루 콘솔 부스(11,-41)와 같은 선
 
 # 회랑에서 잔디로 나오는 포장길 (클라이언트 사진). 입구 석수는 생략 — 형태가 복잡해 뺀다.
 PATH_X, PATH_W = 4.6, 3.2
