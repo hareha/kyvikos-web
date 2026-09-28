@@ -66,6 +66,7 @@
   },
   "graphics": [
     "bq_m_asia_projection_interview_still.png",
+    "bq_m_asia_projection_painting_head_still.png",
     "bq_m_bangudae_rubbing.png",
     "bq_m_chronology_wall.png",
     "bq_m_entrance_himmel_panel.png",
@@ -93,7 +94,6 @@
     "bq_w_ancient_scientist.png",
     "bq_w_aone_king.png",
     "bq_w_black_figure.png",
-    "bq_w_black_soap.png",
     "bq_w_blue_skies.png",
     "bq_w_bombero.png",
     "bq_w_brown_circle.png",
@@ -150,7 +150,6 @@
     "bq_w_notebook_vitrine_cover_3.png",
     "bq_w_number4.png",
     "bq_w_paik_robot_front.png",
-    "bq_w_peso_neto.png",
     "bq_w_phooey.png",
     "bq_w_self_portrait_1983.png",
     "bq_w_shaman_screen_8panel.png",
@@ -165,8 +164,10 @@
     "bq_w_untitled_1983_soap_box_panels.png",
     "bq_w_untitled_1985_collage_woman.png",
     "bq_w_untitled_1986_pyramid_crane.png",
-    "bq_w_untitled_grid.png",
     "bq_w_vase_unwrap150.png",
-    "bq_w_warrior_1982.png"
+    "bq_w_warrior_1982.png",
+    "bq_w_words_paper_1.png",
+    "bq_w_words_paper_2.png",
+    "bq_w_words_paper_3.png"
   ]
 }

@@ -270,7 +270,10 @@ FRAME_MAP = (('white_box_frame', 'white_box_frame'), ('plexi_box', 'white_box_fr
 ALIAS = {'studio_of_the_street_text': 'studio_of_the_street_text_panel', 'tar_tax': 'tar_tax_disc',
          'emblem': 'emblem_backlit', 'notebook_translation_projection': 'asia_projection_painting_head_still',
          'interview_projection': 'asia_projection_interview_still', 'exu_explainer_monitor': 'epilogue_exu_monitor_still',
-         'magic_worms': 'untitled_grid', 'untitled_1985_words': 'black_soap', 'picasso': 'peso_neto'}
+         # 이 세 점은 layout_v2 에서도 confidence: low 이고 실제 사진이 없다. 다른 그림 텍스처를
+         # 돌려쓰면 전시에 같은 작품이 두 번 걸리므로, 같은 벽(Words and Signs 북쪽)에서 실제로
+         # 찍힌 종이 작품 세 점을 떠서 쓴다 (v3_route_11_words_to_msec_a4b478406_011.jpg).
+         'magic_worms': 'words_paper_1', 'untitled_1985_words': 'words_paper_3', 'picasso': 'words_paper_2'}
 
 
 def disp_of(s):

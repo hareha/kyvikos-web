@@ -408,15 +408,20 @@ boh.build()
 tables = Assembly('tables', C_STATIC)
 # 가운데 동선(x≈6) 왼쪽(타워 쪽)에 엇갈린 격자, 오른쪽에 3열 — 잔디·타워 동선 안쪽만
 TABLES = []
+# layout_v2 guest_field: 22개 원탁(Ø1.8)이 줄이 아니라 '느슨하게 엇갈린' 격자로 놓이고
+#   사이에 통행 레인이 남으며 잔디 소나무를 피해 돌아간다. 반듯한 격자로 읽히지 않게 흔들어 준다.
+jit = random.Random(11)
 for row, tz in enumerate((-3, 2.5, 8, 13.5)):
     for tx in (-20, -14, -8, -2):
-        x = tx + (3 if row % 2 else 0)
-        if on_lawn(x, tz, 2.4):
-            TABLES.append((x, tz))
+        x = tx + (3 if row % 2 else 0) + jit.uniform(-0.7, 0.7)
+        z = tz + jit.uniform(-0.6, 0.6)
+        if on_lawn(x, z, 2.4):
+            TABLES.append((x, z))
 for tz in (-3, 2.5, 8, 13.5):
     for tx in (13, 19.5, 26):
-        if on_lawn(tx, tz, 2.4):
-            TABLES.append((tx, tz))
+        x, z = tx + jit.uniform(-0.7, 0.7), tz + jit.uniform(-0.6, 0.6)
+        if on_lawn(x, z, 2.4):
+            TABLES.append((x, z))
 print('tables', len(TABLES))
 
 
