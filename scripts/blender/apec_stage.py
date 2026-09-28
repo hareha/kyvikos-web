@@ -61,6 +61,8 @@ M = {
     'deckCarpet': material('deckCarpet', None, (0.700, 0.682, 0.639), 0.9),            # 연회색 니들펀치 갑판
     'redStrip': material('redStrip', None, (1, 0.1, 0.1), 0.4, emit=(1.0, 0.08, 0.06), emit_strength=3),
     'scafTube': material('scafTube', None, (0.6, 0.61, 0.59), 0.45, 0.7),        # 시스템 비계 파이프
+    'screenWood': material('screenWood', None, (0.09, 0.055, 0.035), 0.6),      # 한옥 병풍 목부
+    'plinthRed': material('plinthRed', 'cotton_jersey', (0.32, 0.03, 0.04), 0.9),  # 붉은 천 좌대
     'stairBlue': material('stairBlue', None, (0.05, 0.11, 0.38), 0.55),         # 남색 계단
     'nosing': material('nosing', None, (0.8, 0.9, 1), emit=(0.7, 0.85, 1.0), emit_strength=6),
     'fascia': material('fascia', emit_image=f'{SHOTS}/apec_real_fascia.png', emit_strength=1.3, rough=0.4),
@@ -201,9 +203,13 @@ emit.add(plane(LED_W, LED_H), T(CX, LED_B + LED_H / 2, LEDZ + 0.01), M['led'], t
 for sgn in (-1, 1):                                                                 # LED 양 끝 남색 마스킹 플랫 6 x 4.5
     stage.add(box(0.12, 4.5, 6.0), T(CX + sgn * (LED_W / 2 + 0.6), TOP + 2.25, LEDZ + 3.1), M['stageBody'], 1)
 
-# 흰 아크릴 연설대 2개 (gear.lectern)
-for lx, lz in ((CX - 4.6, CZ + 2.2), (CX + 1.4, CZ + 1.3)):
-    gear.lectern(stage, T(lx, TOP, lz), M)
+# layout_v2 #6: 흰 아크릴 두 개가 아니라 목재 연설대 하나 + 한옥 접이 병풍 + 붉은 천 좌대
+gear.lectern(stage, T(CX - 3.2, TOP, CZ + 2.0), {**M, 'acrylic': M['walnut']} if 'walnut' in M else M)
+scr = T(CX + 3.4, TOP, CZ - 1.6, -0.35)                                   # 어두운 목재 4폭 병풍
+for k in range(4):
+    stage.add(box(0.95, 2.05, 0.05), scr @ T(-1.5 + k * 1.0, 1.03, 0.06 * (k % 2), 0, 0, 0.1 * (-1 if k % 2 else 1)), M['screenWood'], 1)
+stage.add(bevel_box(1.1, 0.9, 1.1, 0.02), T(CX - 6.4, TOP + 0.45, CZ + 1.2), M['plinthRed'], 1)   # 붉은 천 좌대
+stage.add(bevel_box(1.16, 0.06, 1.16, 0.01), T(CX - 6.4, TOP + 0.93, CZ + 1.2), M['plinthRed'], 1)
 # 무대 앞 양쪽 스피커 (불러온 모델)
 for sx in (-4.3, 16.3):
     stage.add(mesh_source(SRC_SPEAKER), T(sx, 0.12, FRONT + 0.4), list(SRC_SPEAKER.data.materials))
@@ -474,20 +480,53 @@ for k, (hx, hz) in enumerate(HEATERS):
 heaters.build()
 glass.build(smooth=True)
 
+# layout_v2 #13: 피라미드 히터가 주류지만 버섯형(돔) 히터도 몇 대 섞여 있었다
+M['heaterCream'] = material('heaterCream', None, (0.86, 0.84, 0.78), 0.5)
+extra = Assembly('extra_kit', C_STATIC)
+for (hx, hz) in ((-3.0, 6.5), (11.0, 3.0), (18.0, -2.0), (-12.0, 1.0)):
+    hf = T(hx, 0.12, hz)
+    extra.add(cyl(0.22, 0.3, 0.05, 20), hf @ T(0, 0.025, 0), M['heaterCream'], 1)
+    extra.add(cyl(0.06, 0.06, 1.95, 12), hf @ T(0, 0.98, 0), M['heaterCream'], 1)
+    extra.add(cyl(0.12, 0.12, 0.42, 16), hf @ T(0, 2.06, 0), M['steelGrey'] if 'steelGrey' in M else M['heaterCream'], 1)
+    extra.add(cyl(0.44, 0.06, 0.16, 24), hf @ T(0, 2.34, 0), M['heaterCream'], 1)      # 반사 돔
+    emit.add(cyl(0.11, 0.11, 0.3, 16), hf @ T(0, 2.06, 0), M['flame'])
+
+# layout_v2 #15: 백스테이지 쪽에 깔린 어두운 바닥 보호 매트 (행사 당일에도 남아 있었다)
+M['groundMat'] = material('groundMat', None, (0.14, 0.15, 0.13), 0.9)
+for (mx0, mx1, mz0, mz1) in ((-12.0, 20.0, -26.5, -22.5), (16.0, 20.0, -22.5, -6.0), (-12.0, -8.0, -22.5, -12.0)):
+    extra.add(box(mx1 - mx0, 0.03, mz1 - mz0), T((mx0 + mx1) / 2, 0.135, (mz0 + mz1) / 2), M['groundMat'], 2)
+
+# layout_v2 #16: 잔디 한가운데 딜레이 스피커 스택
+for dx in (-9.0, 21.0):
+    df = T(dx, 0.12, 6.0)
+    extra.add(cyl(0.05, 0.05, 3.2, 10), df @ T(0, 1.6, 0), M['scafTube'], 1)
+    extra.add(box(0.9, 0.05, 0.9), df @ T(0, 0.03, 0), M['black'], 1)
+    for k in range(3):
+        extra.add(box(0.62, 0.3, 0.42), df @ T(0, 2.3 + k * 0.31, 0.03 * k, 0, -0.06 * k), M['speakerBox'], 1)
+extra.build()
+
 # ── 보라색 사인월 + 상단 투광등 4개 ─────────────────────────────
-SIGN = T(-19.0, 0.12, -1.5, 0.785)   # 드론 사진: 타워 계단 왼쪽 앞 포장면, 잔디·테라스 쪽을 봄
+# layout_v2 #11: 납작한 보라색 패널이 아니라 남색 큐브 2.4 x 2.4 x 2.8 — 중도타워 계단 발치 포장면 위
+SIGN = T(-19.0, 0.0, -4.0, 0.785)
 sign = Assembly('sign', C_STATIC)
-sign.add(bevel_box(4.9, 0.3, 0.7, 0.02), SIGN @ T(0, 0.15, 0), M['black'])
-sign.add(bevel_box(4.7, 3.3, 0.3, 0.02), SIGN @ T(0, 1.95, -0.02), M['black'])
-sign.add(box(4.5, 3.2, 0.03), SIGN @ T(0, 1.95, 0.145), M['sign'], tile=None)   # 패널 앞면에 붙은 그래픽판
-sign.add(box(4.3, 0.08, 0.08), SIGN @ T(0, 3.64, 0.05), M['black'])   # 패널 위 조명 바
-for fx in (-1.5, -0.5, 0.5, 1.5):
-    sign.add(bevel_box(0.4, 0.3, 0.25, 0.02), SIGN @ T(fx, 3.83, 0.05), M['black'])
-    emit.add(plane(0.32, 0.22), SIGN @ T(fx, 3.83, 0.18), M['washLens'], tile=None)
-    p = SIGN @ V((fx, 3.83, 0.2))
-    tgt = SIGN @ V((fx * 2.5, 0, 10))
-    light(C_LIGHT, f'sign_flood_{fx}', 'SPOT', tuple(p), tuple(tgt), energy=2600, color=(1.0, 0.9, 0.75),
-          spot=0.9, blend=0.4, size=0.15)
+M['signNavy'] = material('signNavy', None, (0.024, 0.026, 0.108), 0.7)          # #2B2E5C
+sign.add(bevel_box(2.4, 2.8, 2.4, 0.02), SIGN @ T(0, 1.4, 0), M['signNavy'])
+for (sgn, ry_) in ((1, 0.0), (0, PI / 2)):                                      # +x·+z 두 면에 그래픽
+    ff = SIGN @ T(0, 1.55, 0, ry_)
+    sign.add(box(2.1, 1.5, 0.02), ff @ T(0, 0, 1.21), M['sign'], tile=None)
+# 큐브 뒤 별도 스탠드: 중도타워를 쏘는 따뜻한 투광등 바 (layout_v2 #12)
+fst = SIGN @ T(-1.9, 0, -0.6, -0.5)
+for s_ in (-1, 1):
+    sign.add(cyl(0.05, 0.05, 3.4, 10), fst @ T(s_ * 0.7, 1.7, 0), M['black'], 1)
+    sign.add(box(1.0, 0.05, 0.5), fst @ T(s_ * 0.7, 0.03, 0), M['black'], 1)
+sign.add(box(1.7, 0.09, 0.09), fst @ T(0, 3.4, 0), M['black'], 1)
+for k in range(5):
+    fx_ = -0.68 + k * 0.34
+    sign.add(bevel_box(0.3, 0.26, 0.28, 0.02), fst @ T(fx_, 3.24, 0.05, 0, 0.35), M['black'], 1)
+    emit.add(cyl(0.11, 0.11, 0.02, 16), fst @ T(fx_, 3.12, 0.16, 0, 0.35), M['washLens'])
+    pf = fst @ V((fx_, 3.12, 0.2))
+    light(C_LIGHT, f'sign_flood_{k}', 'SPOT', tuple(pf), tuple(V((-43.0, 22.0, -11.0))), energy=2600,
+          color=(1.0, 0.9, 0.75), spot=0.5, blend=0.4, size=0.15)      # 중도타워를 쏜다
 sign.build()
 
 # 석등
