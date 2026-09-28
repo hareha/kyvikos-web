@@ -643,9 +643,11 @@ expo.add(bevel_box(0.4, 0.12, 0.22, 0.02), T(pc[0], 1.42, pc[1], 44.4 * DEG + PI
 # 경 100,000,001대 생산 축 아치 (앞뒤 같은 그래픽, 다리 흰 받침)
 A = X1['arch_100000001']
 af = T(A['centre_xz'][0], 0, A['centre_xz'][1], A['yaw_deg_of_arch_plane_normal'] * DEG + PI / 2)
-OW, OH, BW, DP = A['outer_width_m'], A['outer_height_m'], A['band_width_m'], A['depth_m']
-for s in (-1, 1):
-    expo.add(box(BW + 0.04, 0.3, DP + 0.04), af @ T(s * (OW - BW) / 2, 0.15, 0), M['white'], 1)
+L2A = L2['1F']['arch_100000001']                              # 2차 실측: 3.5 x 3.13, 띠 0.61, 깊이 0.45
+OW, OH, BW, DP = L2A['outer_w_m'], L2A['outer_h_m'], L2A['band_w_m'], L2A['depth_m']
+for s in (-1, 1):                                             # 다리 밑동은 흰색이 아니라 짙은 남색 (현대 워드마크판)
+    expo.add(box(BW + 0.04, 0.3, DP + 0.04), af @ T(s * (OW - BW) / 2, 0.15, 0), M['archNavy'], 1)
+    expo.add(box(BW * 0.55, 0.09, 0.01), af @ T(s * (OW - BW) / 2, 0.17, DP / 2 + 0.03), M['white'], 1)
     expo.add(box(BW, OH - BW - 0.3, DP), af @ T(s * (OW - BW) / 2, 0.3 + (OH - BW - 0.3) / 2, 0), M['archNavy'], 1)
 expo.add(box(OW, BW, DP), af @ T(0, OH - BW / 2, 0), M['archNavy'], 1)
 for side, slug in ((1, 'arch_front'), (-1, 'arch_back')):
@@ -660,9 +662,43 @@ for side, slug in ((1, 'arch_front'), (-1, 'arch_back')):
         expo.add(gallery.quad_uv(w_, h_, (u0, v0, u1, v1)), fr @ T(cxl, cyl_, 0), gmat_, tile=None)
 
 # 천장 컨베이어: 폐루프 레일 + 노란 걸이 24개 + 1:4 차체
-RP = [V((p[0], p[1], p[2])) for p in X1['conveyor']['rail']['path_xyz']]
-for _ in range(2):                                            # 사진의 레일은 꺾이지 않고 부드럽게 휜다
-    RP = [RP[0]] + [q for a_, b_ in zip(RP, RP[1:]) for q in (a_ * 0.75 + b_ * 0.25, a_ * 0.25 + b_ * 0.75)] + [RP[-1]]
+# 제작사(오디스) 공개 사양: 닫힌 스타디움 루프 11.0 x 3.0 (직선 8.0 x 2 + 반원 지름 3.0),
+#   둘레 25.4m, 차체 25개, 피치 1.02m, 손으로 돌린다. 프로파일은 UP-DOWN —
+#   모따기 쪽 직선은 +6.5, 계단 쪽 안쪽 직선은 +4.4 (2층 난간 눈높이로 지나간다).
+CV_C = V((-4.89, 0, -4.75))
+CV_RY = 44.4 * DEG
+CV_STR, CV_R = 8.0, 1.5
+
+
+def cv_point(t):
+    """둘레 위 위치 t(0~1) -> 레일 좌표. 로컬 x = 긴 축(모따기와 나란히), 로컬 z = 폭 방향"""
+    per = 2 * CV_STR + PI * 2 * CV_R
+    d = t * per
+    if d < CV_STR:                                            # 모따기 쪽 직선 (+z)
+        lx, lz = -CV_STR / 2 + d, CV_R
+    elif d < CV_STR + PI * CV_R:
+        a_ = (d - CV_STR) / CV_R
+        lx, lz = CV_STR / 2 + CV_R * math.sin(a_), CV_R * math.cos(a_)
+    elif d < 2 * CV_STR + PI * CV_R:
+        lx, lz = CV_STR / 2 - (d - CV_STR - PI * CV_R), -CV_R
+    else:
+        a_ = (d - 2 * CV_STR - PI * CV_R) / CV_R
+        lx, lz = -CV_STR / 2 - CV_R * math.sin(a_), -CV_R * math.cos(a_)
+    hi, lo = 6.5, 4.4
+    if d < CV_STR * 0.86:
+        y = hi
+    elif d < CV_STR + PI * CV_R:                              # 급하게 내려간다
+        y = hi - (lo - lo) - (hi - lo) * min(1, (d - CV_STR * 0.86) / (CV_STR * 0.14 + PI * CV_R))
+    elif d < 2 * CV_STR + PI * CV_R * 0.9:
+        y = lo
+    else:
+        y = lo + (hi - lo) * min(1, (d - (2 * CV_STR + PI * CV_R * 0.9)) / (PI * CV_R * 1.1))
+    f_ = T(CV_C.x, 0, CV_C.z, CV_RY)
+    q = f_ @ V((lx, y, lz))
+    return V((q.x, q.y, q.z))
+
+
+RP = [cv_point(k / 96) for k in range(97)]
 for a, b in zip(RP, RP[1:]):
     rig.add(box((b - a).length + 0.02, 0.10, 0.055), T((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2,
             math.atan2(-(b.z - a.z), b.x - a.x), 0, math.atan2(b.y - a.y, math.hypot(b.x - a.x, b.z - a.z))), M['aluRail'], 1)
@@ -679,10 +715,13 @@ BODY_COLS = {'red': '#B81D24', 'white': '#EDEDEB', 'navy/black': '#161A2A', 'sil
 body_mats = {}
 mini = props.load('edc994ad28ed438cb365c0e0389ac177', 'src_minibody', width=1.05, decimate=0.3, coll=C_SRC)
 align_long_axis(mini)
-for h in X1['conveyor']['hangers']['items']:
-    p = V(h['rail_point_xyz'])
-    tx, tz = h['tangent_xz']
+for hi_ in range(25):                                         # 25개, 피치 1.02m
+    t_ = hi_ / 25
+    p = cv_point(t_)
+    pn = cv_point((t_ + 0.004) % 1.0)
+    tx, tz = pn.x - p.x, pn.z - p.z
     ry = math.atan2(-tz, tx)
+    h = {'body_colour': X1['conveyor']['hangers']['items'][hi_ % 24].get('body_colour', 'white')}
     f = T(p.x, p.y - 0.25, p.z, ry)
     g, m = tube(V((p.x, p.y - 0.09, p.z)), V((p.x, p.y - 0.25, p.z)), 0.011, 6)
     rig.add(g, m, M['cage'])
