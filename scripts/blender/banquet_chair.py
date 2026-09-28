@@ -56,7 +56,7 @@ def _bow_mesh(width=0.23):
     return bm
 
 
-def _add_sash(me, sash_mat, at=0.76, band=0.092):
+def _add_sash(me, sash_mat, at=0.70, band=0.098):
     """등받이 단면을 실제로 재서 그 둘레에 새틴 띠를 감고, 뒤에 리본과 늘어뜨린 꼬리를 단다.
        (이 모델에는 리본이 없다. 커버만 씌워져 있다.)"""
     zs = [v.co.z for v in me.vertices]
@@ -69,8 +69,12 @@ def _add_sash(me, sash_mat, at=0.76, band=0.092):
     cy = sum(v.y for v in sl) / len(sl)
     # 등받이는 납작한 판이다. 윤곽을 각도로 추적하면 점이 성겨 띠가 들쭉날쭉해지니,
     # 단면의 가로·세로만 재서 상자 하나로 두른다 (밖에서 보면 감긴 띠로 읽힌다).
-    bx0, bx1 = min(v.x for v in sl), max(v.x for v in sl)
-    by0, by1 = min(v.y for v in sl), max(v.y for v in sl)
+    # 이 높이 단면에는 등받이 말고 커버 자락 등도 섞여 들어와 폭이 부풀어 띠가 옆으로 튀어나온다.
+    # 뒤쪽(등받이) 두께 안에 드는 점만 골라 잰다.
+    ymin = min(v.y for v in sl)
+    back = [v for v in sl if v.y < ymin + 0.10] or sl
+    bx0, bx1 = min(v.x for v in back), max(v.x for v in back)
+    by0, by1 = min(v.y for v in back), max(v.y for v in back)
 
     bm = bmesh.new()
 
@@ -83,25 +87,34 @@ def _add_sash(me, sash_mat, at=0.76, band=0.092):
         bm.from_mesh(t)
         bpy.data.meshes.remove(t)
 
-    # 띠는 도형을 덧대지 않고 의자 표면 자체를 칠한다.
-    # (상자든 스윕이든 덧대면 등받이보다 넓게 떠서 챙처럼 보였다.)
-    cx, ry = (bx0 + bx1) / 2, by0 - 0.010               # 등받이 뒷면 (블렌더 -y = 웹 +z)
+    # 띠: 단면 네 면에 얇은 판을 덧대 두른다. (면을 칠하는 방식은 저폴리 메시라
+    #     큰 면 하나가 통째로 칠해지거나 아예 안 칠해져 띠가 파묻혀 보였다.)
+    cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
+    ww, dd, t_ = bx1 - bx0, by1 - by0, 0.008
+    # 등받이가 위로 갈수록 좁아져서, 잰 폭을 그대로 쓰면 띠가 귀처럼 옆으로 튀어나온다 -> 안으로 접어 넣는다
+    for (ax, az, sw, sd) in ((cx, by0 - t_, ww - 0.012, t_ * 2), (cx, by1 + t_, ww - 0.012, t_ * 2),
+                             (bx0 + t_, cy, t_ * 2, dd + 2 * t_), (bx1 - t_, cy, t_ * 2, dd + 2 * t_)):
+        emit(lambda b_, ax=ax, az=az, sw=sw, sd=sd: bmesh.ops.create_cube(
+            b_, size=1.0, matrix=Matrix.Translation((ax, az, zm)) @ Matrix.Diagonal((sw, sd, band, 1))))
+
+    ry = by0 - t_ * 2                                    # 등받이 뒷면 (블렌더 -y = 웹 +z)
     bow = _bow_mesh(width=0.21)                          # 나비 고리는 받아온 모델 (deokpal, CC-BY)
     if bow is not None:
-        bow.transform(Matrix.Translation((cx, ry - 0.022, zm - 0.008)))
+        bow.transform(Matrix.Translation((cx, ry - 0.030, zm - 0.008)))
         t = bpy.data.meshes.new('t')
         bow.to_mesh(t)
         bow.free()
         bm.from_mesh(t)
         bpy.data.meshes.remove(t)
-    for sx in (-1, 1):
-        tail, tw = [], []
-        for k in range(10):                              # 좌판 아래까지 늘어뜨린 꼬리 (두 갈래가 확실히 벌어지게)
-            t = k / 9
-            tail.append((cx + sx * (0.062 + 0.105 * t * t), ry - 0.016 - 0.034 * math.sin(t * 2.3),
-                         zm - 0.030 - 0.052 * k))
-            tw.append(0.082 - 0.028 * t)
-        emit(_ribbon_bl(tail, tw, 0.007))
+    # 꼬리: 사진처럼 가운데 한 갈래가 곧게 내려와 띠와 T 자를 이룬다 (두 갈래가 아니다)
+    tail, tw = [], []
+    for k in range(9):
+        t = k / 8
+        tail.append((cx, ry - 0.012 - 0.016 * math.sin(t * 2.0), zm - 0.030 - 0.062 * k))
+        tw.append(0.115 - 0.022 * t)
+    emit(_ribbon_bl(tail, tw, 0.008))
+    emit(lambda b_: bmesh.ops.create_cube(b_, size=1.0, matrix=Matrix.Translation((cx, ry - 0.020, zm))
+         @ Matrix.Diagonal((0.055, 0.030, 0.055, 1))))   # 매듭
 
     sm = bpy.data.meshes.new('sash')
     bm.to_mesh(sm)
@@ -116,9 +129,7 @@ def _add_sash(me, sash_mat, at=0.76, band=0.092):
     for f in list(me.polygons)[n0:]:
         f.material_index = 1
     # 면의 중심만 보면 큰 면이 통째로 칠해져 삼각형 얼룩이 된다. 모든 꼭짓점이 띠 안일 때만.
-    for f in me.polygons:
-        if all(abs(me.vertices[i].co.z - zm) <= band / 2 for i in f.vertices):
-            f.material_index = 1
+
 
 
 def build(coll, cover_mat, sash_mat, name='banquet_chair', decimate=0.22):

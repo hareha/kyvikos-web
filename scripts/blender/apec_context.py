@@ -41,7 +41,11 @@ C_STATIC = bpy.data.collections['STATIC']
 C_EMIT = bpy.data.collections['EMISSIVE']
 C_LIGHT = bpy.data.collections['LIGHTS']
 C_CAM = bpy.data.collections['CAMERAS']
-for name in ('pagoda', 'halls', 'garden', 'yeonsu', 'yeonsu_ne', 'yeonsu_nw', 'pines', 'pine_needles', 'tree_leaves', 'backstage', 'context_emissive', 'context_glass'):
+# 이 목록에서 빠진 어셈블리는 실행할 때마다 .001 .002 로 중복 생성돼 쌓인다
+# (site_stones / foh_corridor 가 그랬다 — 파일 용량도 같이 불었다).
+for name in ('pagoda', 'halls', 'garden', 'yeonsu', 'yeonsu_ne', 'yeonsu_nw', 'pines', 'pine_needles',
+             'tree_leaves', 'backstage', 'context_emissive', 'context_glass',
+             'foh_corridor', 'foh_emissive', 'site_stones', 'site_stones_emissive'):
     if name in bpy.data.objects:
         bpy.data.objects.remove(bpy.data.objects[name], do_unlink=True)
 for o in [o for o in C_LIGHT.objects if o.name.startswith(('pagoda_', 'hall_', 'site_'))]:
@@ -1356,7 +1360,7 @@ def stone_dome(x, z, r=11.0, drum=5.6, dome=7.6, ry=0.0):
           energy=2200, color=(1.0, 0.92, 0.78), spot=0.7, blend=0.5, size=0.3)
 
 
-stone_dome(-56.0, -26.0, r=9.0, ry=0.5)    # 중도타워 기단 원판 위, 탑 뒤쪽 (객석에서 무대 왼편)
+stone_dome(-32.0, 6.0, r=9.0, ry=0.6)      # 중도타워 기단 원판 위, 객석에서 무대 왼편으로 보이는 자리
 
 # 회랑에서 잔디로 나오는 포장길 (클라이언트 사진). 입구 석수는 생략 — 형태가 복잡해 뺀다.
 PATH_X, PATH_W = 4.6, 3.2

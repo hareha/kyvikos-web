@@ -67,8 +67,8 @@
     "roadCase": "objects",
     "consoleBody": "objects",
     "keyGrey": "objects",
-    "ComputerFrame.002": "objects",
-    "ComputerScreen.002": "objects",
+    "ComputerFrame": "objects",
+    "ComputerScreen": "objects",
     "apIbcPallet": "objects",
     "apIbc": "objects",
     "apIbcCage": "objects",
@@ -125,8 +125,8 @@
     "winGlass": "yeonsu_nw",
     "winFrame": "yeonsu_nw",
     "steelRail": "yeonsu_nw",
-    "outdoor_table_chair_set_01_chair.002": "yeonsu_ne",
-    "outdoor_table_chair_set_01_table.002": "yeonsu_ne",
+    "outdoor_table_chair_set_01_chair": "yeonsu_ne",
+    "outdoor_table_chair_set_01_table": "yeonsu_ne",
     "parasol": "yeonsu_ne"
   },
   "objects": {
