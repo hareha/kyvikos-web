@@ -65,7 +65,9 @@ M = {
     'screenWood': material('screenWood', None, (0.052, 0.030, 0.019), 0.55),    # 병풍·연설대 호두나무 (사진 확대)
     'hanjiPaper': material('hanjiPaper', image_base=f'{SHOTS}/apec_hanji.png', rough=0.88),   # 병풍 배접 한지
     'plinthRed': material('plinthRed', 'cotton_jersey', (0.32, 0.03, 0.04), 0.9),  # 붉은 천 좌대
-    'stairBlue': material('stairBlue', None, (0.05, 0.11, 0.38), 0.55),         # 남색 계단
+    'stairBlue': material('stairBlue', None, (0.05, 0.11, 0.38), 0.55),         # 계단 챌판 (중청)
+    'stairTread': material('stairTread', None, (0.26, 0.34, 0.62), 0.7),        # 계단 디딤판 (연청, 사진)
+    'rampLogo': material('rampLogo', image_base=f'{SHOTS}/apec_ramp_logo.png', rough=0.6),   # 경사면 가운데 로고 한 벌
     'nosing': material('nosing', None, (0.8, 0.9, 1), emit=(0.7, 0.85, 1.0), emit_strength=6),
     'fascia': material('fascia', emit_image=f'{SHOTS}/apec_real_fascia.png', emit_strength=1.3, rough=0.4),
     'led': material('led', emit_image=f'{SHOTS}/apec_real_led.png', emit_strength=1.8, rough=0.25),
@@ -191,7 +193,7 @@ def step_unit(cx_, cz_, w_, ry_=0.0):
         h = TOP * k / 3
         zc = 0.3 * (4 - k) - 0.15
         stage.add(box(w_, h, 0.3), f @ T(0, h / 2, zc), M['stairBlue'], 1)
-        stage.add(box(w_, 0.03, 0.3), f @ T(0, h + 0.015, zc), M['deckCarpet'], 1)
+        stage.add(box(w_, 0.03, 0.3), f @ T(0, h + 0.015, zc), M['stairTread'], 1)
 
 
 # 무대 앞: 계단이 양옆에 하나씩, 가운데는 경사면이고 그 사면에 로고 띠가 박힌다 (클라이언트 확인).
@@ -218,8 +220,8 @@ def _ramp(bm):
 RF = T(CX, 0, FRONT)
 stage.add(_ramp, RF, M['stairBlue'], 1)
 SL = math.hypot(RMP_L, TOP)                                        # 사면 길이
-emit.add(plane(RMP_W - 0.1, SL - 0.06), RF @ T(0, TOP / 2 + 0.006, RMP_L / 2, 0, math.atan2(TOP, RMP_L) - PI / 2),
-         M['fascia'], tile=None)                                   # 사면에 박힌 로고 띠
+stage.add(plane(RMP_W * 0.52, RMP_W * 0.52 * 360 / 1600), RF @ T(0, TOP / 2 + 0.006, RMP_L / 2, 0, math.atan2(TOP, RMP_L) - PI / 2),
+          M['rampLogo'], tile=None)                                # 사면 가운데 로고 한 벌 (띠가 아니다)
 for k in range(7):                                                 # 무대 앞 잔디의 검은 모니터 스피커
     stage.add(bevel_box(0.44, 0.3, 0.34, 0.02), T(CX - 7.5 + k * 2.6, 0.16, FRONT + 0.32, 0, -0.12), M['black'], 1)
 # 무대 뒤 계단 (대기 천막 쪽, 무대 오른쪽 뒤)
@@ -251,38 +253,25 @@ for sgn in (-1, 1):                                                             
 SCR_PW, SCR_PH = 0.42, 2.02                                               # 한 폭 폭·높이 (사람 1.75m 를 자로)
 
 
-def screen_panel(f):
-    """용자살 한 폭: 겉틀 + 위아래 격자살 + 가운데 세로살 + 뒤에 한지"""
-    st, rl, t = 0.055, 0.09, 0.034                                        # 선대·막이 폭, 살 두께
-    stage.add(box(SCR_PW, SCR_PH, t), f @ T(0, SCR_PH / 2, -t / 2 - 0.004), M['hanjiPaper'], 2)   # 한지 배접
-    for sx in (-1, 1):
-        stage.add(box(st, SCR_PH, t), f @ T(sx * (SCR_PW - st) / 2, SCR_PH / 2, 0), M['screenWood'], 1)
-    for (yy, hh) in ((rl / 2, rl), (SCR_PH - rl / 2, rl), (SCR_PH * 0.30, 0.05), (SCR_PH * 0.74, 0.05)):
-        stage.add(box(SCR_PW, hh, t), f @ T(0, yy, 0), M['screenWood'], 1)
-    iw = SCR_PW - 2 * st
-    zones = ((rl, SCR_PH * 0.30 - 0.025, True), (SCR_PH * 0.30 + 0.025, SCR_PH * 0.74 - 0.025, False),
-             (SCR_PH * 0.74 + 0.025, SCR_PH - rl, True))
-    for (y0, y1, grid) in zones:
-        for i in range(8):                                                # 세로살 여덟 개
-            stage.add(box(0.013, y1 - y0, t * 0.62), f @ T((i - 3.5) * iw / 8, (y0 + y1) / 2, 0), M['screenWood'], 1)
-        if not grid:
-            continue
-        n = max(2, round((y1 - y0) / (iw / 8)))                           # 격자 구간만 가로살
-        for j in range(n):
-            stage.add(box(iw, 0.013, t * 0.62), f @ T(0, y0 + (j + 0.5) * (y1 - y0) / n, 0), M['screenWood'], 1)
+# 병풍은 뺀다 — 공연 한 대목에만 세웠던 것이고, 클라이언트가 보내 준 만찬 장면
+# 사진에는 무대 뒤가 LED 뿐이다.
 
 
-SCR = T(CX + 3.2, TOP, CZ - 1.5, -0.30)
-for k in range(5):                                                        # 지그재그로 접힌 다섯 폭
-    a = 0.30 if k % 2 else -0.30
-    screen_panel(SCR @ T((k - 2) * SCR_PW * 0.96, 0, 0.11 * (k % 2), a))
+def podium(f, w=0.56, h=1.18, d=0.46):
+    """연단 — 아래가 넓고 위가 좁은 단순한 사다리꼴 기둥에 앞면 로고.
+       gear.lectern 은 윗판이 밖으로 크게 나와 정면에서 망치상어처럼 보였다."""
+    stage.add(cyl(w * 0.72 * 1.414 / 2, w * 1.414 / 2, h - 0.06, 4), f @ T(0, (h - 0.06) / 2, 0, PI / 4), M['lectern'], 1)
+    stage.add(bevel_box(w * 0.78, 0.055, d * 0.78, 0.012), f @ T(0, h - 0.03, 0), M['black'], 1)   # 어두운 윗판
+    stage.add(bevel_box(w + 0.04, 0.04, d + 0.04, 0.01), f @ T(0, 0.02, 0), M['lectern'], 1)       # 밑동
+    stage.add(plane(w * 0.80, w * 0.80 * 1152 / 1792), f @ T(0, h * 0.58, d * 0.425 + 0.004), M['lecternPanel'], tile=None)
+    stage.add(cyl(0.007, 0.007, 0.22, 8), f @ T(-0.14, h + 0.10, 0.06, 0, -0.55), M['black'], 1)   # 구즈넥
+    stage.add(cyl(0.006, 0.006, 0.14, 8), f @ T(-0.14, h + 0.21, 0.16, 0, -1.15), M['black'], 1)
+    stage.add(sphere(0.014, 2), f @ T(-0.14, h + 0.25, 0.215), M['black'])
 
 
-# 단상 — 클라이언트 레퍼런스: 어두운 목재가 아니라 아래로 벌어지는 흰 연단이고,
-# 앞판에 APEC 로고가 박힌다. 무대 가운데와 왼쪽에 하나씩 두 대.
-M['lecternPanel'] = material('lecternPanel', image_base=f'{SHOTS}/apec_clad_panel.png', rough=0.25, coat=0.6)
-gear.lectern(stage, T(CX + 0.6, TOP, CZ - 0.6, -0.22), M)
-gear.lectern(stage, T(CX - 6.4, TOP, CZ + 0.4, 0.30), M)
+M['lecternPanel'] = material('lecternPanel', image_base=f'{SHOTS}/apec_clad_panel.png', rough=0.25, coat=0.5)
+podium(T(CX + 0.6, TOP, CZ - 0.6, -0.16))
+podium(T(CX - 6.4, TOP, CZ + 0.4, 0.22))
 # 무대 앞 양쪽 스피커 (불러온 모델)
 for sx in (-4.3, 16.3):
     stage.add(mesh_source(SRC_SPEAKER), T(sx, 0.12, FRONT + 0.4), list(SRC_SPEAKER.data.materials))
@@ -599,9 +588,7 @@ side_tower(T(-22.4, 0, -2.0, PI / 2), floods=6)      # 서쪽: 잔디(+x)를 본
 side_tower(T(32.6, 0, -2.0, -PI / 2), floods=6)      # 동쪽: 잔디(-x)를 본다
 # 무대를 정면으로 보는 낮은 중계카메라 단상 — 회랑(z≈19) 열주 앞 잔디
 cam_riser(T(-4.5, 0, 14.9, PI))          # 회랑 누각 앞, 쌍사자 석등·삼층석탑을 비켜서
-# 무대 정면 잔디에 세운 중계카메라 두 대 (onsite_090013_030)
-tripod_cam(T(CX - 3.2, 0, FRONT + 4.6, PI + 0.12))
-tripod_cam(T(CX + 2.4, 0, FRONT + 5.4, PI - 0.08))
+# 무대 정면 잔디의 삼각대 카메라는 뺀다 — 만찬 사진에는 객석뿐이다 (리허설 때만 있었다)
 for k in range(5):                                                  # 5 x 5m 몽골텐트 (실측), 무대 뒤에 맞붙여 다섯 동
     marquee(T(CX - 10.4 + k * 5.2, 0, ZB - 4.6), 5.0, 5.0, eave=2.2, ridge=3.3)
 boh.build()
