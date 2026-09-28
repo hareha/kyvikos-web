@@ -1087,4 +1087,10 @@ stones_glow.build()
 camera(C_CAM, 'cam_terrace', (26.5, 14.6, 20.1), (-10.1, 23.4, -26.5), 84)   # 현장 사진에서 역산 (아이폰 광각, 위로 약 9°)
 # 신평루 콘솔 부스 — 콘솔 뒤에서 무대 쪽 (소개서 18p 사진)
 camera(C_CAM, 'cam_console', (SP[0] + 4.2, SP_BASE + 2.9, SP[1] - 0.8), (SP[0] - 6, 0.4, -24), 66)
-print('context built')
+# 위 44행의 삭제 목록이 apec_stage.py 의 어셈블리를 지워 버리는 사고가 한 번 있었다 (clad_tower·천막 전멸).
+# 무대 쪽 덩어리가 살아 있는지 매번 확인한다.
+MUST = ('ground', 'stage', 'truss', 'roof', 'stage_kit', 'tables', 'heaters', 'sign')
+missing = [n for n in MUST if n not in bpy.data.objects]
+if missing:
+    raise SystemExit(f'apec_stage.py 의 객체가 사라졌다 (이름 충돌?): {missing}')
+print('context built | stage objects ok')
