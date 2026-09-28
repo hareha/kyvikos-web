@@ -110,6 +110,7 @@
     "yeonsu_nw": "yeonsu_nw"
   },
   "graphics": [
+    "apec_clad_panel.png",
     "apec_fret.png",
     "apec_hanji.png",
     "apec_leaves.png",

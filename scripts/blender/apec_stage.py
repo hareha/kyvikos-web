@@ -84,6 +84,8 @@ M = {
     'chairBlack': material('chairBlack', 'cotton_jersey', (0.007, 0.007, 0.009), 0.75, normal=0.6, sheen=0.05),
     'chairGold': material('chairGold', 'cotton_jersey', (0.66, 0.47, 0.22), 0.28, 0.45, normal=0.25, sheen=0.6),
     'stainless': material('stainless', None, (0.8, 0.81, 0.82), 0.22, 1.0),
+    'cladPanel': material('apCladPanel', image_base=f'{SHOTS}/apec_clad_panel.png', rough=0.72),   # 실제 사진에서 뜬 벽체 인쇄면
+    'grating': material('grating', None, (0.045, 0.046, 0.05), 0.55, 0.7),   # 발판 강재 그레이팅
     'heaterBody': material('heaterBody', None, (0.84, 0.81, 0.70), 0.42),   # 히터 크림색 철판 (kakao 16)
     'flame': material('flame', None, (1, 0.5, 0.15), emit=(1.0, 0.5, 0.15), emit_strength=70),
     'sign': material('sign', emit_image=f'{SHOTS}/apec_real_sign.png', emit_strength=0.35, rough=0.5),
@@ -423,41 +425,51 @@ def side_tower(f, w=5.6, h=3.6, d=2.4, floods=6, aim=None):
     로컬 +z 가 잔디(테이블) 쪽 — 그래픽과 블라인더가 그리로 향한다. 무빙헤드·중계카메라는
     벽체 방향과 상관없이 무대 좌표를 보고 각을 따로 계산한다."""
     boh.add(bevel_box(w, h, d, 0.02), f @ T(0, h / 2, 0), M['cladNavy'], 1)
-    # 사진에서 로고는 벽면 가운데에만 인쇄돼 있다. 전에는 판을 면 전체에 붙여서
-    # 벽이 통째로 밝은 파란 판처럼 보였다 — 로고 크기만큼만 붙인다.
-    boh.add(plane(w * 0.46, h * 0.34), f @ T(0, h * 0.55, d / 2 + 0.012), M['sign'], tile=None)
-    # 옆면에는 로고가 없다 (전에 붙였더니 파란 판이 모서리에 붙다 만 것처럼 보였다).
-    # 대신 네 면을 두르는 남색 상부 코핑으로 끝을 덮어 마감한다.
-    boh.add(bevel_box(w + 0.1, 0.14, d + 0.1, 0.02), f @ T(0, h - 0.06, 0), M['cladNavy'], 1)
+    # 로고는 벽면에 '인쇄'돼 있다. 전에는 배경색이 다른 sign 텍스처를 붙여서
+    # 남색 벽 위에 밝은 보라 판때기가 떠 있는 꼴이었다. client_cladtower_8 에서
+    # 실제 인쇄면을 떠 와 배경을 클래딩 남색으로 맞춘 apec_clad_panel 을 면 전체에 씌운다.
+    boh.add(plane(w, h), f @ T(0, h / 2, d / 2 + 0.009), M['cladPanel'], tile=None)
     boh.add(box(0.04, 2.0, 0.9), f @ T(w / 2 + 0.022, 1.0, -d / 2 + 0.6), M['cladNavy'], 1)   # 옆면 출입문
-    for (sx, sz) in ((-w / 2 + 0.12, -d / 2 + 0.12), (w / 2 - 0.12, -d / 2 + 0.12),
-                     (-w / 2 + 0.12, d / 2 - 0.12), (w / 2 - 0.12, d / 2 - 0.12)):
-        boh.add(cyl(0.024, 0.024, h + 1.75, 8), f @ T(sx, (h + 1.75) / 2, sz), M['scaffold'], 1)
-    dd = d + 0.5                                                        # 발판은 잔디 쪽(+z)으로 0.5m 내민다
-    for k in range(14):                                                 # 윗면 그레이팅 발판
-        boh.add(box(w - 0.16, 0.04, (dd - 0.2) / 14 - 0.02), f @ T(0, h + 0.02, -d / 2 + 0.14 + k * (dd - 0.2) / 14), M['scaffold'], 1)
-    for k in (0, 1):                                                    # 상부 난간 두 줄 (잔디 쪽 한 변만 비워 둔다)
-        yy = h + 0.62 + k * 0.5
-        for (a_, b_) in (((-w / 2, -d / 2), (w / 2, -d / 2)), ((-w / 2, -d / 2), (-w / 2, dd - d / 2)), ((w / 2, -d / 2), (w / 2, dd - d / 2))):
+    # ── 상부 마감: 클래딩이 윗면 테두리까지 올라와 감싼다 ──────────────────
+    # 전에는 남색이 h 에서 끊기고 그 위에 밝은 회색 발판이 뚜껑처럼 얹혀서
+    # "래핑이 안 된" 모습이었다. 사진(cladtower_8)처럼 네 면을 두르는 남색
+    # 파라펫(0.26m)을 세우고, 어두운 강재 그레이팅을 그 안쪽에 앉힌다.
+    PAR = 0.26
+    for (ax, az, pw, pd) in ((0, d / 2, w + 0.12, 0.09), (0, -d / 2, w + 0.12, 0.09),
+                             (w / 2, 0, 0.09, d + 0.12), (-w / 2, 0, 0.09, d + 0.12)):
+        boh.add(bevel_box(pw, PAR, pd, 0.02), f @ T(ax, h + PAR / 2 - 0.03, az), M['cladNavy'], 1)
+    boh.add(bevel_box(w + 0.16, 0.05, d + 0.16, 0.015), f @ T(0, h + PAR - 0.05, 0), M['cladNavy'], 1)   # 파라펫 갓
+    for (sx, sz) in ((-w / 2 + 0.16, -d / 2 + 0.16), (w / 2 - 0.16, -d / 2 + 0.16),
+                     (-w / 2 + 0.16, d / 2 - 0.16), (w / 2 - 0.16, d / 2 - 0.16)):
+        boh.add(cyl(0.026, 0.026, h + 1.95, 8), f @ T(sx, (h + 1.95) / 2, sz), M['scaffold'], 1)
+    for k in range(12):                                                 # 어두운 강재 그레이팅 (파라펫 안쪽)
+        boh.add(box(w - 0.22, 0.045, (d - 0.24) / 12 - 0.025), f @ T(0, h - 0.02, -d / 2 + 0.14 + k * (d - 0.24) / 12), M['grating'], 1)
+    for k in range(4):                                                  # 잔디 쪽으로 0.45m 내민 캔틸레버 발판
+        boh.add(box(w - 0.22, 0.045, 0.45 / 4 - 0.025), f @ T(0, h - 0.02, d / 2 + 0.06 + k * 0.45 / 4), M['grating'], 1)
+    boh.add(box(w - 0.22, 0.09, 0.5), f @ T(0, h - 0.09, d / 2 + 0.28), M['grating'], 1)      # 내민 발판 밑 받침 앵글
+    for k in (0, 1):                                                    # 난간 두 줄 (잔디 쪽 한 변만 비워 둔다)
+        yy = h + 0.78 + k * 0.48
+        for (a_, b_) in (((-w / 2 + 0.16, -d / 2 + 0.16), (w / 2 - 0.16, -d / 2 + 0.16)),
+                         ((-w / 2 + 0.16, -d / 2 + 0.16), (-w / 2 + 0.16, d / 2 - 0.16)),
+                         ((w / 2 - 0.16, -d / 2 + 0.16), (w / 2 - 0.16, d / 2 - 0.16))):
             g, m = tube(f @ V((a_[0], yy, a_[1])), f @ V((b_[0], yy, b_[1])), 0.018, 6)
             boh.add(g, m, M['scaffold'])
-    for yy in (h + 1.12, h + 1.70):                                     # 2단 가로 장선 (앞뒤 두 줄씩)
-        for zz in (-0.45, 0.25):
-            g, m = tube(f @ V((-w / 2 + 0.12, yy, zz)), f @ V((w / 2 - 0.12, yy, zz)), 0.021, 6)
-            boh.add(g, m, M['scaffold'])
+    for yy in (h + 1.42, h + 1.86):                                     # 조명 다는 2단 가로 장선
+        g, m = tube(f @ V((-w / 2 + 0.16, yy, 0.1)), f @ V((w / 2 - 0.16, yy, 0.1)), 0.021, 6)
+        boh.add(g, m, M['scaffold'])
     for k in range(floods):                                             # 블라인더 (두 대씩 짝지어 세 짝)
         pair, side_ = k // 2, k % 2
         npair = max(1, (floods + 1) // 2)
         lx = (pair - (npair - 1) / 2) * (w - 1.5) / max(1, npair - 1) + (side_ - 0.5) * 0.52
-        boh.add(mesh_source(SRC_WASH), f @ T(lx, h + 1.60, 0.25, 0, PI / 2 + 0.45), list(SRC_WASH.data.materials))
-        pos = f @ V((lx, h + 1.50, 0.5))
+        boh.add(mesh_source(SRC_WASH), f @ T(lx, h + 1.76, 0.25, 0, PI / 2 + 0.45), list(SRC_WASH.data.materials))
+        pos = f @ V((lx, h + 1.66, 0.5))
         tgt = f @ V((lx, 0.9, 9.0))
         light(C_LIGHT, f'sidewash_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], tgt[:],
               energy=1500, color=(1.0, 0.84, 0.6), spot=0.85, blend=0.6, size=0.22)
     for k in range(3):                                                  # 장선 아래 매단 무빙헤드 셋
         lx = (k - 1) * (w - 2.0) / 2
-        boh.add(mesh_source(SRC_MOVER), f @ T(lx, h + 0.95, -0.2, 0, 0.3), list(SRC_MOVER.data.materials))
-    cov = f @ T(w / 2 - 1.0, h + 1.95, -0.1, 0, 0, 0.12)                # 한쪽 끝, 검은 우비 씌운 기구
+        boh.add(mesh_source(SRC_MOVER), f @ T(lx, h + 1.16, -0.05, 0, 0.3), list(SRC_MOVER.data.materials))
+    cov = f @ T(w / 2 - 1.0, h + 2.12, -0.1, 0, 0, 0.12)                # 한쪽 끝, 검은 우비 씌운 기구
     boh.add(bevel_box(0.72, 0.46, 0.9, 0.06), cov, M['black'], 1)
     boh.add(bevel_box(0.5, 0.3, 0.42, 0.05), cov @ T(0.04, -0.34, 0.2), M['black'], 1)
     # 발판 위 무빙헤드 + 중계카메라 — 무대(aim)를 보도록 각을 따로 계산한다
