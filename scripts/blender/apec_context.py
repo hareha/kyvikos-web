@@ -572,7 +572,7 @@ def south_row():
         halls.add(box(0.5, 0.05, 1.1), T(cx + math.cos(a) * (r - 0.8), 0.32, cz + math.sin(a) * (r - 0.8), PI / 2 - a), M['granite'], 1)   # 광장에 박힘
     # 광장 가운데 원형 좌대는 석불관이 앉는 자리라 여기서는 그리지 않는다
     # 한옥 별채 (용마루 x 방향)
-    hanok(halls, -32.0, -41.0, 14.0, 6.0, ry=0.0, y0=0.0, wall_h=3.4, veranda=False, base_h=0.8, label='annex', lamp=300)
+    # 여기 한옥 별채는 내가 임의로 넣은 것이다. 실제로는 비어 있다 (클라이언트 사진) -> 뺀다
 
 
 # ── 정원 (수공간: 연못 · 육각정 · 돌다리 · 곡선 산책로) ─────────────
@@ -1335,7 +1335,7 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
        줄눈이 위로 모이는 돔 / 꼭대기에 밖으로 뻗은 동틀돌 두 단 / 원형 천개석 /
        옆으로 붙은 기와지붕 통로."""
     f = T(x, 0, z, ry)
-    S = mat('seokbulStone', 'granite_tile_03', (0.66, 0.66, 0.645), 0.84, normal=0.3)
+    S = mat('seokbulStone', 'granite_tile_03', (0.70, 0.665, 0.575), 0.86, normal=0.3)   # 사진의 따뜻한 크림색 석재
     SD = mat('seokbulJoint', None, (0.40, 0.40, 0.392), 0.93)   # 줄눈은 선이 아니라 그림자로 읽히게
     y0 = 0.69
     # 기단은 이미 있는 원형 광장(반경 5.5, 윗면 0.3)이다. 그 위에 낮은 굄돌만 얹는다.
@@ -1378,16 +1378,52 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
     # 돔 줄눈도 같은 이유로 도형을 붙이지 않는다 (화강석 텍스처와 코스 턱으로 읽힌다)
     tr, th = prof(TCUT)
     ty = dy + th                                                                                 # 동틀돌이 앉는 높이
-    for tier, (nb, rad, out, up) in enumerate(((12, tr + 1.30, 2.10, 0.0), (12, tr + 0.55, 1.85, 0.66))):
+    # 천개석을 크게 덮으면 동틀돌이 그 밑에 묻혀 그냥 접시로 보인다. 사진처럼 꽃잎이 드러나게
+    # 두 단을 엇갈려 놓고 그 위에 작은 원판만 얹는다.
+    for tier, (nb, rad, out, up) in enumerate(((16, tr + 1.35, 2.30, 0.0), (16, tr + 0.80, 1.95, 0.72))):
         for k in range(nb):
             a_ = 2 * PI * (k + (0.5 if tier else 0.0)) / nb
             bf = f @ T((rad - out / 2) * math.sin(a_), ty + up + 0.20, (rad - out / 2) * math.cos(a_), -a_)
-            stones.add(bevel_box(0.62, 0.48, out, 0.05), bf, S, 1)                               # 밖으로 뻗은 동틀돌
-            stones.add(bevel_box(0.56, 0.32, 0.40, 0.05), bf @ T(0, -0.34, out / 2 - 0.20), S, 1)   # 끝의 턱
-    stones.add(cyl(tr + 0.95, tr + 0.95, 0.30, 48), f @ T(0, ty + 1.24, 0), S, 1.4)              # 천개석
-    stones.add(cyl(tr * 0.50, tr * 0.60, 0.20, 32), f @ T(0, ty + 1.49, 0), S, 1.2)
+            stones.add(bevel_box(0.62, 0.44, out, 0.05), bf, S, 1)                               # 밖으로 뻗은 동틀돌
+            stones.add(bevel_box(0.56, 0.30, 0.40, 0.05), bf @ T(0, -0.32, out / 2 - 0.20), S, 1)   # 끝의 턱
+    stones.add(cyl(tr * 0.72, tr * 0.72, 0.28, 48), f @ T(0, ty + 1.24, 0), S, 1.4)              # 천개석
+    stones.add(cyl(tr * 0.40, tr * 0.52, 0.22, 32), f @ T(0, ty + 1.48, 0), S, 1.2)
 
-    # 기와지붕 통로는 실제 방향을 모르는 채로 붙였더니 옆 한옥에 파묻혔다 -> 자료가 생기면 다시 넣는다
+    # 양옆의 기와통로 — 위성사진·근접사진: 돔 좌우로 높이 솟은 기와지붕 통로가 붙어 있다.
+    # 앞면(+z)이 잔디·무대 쪽, 통로는 그 면과 나란히 ±x 로 뻗는다.
+    # 전에는 한쪽에만 낮은 포치를 달았고 그것도 중도타워 쪽으로 틀어 옆 건물에 박혔다.
+    # 길이 10.5 이상이면 +x 쪽 지붕이 신평루(11,-41) 지붕(x 2.9~)과 겹친다.
+    CL, CD, CH = 10.5, 5.2, 4.6                                    # 길이 / 폭 / 처마 밑 벽 높이
+    hd_ = CD / 2 + 2.3
+    cb = seat(0.44 + CH + 1.05, hd_, 0.8, 2.8, overhang=2.3)       # 평방 윗면 = 0.44+4.6+1.05
+    for s_ in (-1, 1):
+        g = f @ T(s_ * (r + 0.2 + CL / 2), 0, 0)
+        stones.add(bevel_box(CL + 0.8, 0.44, CD + 1.2, 0.05), g @ T(0, 0.22, 0), M['granite'], 1.5)   # 기단
+        stones.add(box(CL, CH, CD), g @ T(0, 0.44 + CH / 2, 0), S, 2.0)                               # 석벽 몸체
+        for k in range(3):                                                                            # 앞면 사각 창
+            wx = (k - 1) * CL / 3
+            stones.add(box(2.0, 2.4, 0.22), g @ T(wx, 0.44 + 2.5, CD / 2 - 0.05), M['black'], 1)
+            stones.add(box(2.34, 0.26, 0.30), g @ T(wx, 0.44 + 3.83, CD / 2 - 0.05), S, 1)            # 인방
+        stones.add(box(CL + 0.4, 0.50, CD + 0.4), g @ T(0, 0.44 + CH + 0.25, 0), M['vermilion'], 1)   # 창방
+        stones.add(box(CL + 1.0, 0.55, CD + 1.0), g @ T(0, 0.44 + CH + 0.775, 0), M['bracket'], 1)    # 평방
+        rafters(stones, g, CL + 0.8, CD / 2 + 0.6, CD / 2 + 1.95, hip_under(cb, hd_, 0.8, 2.8))
+        stones.add(hip_roof(CL / 2 + 2.3, hd_, 2.8, ridge=0.8, lift=1.1), g @ T(0, cb, 0), M['tileGrey'], 1.4)
+        ridge(stones, g, CL * 0.78, cb + 2.8)
+    # 앞면 출입구 (돔 정면)
+    stones.add(box(3.4, 3.2, 1.2), f @ T(0, 0.30 + 1.60, r - 0.2), S, 1.6)
+    stones.add(box(2.0, 2.4, 0.25), f @ T(0, 0.30 + 1.20, r + 0.42), M['black'], 1)
+    for k in range(3):                                                                                # 정면 계단
+        stones.add(box(3.6, 0.16, 0.42), f @ T(0, 0.30 - 0.08 - k * 0.16, r + 0.55 + k * 0.42), M['granite'], 1.5)
+    # 앞쪽을 두르는 낮은 돌난간 (사진). 통로 사이 정면 구간만 — 더 벌리면 통로 벽을 뚫는다
+    SPAN, RB = PI * 0.64, r + 2.5
+    for k in range(22):
+        a_ = -SPAN / 2 + SPAN * k / 21
+        stones.add(bevel_box(0.20, 0.86, 0.20, 0.03),
+                   f @ T(RB * math.sin(a_), 0.30 + 0.43, RB * math.cos(a_), -a_), M['balustrade'], 1)
+        if k:
+            b_ = a_ - SPAN / 42
+            stones.add(box(0.60, 0.50, 0.09),
+                       f @ T(RB * math.sin(b_), 0.30 + 0.34, RB * math.cos(b_), -b_), M['balustrade'], 1)
     light(C_LIGHT, f'seokbul_{round(x)}', 'SPOT', (x, 0.8, z + r + 6.5), (x, drum + 2.5, z),
           energy=2400, color=(1.0, 0.94, 0.82), spot=0.7, blend=0.5, size=0.3)
 
