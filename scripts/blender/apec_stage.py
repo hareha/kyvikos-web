@@ -53,9 +53,9 @@ C_SRC.hide_viewport = True
 
 # ── 재질 ─────────────────────────────────────────────────────
 M = {
-    'lawn': material('lawn', 'leafy_grass', (0.62, 0.56, 0.26), 0.95),          # 11월 마른 잔디 (현장 사진)
+    'lawn': material('lawn', 'leafy_grass', (0.115, 0.215, 0.075), 0.95),     # 초록 잔디 (마른 갈색으로 잘못 깔아 뒀었다)
     # 디딤돌이 잔디보다 밝아서 하얀 덩어리로 떠 보였다. 사진에서는 잔디보다 어두운 회색 석재다.
-    'paver': material('paver', 'rock_tile_floor_02', (0.30, 0.30, 0.285), 0.85, normal=0.5),
+    'paver': material('paver', 'rock_tile_floor_02', (0.56, 0.56, 0.545), 0.92, normal=0.9),   # 밝은 회색 자연석
     'plaza': material('plaza', 'asphalt_02', (0.35, 0.36, 0.38), 0.9),
     'stageFloor': material('stageFloor', image_base=f'{SHOTS}/apec_stage_floor.png', rough=0.25, coat=0.3),
     'stageBody': material('stageBody', None, (0.017, 0.026, 0.100), 0.7),             # 남색 치마 (#232A55)
@@ -146,29 +146,17 @@ def on_lawn(x, z, margin=0.0):
 def paver(px, pz):
     if not on_lawn(px, pz, 0.3):
         return
-    ground.add(bevel_box(0.5, 0.12, 0.5, 0.012), T(px, 0.135, pz, random.uniform(-0.02, 0.02)), M['paver'], 1.2)   # 잔디에 박힘, 윗면 0.195
+    # 덩어리로 튀지 않게 얇게, 잔디에 거의 묻히는 높이로 (윗면 0.135)
+    ground.add(bevel_box(0.52, 0.05, 0.52, 0.01), T(px, 0.11, pz, random.uniform(-0.05, 0.05)), M['paver'], 0.55)
 
 
-# 무대 앞을 가로지르는 흰 디딤돌 두 줄
-x = -24.0
-while x <= 34:
-    if abs(x - MED[0]) > 4.1:
-        paver(x, MED[1] - 0.35)
-        paver(x + 0.35, MED[1] + 0.35)
-    x += 0.7
-# 앞쪽으로 뻗는 동선 두 줄
-z = MED[1] + 4.0
+# 무대 앞을 가로지르는 연석 줄과 가운데 큰 원형 석재는 실제 현장에 없다 (클라이언트 확인).
+# 회랑에서 잔디로 나오는 짧은 진입 동선만 남긴다.
+z = 11.0
 while z <= 16.5:
     paver(MED[0] - 0.35, z)
     paver(MED[0] + 0.35, z + 0.35)
-    z += 0.7
-# 동심원 패턴: 가운데 원판 + 끊어진 고리 세 겹
-ground.add(cyl(0.9, 0.9, 0.12, 48), T(MED[0], 0.135, MED[1]), M['paver'], 1.2)
-for r0, r1, count in ((1.45, 1.9, 12), (2.35, 2.75, 20), (3.15, 3.45, 28)):
-    span = 2 * PI / count
-    for i in range(count):
-        a = i * span
-        ground.add(ring_segment(r0, r1, a + span * 0.1, a + span * 0.9, 0.12), T(MED[0], 0.075, MED[1]), M['paver'], 1.2)
+    z += 0.72
 ground.build()
 
 outer = Assembly('outer', C_RENDER_ONLY)
@@ -566,31 +554,29 @@ boh.build()
 tables = Assembly('tables', C_STATIC)
 # 가운데 동선(x≈6) 왼쪽(타워 쪽)에 엇갈린 격자, 오른쪽에 3열 — 잔디·타워 동선 안쪽만
 TABLES = []
-# layout_v2 guest_field: 22개 원탁(Ø1.8)이 줄이 아니라 '느슨하게 엇갈린' 격자로 놓이고
-#   사이에 통행 레인이 남으며 잔디 소나무를 피해 돌아간다. 반듯한 격자로 읽히지 않게 흔들어 준다.
+# 항공 사진: 원탁 22개가 잔디 전체가 아니라 가운데(중도타워 쪽으로 치우친 블록)에 모여 있고,
+# 무대 앞과 좌우 가장자리에는 넓은 빈 잔디가 남는다. 전에는 잔디를 꽉 채워 놨었다.
+FIELD_X0, FIELD_X1, FIELD_Z0, FIELD_Z1 = -20.5, 2.5, -7.5, 12.0
 jit = random.Random(11)
+
+
 def place(x, z):
-    """막히면 버리지 말고 가까운 빈자리로 밀어 놓는다 (실측 22 개를 채운다)"""
     if len(TABLES) >= 22:
         return
-    if on_lawn(x, z, 2.4) and all(math.hypot(x - a, z - b) > 3.4 for a, b in TABLES):
-        TABLES.append((x, z))
-        return
-    for r in (1.2, 2.0, 2.8, 3.6):
+    for r in (0.0, 1.0, 1.8, 2.6):
         for k in range(12):
-            a = k * PI / 6
-            nx, nz = x + r * math.cos(a), z + r * math.sin(a)
-            if on_lawn(nx, nz, 2.4) and all(math.hypot(nx - p, nz - q) > 3.4 for p, q in TABLES):
+            a_ = k * PI / 6
+            nx, nz = x + r * math.cos(a_), z + r * math.sin(a_)
+            if on_lawn(nx, nz, 2.3) and all(math.hypot(nx - p, nz - q) > 3.5 for p, q in TABLES):
                 TABLES.append((nx, nz))
                 return
 
 
-for row, tz in enumerate((-3, 2.5, 8, 13.5)):
-    for tx in (-20, -14, -8, -2):
-        place(tx + (3 if row % 2 else 0) + jit.uniform(-0.7, 0.7), tz + jit.uniform(-0.6, 0.6))
-for tz in (-3, 2.5, 8, 13.5):
-    for tx in (13, 19.5, 26):
-        place(tx + jit.uniform(-0.7, 0.7), tz + jit.uniform(-0.6, 0.6))
+for row in range(5):                                        # 5줄 x 5열 격자를 엇갈리게, 22개까지
+    tz = FIELD_Z0 + row * (FIELD_Z1 - FIELD_Z0) / 4
+    for col in range(5):
+        tx = FIELD_X0 + (col + (0.5 if row % 2 else 0.0)) * (FIELD_X1 - FIELD_X0) / 5
+        place(tx + jit.uniform(-0.55, 0.55), tz + jit.uniform(-0.5, 0.5))
 print('tables', len(TABLES))
 
 
@@ -636,15 +622,24 @@ for i, spot in enumerate(glass_spots):
 # ── 스테인리스 피라미드 히터 ───────────────────────────────────
 # 테이블 사이 빈자리에 고르게 (동선·잔디 밖 제외)
 HEATERS = []
-for hz in (-6.2, -0.2, 5.3, 10.8, 15.8):
-    for hx in range(-22, 34, 5):
-        if not on_lawn(hx, hz, 0.8) or abs(hx - MED[0]) < 2.2:
-            continue
-        if min(math.hypot(hx - tx, hz - tz) for tx, tz in TABLES) < 2.7:
-            continue
-        if min((math.hypot(hx - a, hz - b) for a, b in HEATERS), default=99) < 5.5:
-            continue
-        HEATERS.append((hx, hz))
+# 사진: 난로는 테이블 사이사이가 아니라 테이블 블록 바깥 둘레(특히 앞·좌우)로 빠져 있다.
+RING = []
+for k in range(9):                                          # 앞쪽(객석 뒤) 한 줄
+    RING.append((FIELD_X0 - 1.2 + k * (FIELD_X1 - FIELD_X0 + 2.4) / 8, FIELD_Z1 + 2.6))
+for k in range(7):                                          # 무대 쪽 한 줄
+    RING.append((FIELD_X0 - 0.6 + k * (FIELD_X1 - FIELD_X0 + 1.2) / 6, FIELD_Z0 - 2.8))
+for k in range(6):                                          # 좌우 두 줄
+    zz = FIELD_Z0 - 1.0 + k * (FIELD_Z1 - FIELD_Z0 + 2.0) / 5
+    RING.append((FIELD_X0 - 3.0, zz))
+    RING.append((FIELD_X1 + 3.0, zz))
+for (hx, hz) in RING:
+    if not on_lawn(hx, hz, 0.8):
+        continue
+    if min((math.hypot(hx - tx, hz - tz) for tx, tz in TABLES), default=99) < 2.4:
+        continue
+    if min((math.hypot(hx - a_, hz - b_) for a_, b_ in HEATERS), default=99) < 2.8:
+        continue
+    HEATERS.append((hx, hz))
 print('heaters', len(HEATERS))
 heaters = Assembly('heaters', C_STATIC)
 for k, (hx, hz) in enumerate(HEATERS):

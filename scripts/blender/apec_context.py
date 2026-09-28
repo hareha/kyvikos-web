@@ -57,11 +57,11 @@ def mat(name, *args, **kw):
 M = {
     # 중도타워
     'copper': mat('copperTile', 'ceramic_roof_01', (0.22, 0.13, 0.1), 0.5),          # 적갈색 동기와
-    'vermilion': mat('vermilion', 'dark_wooden_planks', (0.95, 0.34, 0.2), 0.65),     # 주칠 기둥·창방
-    'bracket': mat('bracket', 'dark_wooden_planks', (0.72, 0.24, 0.13), 0.7),        # 공포
-    'wallWood': mat('wallWood', 'dark_wooden_planks', (0.5, 0.2, 0.11), 0.7),
+    'vermilion': mat('vermilion', 'dark_wooden_planks', (0.115, 0.048, 0.028), 0.72),  # 어두운 갈색 기둥·창방
+    'bracket': mat('bracket', 'dark_wooden_planks', (0.095, 0.042, 0.026), 0.75),     # 공포
+    'wallWood': mat('wallWood', 'dark_wooden_planks', (0.058, 0.030, 0.021), 0.78),
     'goldRail': mat('goldRail', image_base=f'{SHOTS}/apec_rail.png', rough=0.4),
-    'deck': mat('deckWood', 'dark_wooden_planks', (0.55, 0.3, 0.18), 0.7),
+    'deck': mat('deckWood', 'dark_wooden_planks', (0.085, 0.048, 0.030), 0.75),
     'gold': mat('finialGold', None, (0.85, 0.62, 0.25), 0.3, 1.0),
     'windowGlow': mat('windowGlow', emit_image=f'{SHOTS}/apec_windows.png', emit_strength=2.2, rough=0.5),
     'eaveLamp': mat('eaveLamp', None, (1, 1, 1), emit=(1.0, 0.97, 0.9), emit_strength=80),
@@ -757,7 +757,8 @@ def yeonsu_block():
     # 귀빈동 테라스 가구 (파라솔 테이블)
     for k, (x, z) in enumerate(((27, 26), (27, 34), (27, 42), (31, 47))):   # 야외 테이블 세트 + 파라솔 (불러온 모델)
         ye_ne.add(mesh_source(SRC_TABLESET), T(x, Y, z, k * 0.7), list(SRC_TABLESET.data.materials))
-        ye_ne.add(mesh_source(SRC_PARASOL), T(x, Y, z), list(SRC_PARASOL.data.materials))
+        # 파라솔이 공중에 떠 있었다: 프롭 원점이 캔버스 중심이라 바닥 높이로 놓으면 안 된다.
+        ye_ne.add(mesh_source(SRC_PARASOL), T(x, Y - 1.30, z), list(SRC_PARASOL.data.materials))
     light(C_LIGHT, 'site_terrace', 'POINT', (27, Y + 2.6, 30), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
 
     # 북서동 + 잔디 쪽 저층부(화분 줄)
