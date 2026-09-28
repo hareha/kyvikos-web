@@ -61,7 +61,8 @@ M = {
     'deckCarpet': material('deckCarpet', None, (0.700, 0.682, 0.639), 0.9),            # 연회색 니들펀치 갑판
     'redStrip': material('redStrip', None, (1, 0.1, 0.1), 0.4, emit=(1.0, 0.08, 0.06), emit_strength=3),
     'scafTube': material('scafTube', None, (0.6, 0.61, 0.59), 0.45, 0.7),        # 시스템 비계 파이프
-    'screenWood': material('screenWood', None, (0.09, 0.055, 0.035), 0.6),      # 한옥 병풍 목부
+    'screenWood': material('screenWood', None, (0.052, 0.030, 0.019), 0.55),    # 병풍·연설대 호두나무 (사진 확대)
+    'hanjiPaper': material('hanjiPaper', image_base=f'{SHOTS}/apec_hanji.png', rough=0.88),   # 병풍 배접 한지
     'plinthRed': material('plinthRed', 'cotton_jersey', (0.32, 0.03, 0.04), 0.9),  # 붉은 천 좌대
     'stairBlue': material('stairBlue', None, (0.05, 0.11, 0.38), 0.55),         # 남색 계단
     'nosing': material('nosing', None, (0.8, 0.9, 1), emit=(0.7, 0.85, 1.0), emit_strength=6),
@@ -225,13 +226,52 @@ emit.add(plane(LED_W, LED_H), T(CX, LED_B + LED_H / 2, LEDZ + 0.01), M['led'], t
 for sgn in (-1, 1):                                                                 # LED 양 끝 남색 마스킹 플랫 6 x 4.5
     stage.add(box(0.12, 4.5, 6.0), T(CX + sgn * (LED_W / 2 + 0.6), TOP + 2.25, LEDZ + 3.1), M['stageBody'], 1)
 
-# layout_v2 #6: 흰 아크릴 두 개가 아니라 목재 연설대 하나 + 한옥 접이 병풍 + 붉은 천 좌대
-gear.lectern(stage, T(CX - 3.2, TOP, CZ + 2.0), {**M, 'acrylic': M['walnut']} if 'walnut' in M else M)
-scr = T(CX + 3.4, TOP, CZ - 1.6, -0.35)                                   # 어두운 목재 4폭 병풍
-for k in range(4):
-    stage.add(box(0.95, 2.05, 0.05), scr @ T(-1.5 + k * 1.0, 1.03, 0.06 * (k % 2), 0, 0, 0.1 * (-1 if k % 2 else 1)), M['screenWood'], 1)
-stage.add(bevel_box(1.1, 0.9, 1.1, 0.02), T(CX - 6.4, TOP + 0.45, CZ + 1.2), M['plinthRed'], 1)   # 붉은 천 좌대
-stage.add(bevel_box(1.16, 0.06, 1.16, 0.01), T(CX - 6.4, TOP + 0.93, CZ + 1.2), M['plinthRed'], 1)
+# 무대 위 (onsite_085952_003 확대): 호두나무색 창살 병풍 다섯 폭 + 그 앞 목재 연설대.
+# 전에는 병풍이 무늬 없는 판 네 장, 연설대가 흰 상자, 그 옆에 붉은 상자였다.
+# 붉은 좌대는 소개서에만 있고 현장 사진 어디에도 없어서 뺀다.
+SCR_PW, SCR_PH = 0.42, 2.02                                               # 한 폭 폭·높이 (사람 1.75m 를 자로)
+
+
+def screen_panel(f):
+    """용자살 한 폭: 겉틀 + 위아래 격자살 + 가운데 세로살 + 뒤에 한지"""
+    st, rl, t = 0.055, 0.09, 0.034                                        # 선대·막이 폭, 살 두께
+    stage.add(box(SCR_PW, SCR_PH, t), f @ T(0, SCR_PH / 2, -t / 2 - 0.004), M['hanjiPaper'], 2)   # 한지 배접
+    for sx in (-1, 1):
+        stage.add(box(st, SCR_PH, t), f @ T(sx * (SCR_PW - st) / 2, SCR_PH / 2, 0), M['screenWood'], 1)
+    for (yy, hh) in ((rl / 2, rl), (SCR_PH - rl / 2, rl), (SCR_PH * 0.30, 0.05), (SCR_PH * 0.74, 0.05)):
+        stage.add(box(SCR_PW, hh, t), f @ T(0, yy, 0), M['screenWood'], 1)
+    iw = SCR_PW - 2 * st
+    zones = ((rl, SCR_PH * 0.30 - 0.025, True), (SCR_PH * 0.30 + 0.025, SCR_PH * 0.74 - 0.025, False),
+             (SCR_PH * 0.74 + 0.025, SCR_PH - rl, True))
+    for (y0, y1, grid) in zones:
+        for i in range(8):                                                # 세로살 여덟 개
+            stage.add(box(0.013, y1 - y0, t * 0.62), f @ T((i - 3.5) * iw / 8, (y0 + y1) / 2, 0), M['screenWood'], 1)
+        if not grid:
+            continue
+        n = max(2, round((y1 - y0) / (iw / 8)))                           # 격자 구간만 가로살
+        for j in range(n):
+            stage.add(box(iw, 0.013, t * 0.62), f @ T(0, y0 + (j + 0.5) * (y1 - y0) / n, 0), M['screenWood'], 1)
+
+
+SCR = T(CX + 3.2, TOP, CZ - 1.5, -0.30)
+for k in range(5):                                                        # 지그재그로 접힌 다섯 폭
+    a = 0.30 if k % 2 else -0.30
+    screen_panel(SCR @ T((k - 2) * SCR_PW * 0.96, 0, 0.11 * (k % 2), a))
+
+
+def wood_lectern(f):
+    """호두나무 연설대 0.38 x 1.12 x 0.44 — 앞판 세로 이음, 윗판이 조금 나온 통짜"""
+    lw, lh, ld = 0.38, 1.12, 0.44
+    stage.add(bevel_box(lw, lh - 0.05, ld, 0.012), f @ T(0, (lh - 0.05) / 2, 0), M['screenWood'], 1)
+    stage.add(box(0.008, lh - 0.12, 0.006), f @ T(0.02, (lh - 0.05) / 2, ld / 2 + 0.002), M['black'], 1)   # 앞판 이음선
+    stage.add(bevel_box(lw + 0.05, 0.05, ld + 0.05, 0.008), f @ T(0, lh - 0.025, 0), M['screenWood'], 1)   # 윗판
+    stage.add(bevel_box(lw - 0.06, 0.05, ld - 0.06, 0.008), f @ T(0, 0.025, 0), M['screenWood'], 1)        # 밑동
+    stage.add(cyl(0.008, 0.008, 0.26, 8), f @ T(-0.08, lh + 0.13, 0.06, 0, -0.5), M['black'], 1)           # 구즈넥 마이크
+    stage.add(cyl(0.007, 0.007, 0.16, 8), f @ T(-0.08, lh + 0.26, 0.17, 0, -1.1), M['black'], 1)
+    stage.add(sphere(0.016, 2), f @ T(-0.08, lh + 0.30, 0.235), M['black'])
+
+
+wood_lectern(T(CX + 1.1, TOP, CZ - 0.9, -0.30))
 # 무대 앞 양쪽 스피커 (불러온 모델)
 for sx in (-4.3, 16.3):
     stage.add(mesh_source(SRC_SPEAKER), T(sx, 0.12, FRONT + 0.4), list(SRC_SPEAKER.data.materials))
