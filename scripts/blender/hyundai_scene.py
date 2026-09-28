@@ -805,12 +805,15 @@ gallery.slab_art(expo, T(jb['centre_xz'][0], Y2 + jb['top_m'] - 1.0, jb['centre_
 
 # ── 3F 〈1억 대의 원동력〉 ────────────────────────────────────────
 Y3 = LV['3F']
-for c, key in zip(X3['cars'], ('sonata', 'scoupe', 'elantra')):
+for c in L2['3F']['cars']:                                  # 전시 리플릿 평면도(layout_v2) 위치
+    key = c['slug']
     cx, cz = c['centre_xz']
     yaw = c['yaw_deg']
-    prism(expo, [tuple((T(cx, 0, cz, yaw * DEG) @ V((px, 0, pz))).xz) for px, pz in ((-3, -1.4), (3, -1.4), (3, 1.4), (-3, 1.4))],
-          Y3, Y3 + 0.03, M['greyMat'], 2, bottom=False)
-    place_car(key, cx, Y3 + 0.03, cz, yaw, f'car_{key}')
+    mw, md = c['mat_m']
+    prism(expo, [tuple((T(cx, 0, cz, yaw * DEG) @ V((px, 0, pz))).xz) for px, pz in
+                 ((-mw / 2, -md / 2), (mw / 2, -md / 2), (mw / 2, md / 2), (-mw / 2, md / 2))],
+          Y3, Y3 + 0.02, M['greyMat'], 2, bottom=False)
+    place_car(key, cx, Y3 + 0.02, cz, yaw, f'car_{key}')
 for lbx in X3['light_boxes']:
     light_box(*lbx['centre_xz'], lbx['yaw_deg'], Y3 + 3.6)
     light(C_LIGHT, f"lb3_{lbx['centre_xz'][0]:.0f}", 'AREA', (lbx['centre_xz'][0], Y3 + 3.55, lbx['centre_xz'][1]),
@@ -842,6 +845,17 @@ for k in range(8):
     expo.add(box(0.35, 0.02, 0.26), af3 @ T(-3.2 + k * 0.9, 0.91, 0.05), M['paper'], 1)
 # 파란 리본 벽: 세로 강관 슬랫이 천장에서 바닥으로 휘어 내림 + 55인치 모니터
 rbp = [V((p[0], 0, p[1])) for p in X3['blue_ribbon_wall']['plan_polyline_xz']]
+RIB_MAX = 5.2                                               # layout_v2: 독립된 긴 벽이 아니라 유리 쪽 짧은 핀 스크린
+acc_ = 0.0
+cut = [rbp[0]]
+for a, b in zip(rbp, rbp[1:]):
+    L_ = (b - a).length
+    if acc_ + L_ >= RIB_MAX:
+        cut.append(a.lerp(b, (RIB_MAX - acc_) / L_))
+        break
+    acc_ += L_
+    cut.append(b)
+rbp = cut
 tot = sum((b - a).length for a, b in zip(rbp, rbp[1:]))
 acc = 0.0
 for a, b in zip(rbp, rbp[1:]):
@@ -850,8 +864,8 @@ for a, b in zip(rbp, rbp[1:]):
     for k in range(n):
         p = a.lerp(b, k / n)
         t_ = (acc + L * k / n) / tot
-        top = Y3 + 4.2
-        bot = Y3 + (0.0 if t_ > 0.25 else (0.25 - t_) * 8)
+        top = Y3 + 3.2
+        bot = Y3 + (0.0 if t_ > 0.3 else (0.3 - t_) * 5)
         g, m = tube(V((p.x, bot, p.z)), V((p.x, top, p.z)), 0.02, 6)
         expo.add(g, m, M['ribbon'])
     acc += L
@@ -935,27 +949,46 @@ for pt in X3['pipe_trolley_monitors']:
     expo.add(box(1.23, 0.71, 0.06), T(cx, Y3 + 1.45, cz, PI / 2), M['black'], 1)
 
 # ── 4F·5F 〈1억 대의 내일〉: 파란 바닥·곡면 배경 + SUV / EV ──────────────
-for FL, X, keys in (('4F', X4, ('santafe', 'kona', 'casper')), ('5F', X5, ('ioniq5', 'ioniq5n', 'ioniq6'))):
+# 4·5층은 전시 리플릿 평면도(layout_v2)의 세 베이를 쓴다. 두 층 배치가 동일하다.
+BAYS = L2['4F_5F_shared']['bays']
+CAR_BAY = {FL: {c['slug']: c['bay'] for c in L2[FL]['cars']} for FL in ('4F', '5F')}
+
+
+def blue_cyc(cx, cz, yaw, Y, mw, md, h=3.5, cove=0.6):
+    """파란 비닐 바닥이 뒤로 휘어 올라가 배경까지 이어지는 ㄴ자 사이클로라마 (layout_v2 bay_build)"""
+    f = T(cx, 0, cz, yaw * DEG)
+    prism(expo, [tuple((f @ V((px, 0, pz))).xz) for px, pz in
+                 ((-mw / 2, -md / 2), (mw / 2, -md / 2), (mw / 2, md / 2), (-mw / 2, md / 2))],
+          Y, Y + 0.012, M['blueFloor'], 2, bottom=False)
+    zb = -md / 2                                                     # 뒤쪽 가장자리에서 휘어 오른다
+    for k in range(7):                                               # 코브 (사분원)
+        a0, a1 = k / 7 * PI / 2, (k + 1) / 7 * PI / 2
+        p0 = (zb + cove * (1 - math.cos(a0)), Y + cove * math.sin(a0))
+        p1 = (zb + cove * (1 - math.cos(a1)), Y + cove * math.sin(a1))
+        L_ = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+        expo.add(box(mw, 0.04, L_ + 0.01),
+                 f @ T(0, (p0[1] + p1[1]) / 2 - Y, (p0[0] + p1[0]) / 2, 0, -math.atan2(p1[1] - p0[1], p1[0] - p0[0])) @ T(0, Y, 0),
+                 M['blueWall'], 1)
+    expo.add(box(mw, h - cove, 0.05), f @ T(0, Y + cove + (h - cove) / 2, zb), M['blueWall'], 1)
+
+
+for FL in ('4F', '5F'):
     Y = LV[FL]
-    order = {c['centre_xz'][0]: c for c in X['cars']}
-    for c in X['cars']:
-        name = c.get('model') or c.get('name', '')
-        key = {'Santa Fe': 'santafe', 'Kona': 'kona', 'Casper': 'casper', 'N Line': 'ioniq5n', 'IONIQ 6': 'ioniq6', 'IONIQ 5': 'ioniq5'}
-        k_ = next(v for kk, v in key.items() if kk in name)
-        cx, cz = c['centre_xz']
-        yaw = c['yaw_deg']
-        cf_ = T(cx, 0, cz, yaw * DEG)
-        prism(expo, [tuple((cf_ @ V((px, 0, pz))).xz) for px, pz in ((-2.7, -1.25), (2.7, -1.25), (2.7, 1.25), (-2.7, 1.25))],
-              Y, Y + 0.012, M['blueFloor'], 2, bottom=False)
+    X = X4 if FL == '4F' else X5
+    for k_, bay in CAR_BAY[FL].items():
+        bay_ = BAYS[bay]
+        cx, cz = bay_['centre_xz']
+        yaw = bay_['yaw_deg']
+        mw, md = bay_['mat_m']
+        blue_cyc(cx, cz, yaw, Y, mw, md)
         place_car(k_, cx, Y + 0.012, cz, yaw, f'car_{k_}')
-        # 차 뒤(꽁무니 쪽) 곡면 파란 배경 3.5m (사진)
-        bk = [cf_ @ V((-3.3 - 0.35 * math.cos((i - 5) / 5 * PI / 2), 0, -1.9 + i * 0.38)) for i in range(11)]
-        for a, b in zip(bk, bk[1:]):
-            expo.add(box((b - a).length + 0.02, 3.5, 0.06), T((a.x + b.x) / 2, Y + 1.75, (a.z + b.z) / 2, math.atan2(-(b.z - a.z), b.x - a.x)), M['blueWall'], 1)
-        light_box(cx, cz, yaw, Y + 3.6)
-        light(C_LIGHT, f'lb{FL}_{cx:.0f}', 'AREA', (cx, Y + 3.55, cz), (cx, Y, cz), energy=450, color=(0.96, 0.98, 1.0), size=4)
+        light_box(cx, cz, yaw, Y + 3.3)                              # 천 조명 밑면 3.3m
+        light(C_LIGHT, f'lb{FL}_{k_}', 'AREA', (cx, Y + 3.25, cz), (cx, Y, cz), energy=450, color=(0.96, 0.98, 1.0), size=4)
     # 곡면 아카이브 벽 + 호두 선반 (4F 기준, 5F 같은 자리)
-    cw = X4['archive']['curved_wall']['plan_polyline_xz']
+    CA = L2['4F_5F_shared']['curved_archive']
+    ccx, ccz = CA['centre_xz']
+    car_ = CA['radius_m']
+    cw = [(ccx + car_ * math.sin(t / 14 * PI - PI / 2) * -1, ccz + car_ * math.cos(t / 14 * PI - PI / 2) * -1) for t in range(15)]
     segL = [math.dist(a, b) for a, b in zip(cw, cw[1:])]
     totL = sum(segL)
     acc = 0.0
@@ -1028,7 +1061,7 @@ camera(C_CAM, 'cam_2f_top', (1.3, LV['2F'] + 1.2, -2.6), (-4.6, 0.3, -4.8), 76) 
 camera(C_CAM, 'cam_media', (-6.395 + 0.7 * 10.5, 5.2, -6.569 + 0.714 * 10.5), (-6.395, 5.1, -6.569), 64)   # 대형 미디어월 정면
 camera(C_CAM, 'cam_conveyor', (3.0, LV['2F'] + 1.5, -7.0), (-6.4, 5.4, -6.4), 76)            # 2F_view_conveyor-from-2F
 camera(C_CAM, 'cam_2f_dark', (-6.0, LV['2F'] + 1.6, 5.0), (-6.6, LV['2F'] + 0.9, 12.8), 76)  # 2F_center_dark-room-overview
-camera(C_CAM, 'cam_3f', (-6.2, LV['3F'] + 1.35, 2.6), (3.0, LV['3F'] + 1.0, -6.0), 72)        # 3F_overview_scoupe-toward-archive
+camera(C_CAM, 'cam_3f', (3.2, LV['3F'] + 1.4, -9.2), (-2.4, LV['3F'] + 0.95, -5.9), 66)       # 3F_overview_scoupe-toward-archive
 camera(C_CAM, 'cam_drafting', (-5.6, LV['3F'] + 1.6, 6.6), (-5.6, LV['3F'] + 1.2, 13.0), 72)  # 3F_drafting_room-straight
 camera(C_CAM, 'cam_4f', (2.0, LV['4F'] + 1.4, 1.7), (-4.0, LV['4F'] + 1.0, -5.5), 74)         # 4F_santafe_front-wide-rotators
 camera(C_CAM, 'cam_5f', (1.6, LV['5F'] + 1.3, 1.4), (-4.0, LV['5F'] + 1.2, -5.0), 74)         # 5F_ioniq5_front-wide-lightbox
