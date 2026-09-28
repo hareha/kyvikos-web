@@ -84,6 +84,7 @@ M = {
     'chairBlack': material('chairBlack', 'cotton_jersey', (0.007, 0.007, 0.009), 0.75, normal=0.6, sheen=0.05),
     'chairGold': material('chairGold', 'cotton_jersey', (0.66, 0.47, 0.22), 0.28, 0.45, normal=0.25, sheen=0.6),
     'stainless': material('stainless', None, (0.8, 0.81, 0.82), 0.22, 1.0),
+    'heaterBody': material('heaterBody', None, (0.84, 0.81, 0.70), 0.42),   # 히터 크림색 철판 (kakao 16)
     'flame': material('flame', None, (1, 0.5, 0.15), emit=(1.0, 0.5, 0.15), emit_strength=70),
     'sign': material('sign', emit_image=f'{SHOTS}/apec_real_sign.png', emit_strength=0.35, rough=0.5),
     'stone': material('stone', 'rock_tile_floor_02', (0.6, 0.61, 0.62), 0.9),
@@ -236,7 +237,9 @@ stage.build()
 
 # ── 지붕 · 트러스 타워 · 조명 ──────────────────────────────────
 X0, X1, ZB, ZF = -5.2, 17.2, -21.4, -10.6
-HT, HR, ZR, TOWER = 7.5, 9.0, -16, 10.0    # layout_v2: 처마 7.5 · 용마루 9.0 · 타워 10.0
+# 클라이언트 야경 사진(kakao 15)에서 LED 높이 5.5m 를 자로 재고 원근을 보정한 값:
+# 처마 7.5 · 용마루 9.8 · 네 모서리 타워 11.2 (타워가 지붕 위로 확실히 솟는다)
+HT, HR, ZR, TOWER = 7.5, 9.8, -16, 11.2
 truss = Assembly('truss', C_DYNAMIC)
 
 
@@ -285,22 +288,33 @@ for rz in (ZB, (ZB + ZF) / 2, ZF):
 theta = math.atan2(HR - HT, CX - X0)
 slope = math.hypot(HR - HT, CX - X0) + 0.6
 roof = Assembly('roof', C_STATIC)
-roof.add(gable_skin(ZF - ZB + 1.2, slope), T((X0 + CX) / 2, (HT + HR) / 2 + 0.28, (ZB + ZF) / 2, -PI / 2, -theta), M['roofSkin'], 3)
-roof.add(gable_skin(ZF - ZB + 1.2, slope), T((X1 + CX) / 2, (HT + HR) / 2 + 0.28, (ZB + ZF) / 2, PI / 2, -theta), M['roofSkin'], 3)
+# rx 부호가 뒤집혀 있어서 막이 골짜기(V) 모양으로 꺾여 있었다. +theta 여야 가운데가 솟는다.
+roof.add(gable_skin(ZF - ZB + 1.2, slope), T((X0 + CX) / 2, (HT + HR) / 2 + 0.28, (ZB + ZF) / 2, -PI / 2, theta), M['roofSkin'], 3)
+roof.add(gable_skin(ZF - ZB + 1.2, slope), T((X1 + CX) / 2, (HT + HR) / 2 + 0.28, (ZB + ZF) / 2, PI / 2, theta), M['roofSkin'], 3)
 roof.build(smooth=True)
 
-# 전면 트러스 조명 두 줄 (현장 사진: 위 따뜻한 워시, 아래 파란 무빙이 촘촘히 번갈아)
-for i in range(18):
-    lx = X0 + 1.2 + i * (X1 - X0 - 2.4) / 17
-    truss.add(mesh_source(SRC_WASH), T(lx, HT + 0.21, ZF, 0, PI / 2 + 0.45), list(SRC_WASH.data.materials))   # 워시: 현장 사진처럼 객석(+z)·아래를 봄
-    light(C_LIGHT, f'wash_{i}', 'SPOT', (lx, HT + 0.3, ZF + 0.25), (lx * 0.8 + CX * 0.2, 0, 6),
-          energy=900, color=(1.0, 0.92, 0.8), spot=0.7, blend=0.6, size=0.12)
-for i in range(20):
-    lx = X0 + 0.9 + i * (X1 - X0 - 1.8) / 19
-    truss.add(mesh_source(SRC_MOVER), T(lx, HT - 0.21, ZF, 0, PI), list(SRC_MOVER.data.materials))   # 무빙헤드 (거꾸로 매달림)
-    light(C_LIGHT, f'mover_{i}', 'SPOT', (lx, HT - 0.75, ZF + 0.15),
+# 전면 조명 (kakao 15 야경: 지붕 앞 트러스 '위'에 흰 블라인더 12 대가 올라앉고,
+# 그 1.5m 아래 별도 조명 트러스에 파란 무빙 14 대와 흰 LED 바 13 개가 번갈아 매달린다)
+LT = HT - 1.55
+box_truss(V((X0 + 0.6, LT, ZF + 0.2)), V((X1 - 0.6, LT, ZF + 0.2)), 0.42)
+for sx in (X0 + 0.6, X1 - 0.6):                                       # 지붕 트러스에 매다는 체인 호이스트
+    truss.add(box(0.14, HT - LT - 0.2, 0.14), T(sx, (HT + LT) / 2, ZF + 0.2), M['black'], 1)
+for i in range(12):                                                    # 블라인더 (트러스 위, 객석을 정면으로)
+    lx = X0 + 1.4 + i * (X1 - X0 - 2.8) / 11
+    for s_ in (-0.26, 0.26):
+        truss.add(mesh_source(SRC_WASH), T(lx + s_, HT + 0.24, ZF, 0, PI / 2 + 0.30), list(SRC_WASH.data.materials))
+    light(C_LIGHT, f'wash_{i}', 'SPOT', (lx, HT + 0.34, ZF + 0.25), (lx * 0.8 + CX * 0.2, 0, 8),
+          energy=1100, color=(1.0, 0.94, 0.84), spot=0.75, blend=0.6, size=0.14)
+for i in range(14):                                                    # 파란 무빙헤드 (조명 트러스에 거꾸로)
+    lx = X0 + 1.1 + i * (X1 - X0 - 2.2) / 13
+    truss.add(mesh_source(SRC_MOVER), T(lx, LT - 0.28, ZF + 0.2, 0, PI), list(SRC_MOVER.data.materials))
+    light(C_LIGHT, f'mover_{i}', 'SPOT', (lx, LT - 0.82, ZF + 0.35),
           (lx + random.uniform(-2, 2), 0.1, -5 + random.uniform(-2, 3)),
           energy=700, color=(0.3, 0.5, 1.0), spot=0.28, blend=0.35, size=0.04)
+for i in range(13):                                                    # 무빙 사이사이 흰 LED 바
+    lx = X0 + 1.1 + (i + 0.5) * (X1 - X0 - 2.2) / 13
+    truss.add(box(0.86, 0.11, 0.14), T(lx, LT - 0.34, ZF + 0.2), M['black'], 1)
+    emit.add(plane(0.78, 0.07), T(lx, LT - 0.40, ZF + 0.2, 0, -PI / 2 + 0.35), M['washLens'], tile=None)
 truss.build(smooth=True)
 
 # ── 백스테이지 · 설치장비 (현장 사진 assets-src/refs/apec/onsite/) ─────────────
@@ -409,9 +423,12 @@ def side_tower(f, w=5.6, h=3.6, d=2.4, floods=6, aim=None):
     로컬 +z 가 잔디(테이블) 쪽 — 그래픽과 블라인더가 그리로 향한다. 무빙헤드·중계카메라는
     벽체 방향과 상관없이 무대 좌표를 보고 각을 따로 계산한다."""
     boh.add(bevel_box(w, h, d, 0.02), f @ T(0, h / 2, 0), M['cladNavy'], 1)
-    boh.add(plane(w - 0.5, h - 0.7), f @ T(0, h / 2 + 0.05, d / 2 + 0.012), M['sign'], tile=None)
-    for s_ in (-1, 1):                                                  # 좌우 면 로고 (cladtower_10 왼쪽 끝)
-        boh.add(plane(d - 0.5, h - 1.3), f @ T(s_ * (w / 2 + 0.012), h / 2 + 0.05, 0, s_ * PI / 2), M['sign'], tile=None)
+    # 사진에서 로고는 벽면 가운데에만 인쇄돼 있다. 전에는 판을 면 전체에 붙여서
+    # 벽이 통째로 밝은 파란 판처럼 보였다 — 로고 크기만큼만 붙인다.
+    boh.add(plane(w * 0.46, h * 0.34), f @ T(0, h * 0.55, d / 2 + 0.012), M['sign'], tile=None)
+    # 옆면에는 로고가 없다 (전에 붙였더니 파란 판이 모서리에 붙다 만 것처럼 보였다).
+    # 대신 네 면을 두르는 남색 상부 코핑으로 끝을 덮어 마감한다.
+    boh.add(bevel_box(w + 0.1, 0.14, d + 0.1, 0.02), f @ T(0, h - 0.06, 0), M['cladNavy'], 1)
     boh.add(box(0.04, 2.0, 0.9), f @ T(w / 2 + 0.022, 1.0, -d / 2 + 0.6), M['cladNavy'], 1)   # 옆면 출입문
     for (sx, sz) in ((-w / 2 + 0.12, -d / 2 + 0.12), (w / 2 - 0.12, -d / 2 + 0.12),
                      (-w / 2 + 0.12, d / 2 - 0.12), (w / 2 - 0.12, d / 2 - 0.12)):
@@ -464,22 +481,27 @@ def side_tower(f, w=5.6, h=3.6, d=2.4, floods=6, aim=None):
         boh.add(box(0.2, 0.14, 0.02), cf @ T(0.2, 0.06, 0.1, 0, 0, 0.25), M['black'], 1)
 
 
-def cam_riser(f, w=3.6, d=2.6, h=1.0):
-    """무대를 정면으로 보는 낮은 중계카메라 단상 — client_cladtower_10 오른쪽:
-       회랑 열주 앞 잔디에 놓인 낮은 남색 단상 + 그 위 삼각대 카메라. 옆 벽체보다 훨씬 낮다."""
-    boh.add(bevel_box(w, h, d, 0.02), f @ T(0, h / 2, 0), M['cladNavy'], 1)
-    for k in range(9):                                                   # 윗면 합판 발판
-        boh.add(box(w - 0.1, 0.05, (d - 0.1) / 9 - 0.02), f @ T(0, h + 0.025, -d / 2 + 0.08 + k * (d - 0.1) / 9), M['black'], 1)
-    for s_ in (-1, 1):                                                   # 뒤·옆 낮은 난간 한 줄
-        g, m = tube(f @ V((s_ * w / 2, h + 0.95, -d / 2)), f @ V((s_ * w / 2, h + 0.95, d / 2)), 0.018, 6)
-        boh.add(g, m, M['scaffold'])
-        boh.add(cyl(0.022, 0.022, 0.95, 8), f @ T(s_ * w / 2, h + 0.48, d / 2), M['scaffold'], 1)
-        boh.add(cyl(0.022, 0.022, 0.95, 8), f @ T(s_ * w / 2, h + 0.48, -d / 2), M['scaffold'], 1)
-    g, m = tube(f @ V((-w / 2, h + 0.95, d / 2)), f @ V((w / 2, h + 0.95, d / 2)), 0.018, 6)
-    boh.add(g, m, M['scaffold'])
-    for k in range(2):                                                   # 계단 두 단 (뒤쪽)
-        boh.add(box(1.1, h * (k + 1) / 2, 0.32), f @ T(w / 2 - 0.8, h * (k + 1) / 4, d / 2 + 0.48 - k * 0.32), M['cladNavy'], 1)
-    tripod_cam(f @ T(-0.4, h + 0.05, -0.2), h=1.35)
+M['benchBlue'] = material('apBenchBlue', None, (0.024, 0.068, 0.328), 0.72)   # 코발트 청색 스커트 (#2B4A9B)
+M['caseAlu'] = material('apCaseAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8)
+
+
+def cam_riser(f, run=5.0, ret=1.6, d=0.9, h=1.35):
+    """무대를 정면으로 보는 중계카메라 자리 — kakao 16 실측.
+       단이 아니라 ㄱ자로 두른 코발트 청색 스커트(높이 1.35m)다. 그 위에 랙 케이스를
+       쌓아 두고, 카메라는 단 위가 아니라 스커트 앞 잔디에 삼각대로 선다."""
+    for (cx_, cz_, ww, ry_) in ((0.0, 0.0, run, 0.0), (run / 2 - d / 2, -ret / 2 - d / 2, ret, PI / 2)):
+        g_ = f @ T(cx_, 0, cz_, ry_)
+        boh.add(bevel_box(ww, h, d, 0.02), g_ @ T(0, h / 2, 0), M['benchBlue'], 1)
+        boh.add(bevel_box(ww + 0.06, 0.05, d + 0.06, 0.01), g_ @ T(0, h + 0.02, 0), M['black'], 1)   # 상판
+    for k in range(2):                                                   # 스커트 위에 쌓은 랙 케이스 2 x 2
+        for j in range(2):
+            cf = f @ T(-0.5 + k * 0.62, h + 0.05 + j * 0.42, -0.02)
+            boh.add(bevel_box(0.58, 0.4, 0.62, 0.02), cf @ T(0, 0.2, 0), M['black'], 1)
+            for s_ in (-1, 1):                                           # 알루미늄 모서리
+                boh.add(box(0.03, 0.4, 0.66), cf @ T(s_ * 0.29, 0.2, 0), M['caseAlu'], 1)
+            boh.add(plane(0.4, 0.2), cf @ T(0, 0.2, 0.315), M['black'], tile=None)
+    for k, (ox, oz) in enumerate(((-1.55, 0.95), (-0.55, 1.15), (0.75, 1.0))):   # 스커트 앞 잔디의 삼각대 카메라 셋
+        tripod_cam(f @ T(ox, 0, oz, 0.06 * (k - 1)), h=1.5)   # 로컬 +z 가 무대 쪽
 
 
 # 잔디 좌우 긴 변, 건물에 붙여 하나씩 — 무대 쪽 면을 비우고 테이블 쪽에 그래픽
@@ -487,7 +509,7 @@ def cam_riser(f, w=3.6, d=2.6, h=1.0):
 side_tower(T(-22.4, 0, -2.0, PI / 2), floods=6)      # 서쪽: 잔디(+x)를 본다
 side_tower(T(32.6, 0, -2.0, -PI / 2), floods=6)      # 동쪽: 잔디(-x)를 본다
 # 무대를 정면으로 보는 낮은 중계카메라 단상 — 회랑(z≈19) 열주 앞 잔디
-cam_riser(T(1.5, 0, 14.6, PI))
+cam_riser(T(-4.5, 0, 14.9, PI))          # 회랑 누각 앞, 쌍사자 석등·삼층석탑을 비켜서
 # 무대 정면 잔디에 세운 중계카메라 두 대 (onsite_090013_030)
 tripod_cam(T(CX - 3.2, 0, FRONT + 4.6, PI + 0.12))
 tripod_cam(T(CX + 2.4, 0, FRONT + 5.4, PI - 0.08))
