@@ -414,7 +414,9 @@ for k in range(5):
           energy=40, color=(1.0, 0.93, 0.82), spot=1.0, blend=0.6, size=0.03)
 
 # Cartoons: 낮은 흰 좌대 위 이젤 + Bombero 챠콜 자립 가벽 + 흰 커튼 서비스 문
-q = fs('cartoons', 'plinth')
+# projections_v3 R6: Untitled (Easel) 은 카툰이 아니라 Warriors & Power Figures 에 있다
+#   (jjangjjang474 촬영시각 — 백남준 로봇 14:32:10 → 이젤 14:33:41 → Farina 14:34:09)
+q = {**fs('cartoons', 'plinth'), 'centre': [-15.2, -1.4]}
 EZ_ = T(q['centre'][0], 0, q['centre'][1], 0.5)
 works.add(bevel_box(q['size'][0], q['size'][2], q['size'][1], 0.01), EZ_ @ T(0, q['size'][2] / 2, 0), M['plinth'], 1)
 ea = EZ_ @ T(0, q['size'][2], 0)
