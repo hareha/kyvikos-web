@@ -24,7 +24,7 @@ sys.path.insert(0, '/Users/hare/Documents/큐비크스홈페이지/scripts/blend
 import lib  # noqa: E402
 
 importlib.reload(lib)
-from lib import (PI, SHOTS, Assembly, T, bevel_box, box, camera, cyl, light, material, plane, sphere, tube)  # noqa: E402
+from lib import (PI, SHOTS, Assembly, T, bevel_box, box, camera, cyl, light, material, plane, ring_segment, sphere, tube)  # noqa: E402
 
 import bmesh  # noqa: E402
 import bpy  # noqa: E402
@@ -651,7 +651,7 @@ M['winGlass'] = mat('winGlass', None, (0.021, 0.026, 0.033), 0.08, 0.15)      # 
 ROOMS = [mat(f'roomGlass_{t}', emit_image=f'{SHOTS}/apec_room_{t}.png', emit_strength=1.1, rough=0.1) for t in 'abc']
 
 
-def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3):
+def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False):
     """한 면: 로컬 x = 벽 방향(0~L), 로컬 +z = 바깥. 바깥면이 z=0"""
     f = T(sx, 0, sz, ry)
     fh = h / floors
@@ -662,8 +662,25 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3):
     bands = [(0.0, 0.8)] + [(k * fh - 0.45, k * fh + 0.85) for k in range(1, floors)] + [(h - 0.45, h + parapet)]
     for y0, y1 in bands:
         asm.add(box(L - 1.8, y1 - y0, DEPTH), f @ T(L / 2, (y0 + y1) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+    # 1층은 창이 아니라 둥근 아치 열이다 (클라이언트 사진: 연수동 1층 전면이 아케이드).
+    if arcade:
+        SPR = 2.35                                                       # 아치 시작(기공) 높이
+        for k in range(n):
+            xa, xb = xs[k] + 0.55, xs[k + 1] - 0.55
+            ow, cx_ = xb - xa, (xa + xb) / 2
+            r = ow / 2
+            glow.add(plane(ow, SPR), f @ T(cx_, SPR / 2 + 0.25, -0.42), random.choice(ROOMS), tile=None)
+            glow.add(ring_segment(0, r, 0, PI, 0.04), f @ T(cx_, SPR + 0.25, -0.42, 0, PI / 2),
+                     random.choice(ROOMS), tile=None)                    # 아치 안쪽 (반원)
+            asm.add(ring_segment(r, ow * 0.98, 0, PI, DEPTH), f @ T(cx_, SPR + 0.25, -DEPTH, 0, PI / 2), M['granite_clad'], 1.2)
+            asm.add(box(ow + 0.4, bands[1][0] - (SPR + 0.25 + r), DEPTH),
+                    f @ T(cx_, (SPR + 0.25 + r + bands[1][0]) / 2, -DEPTH / 2), M['granite_clad'], 1.2)   # 아치 위 벽
+            asm.add(box(ow + 0.5, 0.14, DEPTH + 0.14), f @ T(cx_, SPR + 0.25, -DEPTH / 2 - 0.07), M['granite_clad'], 1.2)   # 기공선 돌띠
+            asm.add(box(ow, 0.25, 0.5), f @ T(cx_, 0.125, -0.25), M['granite'], 1.5)                     # 아치 아래 디딤돌
+        for x in xs[1:-1]:                                               # 아치 사이 피어
+            asm.add(box(1.1, bands[1][0], DEPTH), f @ T(x, bands[1][0] / 2, -DEPTH / 2), M['granite_clad'], 1.2)
     # 창: 기둥·띠 사이 구멍마다 안쪽 유리(방 불빛) + 창살
-    for fl in range(floors):
+    for fl in range(1 if arcade else 0, floors):
         ya = 0.8 if fl == 0 else fl * fh + 0.85
         yb = (fl + 1) * fh - 0.45 if fl < floors - 1 else h - 0.45
         # 칸 기둥은 띠와 띠 사이 구간에만 (띠와 같은 바깥면에서 겹치지 않게 → z-fighting 없음)
@@ -688,17 +705,18 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3):
             asm.add(box(ow + 0.2, 0.09, 0.34), f @ T(cx_, ya - 0.10, -0.17), M['granite_clad'], 1.2)   # 석재 창대
 
 
-def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True):
+def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None):
     """모서리 기둥 4개 + 네 벽 + 안쪽 몸체 + 옥상"""
     asm.add(box(x1 - x0 - 1.4, h, z1 - z0 - 1.4), T((x0 + x1) / 2, h / 2, (z0 + z1) / 2), M['stoneWall'], 2)   # 몸체는 유리(0.3) 보다 안쪽
     for (cx, cz) in ((x0, z0), (x1, z0), (x1, z1), (x0, z1)):
         ox = 0.45 if cx == x0 else -0.45
         oz = 0.45 if cz == z0 else -0.45
         asm.add(box(0.9, h + parapet, 0.9), T(cx + ox, (h + parapet) / 2, cz + oz), M['granite_clad'], 1.2)
-    wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet)          # -z 면
-    wall(asm, x1, z1, z1 - z0, PI / 2, h, floors, parapet)      # +x 면
-    wall(asm, x0, z1, x1 - x0, 0.0, h, floors, parapet)         # +z 면
-    wall(asm, x0, z0, z1 - z0, -PI / 2, h, floors, parapet)     # -x 면
+    arc = set(arcade or ())     # 아케이드를 둘 면 ('n' = -z, 'e' = +x, 's' = +z, 'w' = -x)
+    wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet, 'n' in arc)          # -z 면
+    wall(asm, x1, z1, z1 - z0, PI / 2, h, floors, parapet, 'e' in arc)      # +x 면
+    wall(asm, x0, z1, x1 - x0, 0.0, h, floors, parapet, 's' in arc)         # +z 면
+    wall(asm, x0, z0, z1 - z0, -PI / 2, h, floors, parapet, 'w' in arc)     # -x 면
     if terrace:
         asm.add(box(x1 - x0 - 0.9, 0.3, z1 - z0 - 0.9), T((x0 + x1) / 2, h + 0.15, (z0 + z1) / 2), M['terrace'], 1.6)
         for (ax, az, bx, bz) in ((x0, z0, x1, z0), (x0, z1, x1, z1), (x0, z0, x0, z1), (x1, z0, x1, z1)):
@@ -714,7 +732,11 @@ def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True):
 def yeonsu_block():
     Y = ROOF_Y + 0.3
     # 북동동 (옥상 서쪽 x 23~38 = 귀빈동 테라스)
-    block(ye_ne, 23, 69, 20, 51, ROOF_Y, 3)
+    # 클라이언트 사진: 잔디를 보는 면이 1층 아치 아케이드이고, 위로 갈수록 뒤로 물러나며
+    # 층마다 난간 두른 테라스가 생기는 계단식 매스다. 전에는 3층 한 덩어리 상자였다.
+    block(ye_ne, 23, 69, 20, 51, 4.6, 1, parapet=1.05, arcade='w')            # 아케이드 저층부
+    block(ye_ne, 30, 69, 20, 51, 9.4, 2, parapet=1.05)                        # 한 단 물러난 중층
+    block(ye_ne, 38, 69, 20, 51, ROOF_Y, 3, parapet=1.2)                      # 두 단 물러난 고층
     hanok(ye_ne, 51.5, 41.0, 21.5, 8.4, ry=PI, y0=Y, label='A', lamp=500)             # 한옥 A: 용마루 x
     hanok(ye_ne, 44.5, 28.6, 10.4, 7.4, ry=-PI / 2, y0=Y, label='B', lamp=700)        # 한옥 B: 용마루 z, 테라스 쪽 정면
     # 연결동 + 천창 (유리)
@@ -730,7 +752,8 @@ def yeonsu_block():
 
     # 북서동 + 잔디 쪽 저층부(화분 줄)
     block(ye_nw, 46, 66, -35, 13, ROOF_Y, 3)
-    block(ye_nw, 42, 45.9, -30, 2, 4.5, 1, parapet=0.9)
+    block(ye_nw, 40, 46.2, -35, 13, 9.0, 2, parapet=1.05)                     # 한 단 물러난 중층
+    block(ye_nw, 36.4, 40.3, -30, 2, 4.6, 1, parapet=0.95, arcade='w')        # 잔디 쪽 아케이드 저층부
     for z in range(-28, 1, 4):
         ye_nw.add(cyl(0.55, 0.45, 0.6, 16), T(44, 5.1, z), M['granite_clad'], 1)
         ye_nw.add(sphere(0.6, 2), T(44, 5.6, z, sy=0.7), M['shrub'], 1)
@@ -1261,7 +1284,14 @@ def buddha_triad_stele(x, z, ry=0.0):
     stones.add(sphere(0.12, 3), f @ T(0, 3.32, 0), M_STONE)                                       # 보주
 
 
-lion_lantern(1.0, 14.2)                    # 잔디 북동쪽 가장자리, 신평루 쪽 — 만찬석에서 보인다
+# 회랑에서 잔디로 나오는 포장길 (클라이언트 사진). 입구 석수는 생략 — 형태가 복잡해 뺀다.
+PATH_X, PATH_W = 4.6, 3.2
+for k in range(9):                                                                                # 큰 판석 포장
+    for sx_ in (-1, 1):
+        stones.add(bevel_box(PATH_W / 2 - 0.06, 0.10, 1.05, 0.02),
+                   T(PATH_X + sx_ * PATH_W / 4, 0.17, 11.6 + k * 1.1), M['terrace'], 1.4)
+
+lion_lantern(-9.5, 14.6)                   # 회랑 앞 (카메라 자리·포장길을 비켜 서쪽으로)
 three_storey_pagoda(-13.5, 15.6)           # 잔디 가장자리 (회랑 쪽) 삼층석탑
 three_storey_pagoda(9.5, 15.2)
 buddha_triad_stele(-19.5, 13.0, 0.7)       # 삼존불 석비
