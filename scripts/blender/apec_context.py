@@ -1368,6 +1368,11 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
                 bm.faces.new((a_[i], a_[(i + 1) % NU], b_[(i + 1) % NU], b_[i]))
         bm.faces.new(rows[-1])
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+        # 열린 껍질이라 recalc 가 안쪽을 고를 수 있다. 웹은 뒷면을 잘라내므로
+        # 그 상태로 내보내면 돔이 반만 보인다 -> 윗면 법선이 위를 향하는지 보고 뒤집는다
+        top = max(bm.faces, key=lambda fc: fc.calc_center_median().z)
+        if top.normal.z < 0:
+            bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
 
     stones.add(dome_shell, f @ T(0, dy, 0), S, 2.6)
     # 돔 줄눈도 같은 이유로 도형을 붙이지 않는다 (화강석 텍스처와 코스 턱으로 읽힌다)
@@ -1382,13 +1387,7 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
     stones.add(cyl(tr + 0.95, tr + 0.95, 0.30, 48), f @ T(0, ty + 1.24, 0), S, 1.4)              # 천개석
     stones.add(cyl(tr * 0.50, tr * 0.60, 0.20, 32), f @ T(0, ty + 1.49, 0), S, 1.2)
 
-    # 옆으로 붙은 기와지붕 통로 (사진 왼쪽)
-    cf = f @ T(0, 0, 0, -PI * 0.62)
-    stones.add(box(4.2, 3.4, 7.0), cf @ T(0, 0.62 + 1.7, r + 2.6), S, 1.6)
-    stones.add(box(4.9, 0.35, 7.6), cf @ T(0, 0.62 + 3.5, r + 2.6), S, 1.3)
-    stones.add(gable_roof(7.8, 5.4, 1.15, sag=0.10), cf @ T(0, 0.62 + 3.7, r + 2.6, PI / 2),
-               M['tileGrey'], 1.4)
-    ridge(stones, cf @ T(0, 0, r + 2.6, PI / 2), 7.4, 0.62 + 3.7 + 1.15)
+    # 기와지붕 통로는 실제 방향을 모르는 채로 붙였더니 옆 한옥에 파묻혔다 -> 자료가 생기면 다시 넣는다
     light(C_LIGHT, f'seokbul_{round(x)}', 'SPOT', (x, 0.8, z + r + 6.5), (x, drum + 2.5, z),
           energy=2400, color=(1.0, 0.94, 0.82), spot=0.7, blend=0.5, size=0.3)
 
