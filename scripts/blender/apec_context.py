@@ -1123,13 +1123,31 @@ def lion_lantern(x, z, h=3.1):
 
 
 def stone_ram(x, z, ry=0.0):
-    """석양(石羊) — 낮은 받침 위 웅크린 돌 양, 전체 약 0.85m"""
+    """석양(石羊) — 왕릉 석물식 웅크린 돌 양 (전체 약 0.95m).
+       전에는 상자 하나에 공 하나 붙인 것이었다: 몸통·네 다리·목·머리·말린 뿔·꼬리를 깎는다."""
     f = T(x, 0, z, ry)
-    stones.add(bevel_box(1.2, 0.22, 0.7, 0.03), f @ T(0, 0.11, 0), M_STONE, 1)
-    stones.add(bevel_box(0.9, 0.36, 0.42, 0.1), f @ T(0, 0.4, 0), M_STONE, 1)
-    stones.add(sphere(0.16, 3), f @ T(0.46, 0.58, 0, 0, 0, 0, 1.1, 0.9, 0.9), M_STONE)
-    for sgn in (-1, 1):
-        stones.add(cyl(0.05, 0.03, 0.2, 6), f @ T(0.46, 0.7, sgn * 0.11, 0, 0, sgn * 0.7), M_STONE, 1)
+    stones.add(bevel_box(1.26, 0.20, 0.78, 0.03), f @ T(0, 0.10, 0), M_STONE, 1)                  # 지대석
+    stones.add(sphere(0.30, 3), f @ T(-0.04, 0.50, 0, 0, 0, 0, 1.55, 0.90, 0.80), M_STONE)        # 몸통
+    stones.add(sphere(0.24, 3), f @ T(-0.34, 0.46, 0, 0, 0, 0, 1.0, 0.95, 0.85), M_STONE)         # 엉덩이
+    for sx_ in (0.26, -0.24):                                                                     # 접은 네 다리
+        for sz_ in (-0.19, 0.19):
+            stones.add(bevel_box(0.20, 0.26, 0.13, 0.05), f @ T(sx_, 0.31, sz_), M_STONE, 1)
+            stones.add(bevel_box(0.24, 0.10, 0.14, 0.04), f @ T(sx_ + 0.03, 0.23, sz_), M_STONE, 1)
+    stones.add(cyl(0.13, 0.17, 0.26, 10), f @ T(0.33, 0.62, 0, 0, 0, -0.75), M_STONE, 1)          # 목
+    stones.add(sphere(0.14, 3), f @ T(0.46, 0.70, 0, 0, 0, 0, 1.25, 0.95, 0.85), M_STONE)         # 머리
+    stones.add(bevel_box(0.16, 0.11, 0.12, 0.04), f @ T(0.58, 0.66, 0), M_STONE, 1)               # 주둥이
+    for sgn in (-1, 1):                                                                           # 말린 뿔
+        prev = None
+        for k in range(6):
+            a = k * 0.85
+            p = f @ V((0.46 - 0.05 * k + 0.07 * math.sin(a), 0.80 + 0.06 * k - 0.05 * (1 - math.cos(a)),
+                       sgn * (0.09 + 0.05 * k)))
+            if prev is not None:
+                g_, m_ = tube(prev, p, 0.040 - 0.004 * k, 6)
+                stones.add(g_, m_, M_STONE)
+            prev = p
+        stones.add(sphere(0.045, 2), f @ T(0.48, 0.79, sgn * 0.16), M_STONE)                      # 귀
+    stones.add(cyl(0.05, 0.03, 0.16, 6), f @ T(-0.52, 0.52, 0, 0, 0, 1.1), M_STONE, 1)            # 꼬리
 
 
 def danggan_marker(x, z, ry=0.0, h=2.0):
@@ -1221,13 +1239,26 @@ def three_storey_pagoda(x, z, h=4.6):
 
 
 def buddha_triad_stele(x, z, ry=0.0):
-    """삼존불 석비 — 기단 위 판석에 삼존불 부조"""
+    """삼존불 석비 — 기단·비신·옥개석에 삼존불을 얕게 새긴다.
+       전에는 판석 하나에 둥근 막대 셋을 붙인 것이었다."""
     f = T(x, 0, z, ry)
-    stones.add(box(2.6, 0.3, 1.0), f @ T(0, 0.15, 0), M_STONE, 1)
-    stones.add(box(2.2, 2.5, 0.36), f @ T(0, 1.55, 0), M_STONE, 1)
-    for (sx_, sh) in ((-0.62, 1.2), (0.0, 1.5), (0.62, 1.2)):        # 삼존 부조 (얕게 돋은 세 몸)
-        stones.add(bevel_box(0.44, sh, 0.1, 0.12), f @ T(sx_, 0.75 + sh / 2, 0.2), M_STONE, 1)
-        stones.add(sphere(0.16, 3), f @ T(sx_, 0.78 + sh, 0.2), M_STONE)
+    stones.add(bevel_box(2.70, 0.24, 1.15, 0.04), f @ T(0, 0.12, 0), M_STONE, 1)                  # 지대석
+    stones.add(_sq(2.36, 2.10, 0.30), f @ T(0, 0.39, 0, PI / 4), M_STONE, 1)                      # 기단 굄
+    stones.add(bevel_box(2.06, 2.20, 0.42, 0.04), f @ T(0, 1.64, 0), M_STONE, 1)                  # 비신
+    stones.add(bevel_box(1.78, 1.86, 0.06, 0.03), f @ T(0, 1.66, 0.22), M_STONE, 1)               # 감실 테두리 (얕게 판 면)
+    for (sx_, sh, sr) in ((-0.60, 0.92, 0.19), (0.0, 1.26, 0.25), (0.60, 0.92, 0.19)):            # 삼존
+        by = 0.80 + sh / 2
+        stones.add(cyl(sr * 1.55, sr * 1.95, sh, 12), f @ T(sx_, by, 0.25), M_STONE, 1)           # 법의 (아래로 퍼짐)
+        stones.add(sphere(sr * 0.98, 3), f @ T(sx_, 0.80 + sh + sr * 0.75, 0.25, 0, 0, 0, 1.0, 1.12, 0.9), M_STONE)   # 머리
+        stones.add(sphere(sr * 0.30, 2), f @ T(sx_, 0.80 + sh + sr * 1.55, 0.25), M_STONE)        # 육계
+        stones.add(cyl(sr * 1.5, sr * 1.5, 0.05, 20), f @ T(sx_, 0.80 + sh + sr * 0.75, 0.20), M_STONE, 1)   # 두광
+        for s_ in (-1, 1):                                                                        # 어깨·팔
+            stones.add(sphere(sr * 0.42, 2), f @ T(sx_ + s_ * sr * 1.25, 0.80 + sh - sr * 0.35, 0.27), M_STONE)
+    stones.add(bevel_box(2.40, 0.16, 0.66, 0.03), f @ T(0, 2.82, 0), M_STONE, 1)                  # 옥개석 처마
+    stones.add(_sq(2.40, 1.05, 0.34), f @ T(0, 3.07, 0, PI / 4, 0, 0, 1.0, 1.0, 0.30), M_STONE, 1)   # 옥개석 낙수면
+    for s_ in (-1, 1):
+        stones.add(bevel_box(0.18, 0.09, 0.18, 0.03), f @ T(s_ * 1.10, 2.94, 0, 0, 0, s_ * -0.25), M_STONE, 1)
+    stones.add(sphere(0.12, 3), f @ T(0, 3.32, 0), M_STONE)                                       # 보주
 
 
 lion_lantern(1.0, 14.2)                    # 잔디 북동쪽 가장자리, 신평루 쪽 — 만찬석에서 보인다

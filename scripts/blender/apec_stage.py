@@ -193,24 +193,32 @@ def step_unit(cx_, cz_, w_, ry_=0.0):
         stage.add(box(w_, 0.03, 0.3), f @ T(0, h + 0.015, zc), M['deckCarpet'], 1)
 
 
-step_unit(CX - 1.4, FRONT + 0.45, 4.5)                             # 앞 가운데 한 짝 (onsite_085952_003 실측 4.5m)
-# 그 오른쪽에 붙은 경사로 — 옆면 사면에 APEC·경상북도 그래픽 (onsite_085952_003)
-RMP_X0, RMP_L, RMP_D = CX + 0.9, 5.0, 1.5
+# 무대 앞: 계단이 양옆에 하나씩, 가운데는 경사면이고 그 사면에 로고 띠가 박힌다 (클라이언트 확인).
+# 전에는 계단 한 짝을 왼쪽에 몰고 그 옆에 경사로를 붙여 놓았다 — 배치가 틀렸다.
+RMP_W, RMP_L = 6.0, 1.9                                            # 가운데 경사면 폭·길이
+step_unit(CX - RMP_W / 2 - 2.0, FRONT + 0.45, 3.4)                 # 왼쪽 계단
+step_unit(CX + RMP_W / 2 + 2.0, FRONT + 0.45, 3.4)                 # 오른쪽 계단
 
 
-def _ramp(bm):                                                     # 삼각 프리즘 (x 로 갈수록 높아짐)
+def _ramp(bm):
+    """가운데 경사면 — 무대 앞면(z=0)에서 갑판 높이, 객석 쪽(z=RMP_L)에서 바닥"""
     import bmesh as _bm
-    vs = [bm.verts.new(p) for p in ((0, 0, -RMP_D / 2), (RMP_L, 0, -RMP_D / 2), (RMP_L, TOP, -RMP_D / 2),
-                                    (0, 0, RMP_D / 2), (RMP_L, 0, RMP_D / 2), (RMP_L, TOP, RMP_D / 2))]
-    for tri in ((0, 1, 2), (5, 4, 3)):
-        bm.faces.new([vs[i] for i in tri])
-    for quad in ((0, 3, 4, 1), (2, 1, 4, 5), (0, 2, 5, 3)):
-        bm.faces.new([vs[i] for i in quad])
+    hw = RMP_W / 2
+    vs = [bm.verts.new(p) for p in ((-hw, TOP, 0), (hw, TOP, 0), (hw, 0, RMP_L), (-hw, 0, RMP_L),
+                                    (-hw, 0, 0), (hw, 0, 0))]
+    bm.faces.new([vs[i] for i in (0, 1, 2, 3)])                     # 사면 (로고가 박히는 면)
+    bm.faces.new([vs[i] for i in (4, 3, 2, 5)])                     # 밑면
+    bm.faces.new([vs[i] for i in (0, 4, 5, 1)])                     # 무대 쪽 마구리
+    bm.faces.new([vs[i] for i in (0, 3, 4)])
+    bm.faces.new([vs[i] for i in (1, 5, 2)])
     _bm.ops.recalc_face_normals(bm, faces=bm.faces[:])
 
 
-stage.add(_ramp, T(RMP_X0, 0, FRONT + RMP_D / 2), M['stairBlue'], 1)
-stage.add(plane(2.2, 0.28), T(RMP_X0 + 3.6, 0.16, FRONT + RMP_D + 0.008), M['sign'], tile=None)   # 사면의 로고
+RF = T(CX, 0, FRONT)
+stage.add(_ramp, RF, M['stairBlue'], 1)
+SL = math.hypot(RMP_L, TOP)                                        # 사면 길이
+emit.add(plane(RMP_W - 0.1, SL - 0.06), RF @ T(0, TOP / 2 + 0.006, RMP_L / 2, 0, math.atan2(TOP, RMP_L) - PI / 2),
+         M['fascia'], tile=None)                                   # 사면에 박힌 로고 띠
 for k in range(7):                                                 # 무대 앞 잔디의 검은 모니터 스피커
     stage.add(bevel_box(0.44, 0.3, 0.34, 0.02), T(CX - 7.5 + k * 2.6, 0.16, FRONT + 0.32, 0, -0.12), M['black'], 1)
 # 무대 뒤 계단 (대기 천막 쪽, 무대 오른쪽 뒤)
@@ -269,19 +277,11 @@ for k in range(5):                                                        # 지�
     screen_panel(SCR @ T((k - 2) * SCR_PW * 0.96, 0, 0.11 * (k % 2), a))
 
 
-def wood_lectern(f):
-    """호두나무 연설대 0.38 x 1.12 x 0.44 — 앞판 세로 이음, 윗판이 조금 나온 통짜"""
-    lw, lh, ld = 0.38, 1.12, 0.44
-    stage.add(bevel_box(lw, lh - 0.05, ld, 0.012), f @ T(0, (lh - 0.05) / 2, 0), M['screenWood'], 1)
-    stage.add(box(0.008, lh - 0.12, 0.006), f @ T(0.02, (lh - 0.05) / 2, ld / 2 + 0.002), M['black'], 1)   # 앞판 이음선
-    stage.add(bevel_box(lw + 0.05, 0.05, ld + 0.05, 0.008), f @ T(0, lh - 0.025, 0), M['screenWood'], 1)   # 윗판
-    stage.add(bevel_box(lw - 0.06, 0.05, ld - 0.06, 0.008), f @ T(0, 0.025, 0), M['screenWood'], 1)        # 밑동
-    stage.add(cyl(0.008, 0.008, 0.26, 8), f @ T(-0.08, lh + 0.13, 0.06, 0, -0.5), M['black'], 1)           # 구즈넥 마이크
-    stage.add(cyl(0.007, 0.007, 0.16, 8), f @ T(-0.08, lh + 0.26, 0.17, 0, -1.1), M['black'], 1)
-    stage.add(sphere(0.016, 2), f @ T(-0.08, lh + 0.30, 0.235), M['black'])
-
-
-wood_lectern(T(CX + 1.1, TOP, CZ - 0.9, -0.30))
+# 단상 — 클라이언트 레퍼런스: 어두운 목재가 아니라 아래로 벌어지는 흰 연단이고,
+# 앞판에 APEC 로고가 박힌다. 무대 가운데와 왼쪽에 하나씩 두 대.
+M['lecternPanel'] = material('lecternPanel', image_base=f'{SHOTS}/apec_clad_panel.png', rough=0.25, coat=0.6)
+gear.lectern(stage, T(CX + 0.6, TOP, CZ - 0.6, -0.22), M)
+gear.lectern(stage, T(CX - 6.4, TOP, CZ + 0.4, 0.30), M)
 # 무대 앞 양쪽 스피커 (불러온 모델)
 for sx in (-4.3, 16.3):
     stage.add(mesh_source(SRC_SPEAKER), T(sx, 0.12, FRONT + 0.4), list(SRC_SPEAKER.data.materials))
