@@ -1118,8 +1118,8 @@ for (tx, tz, tw) in ((FOH_X + 0.6, FOH_Z + 0.2, 1.5), (FOH_X + 2.3, FOH_Z + 0.35
 gear.program_monitor(foh, T(FOH_X + 0.9, FOH_Y + 0.77, FOH_Z - 0.12), M, foh_glow, M['uiAudio'],
                      height=0.46, w=0.54, hgt=0.33, facing=0.0)
 gear.video_switcher(foh, T(FOH_X + 2.4, FOH_Y + 0.77, FOH_Z + 0.3, PI), M, foh_glow)
-for k in range(3):                                            # 쌓아 둔 랙 케이스
-    gear.road_case(foh, T(FOH_X + 4.3, FOH_Y + k * 0.56, FOH_Z + 0.2), M, 0.62, 0.55, 0.72, handles=(k == 2))
+for k in range(2):                                            # 쌓아 둔 랙 케이스 (3단은 토템처럼 솟아 보였다)
+    gear.road_case(foh, T(FOH_X + 4.3, FOH_Y + k * 0.56, FOH_Z + 0.2), M, 0.62, 0.55, 0.72, handles=(k == 1))
 for (cx_, cz_, cr) in ((FOH_X - 2.6, FOH_Z + 1.1, PI), (FOH_X + 0.7, FOH_Z + 1.2, PI),
                        (FOH_X + 2.4, FOH_Z + 1.3, PI + 0.2)):
     gear.folding_chair(foh, T(cx_, FOH_Y, cz_, cr), M)
@@ -1333,9 +1333,8 @@ for k in range(9):                                                              
                    T(PATH_X + sx_ * PATH_W / 4, 0.17, 11.6 + k * 1.1), M['terrace'], 1.4)
 
 lion_lantern(-9.5, 14.6)                   # 회랑 앞 (카메라 자리·포장길을 비켜 서쪽으로)
-three_storey_pagoda(-13.5, 15.6)           # 잔디 가장자리 (회랑 쪽) 삼층석탑
-three_storey_pagoda(9.5, 15.2)
-buddha_triad_stele(-19.5, 13.0, 0.7)       # 삼존불 석비
+# 삼층석탑 두 기는 잔디 한가운데에 탑을 세워 둔 꼴이었고 현장 사진에 없다 → 뺀다
+# 삼존불 석비도 현장 사진에 없어 뺀다
 stone_ram(-16.5, 11.0, 0.6)                # 잔디 동남 모서리 화강석 보도 위
 # 당간지주는 기단 계단 한복판을 막고 있었고 현장 사진에도 없다 → 뺀다
 gold_dragon_pool(24.0, 16.5)               # 잔디 북동 모서리 반사 연못

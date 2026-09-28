@@ -52,24 +52,26 @@ def build(coll, cover_mat, sash_mat, name='banquet_chair'):
         bm_by_mat.setdefault(mat, bmesh.new()).from_mesh(me)
         bpy.data.meshes.remove(me)
 
-    # 자락 (좌판 밑 ~ 바닥) + 좌판 + 등받이
-    add(_skirt(SEAT_W - 0.01, SEAT_D - 0.01, SEAT_W + 0.06, SEAT_D + 0.06, SEAT_H - 0.05, 0.0), Matrix(), cover_mat)
-    add(bevel_box(SEAT_W, 0.075, SEAT_D, 0.022), T(0, SEAT_H - 0.035, 0), cover_mat)
-    add(bevel_box(SEAT_W - 0.03, BACK_H, BACK_T, 0.028), T(0, SEAT_H + BACK_H / 2 + 0.01, -SEAT_D / 2 + BACK_T / 2 + 0.01, 0, -0.05), cover_mat)
-    add(bevel_box(SEAT_W - 0.06, 0.05, BACK_T + 0.02, 0.02), T(0, SEAT_H + BACK_H + 0.03, -SEAT_D / 2 + BACK_T / 2 + 0.005), cover_mat)   # 등받이 윗마구리
+    # 등받이는 웹 +z 쪽이다 (apec_stage 의 의자 배치가 그 전제로 각도를 준다).
+    # 전에 -z 에 두어서 모든 의자가 테이블 바깥을 보고 앉아 있었다.
+    BZ = SEAT_D / 2 - BACK_T / 2 - 0.01
+    add(_skirt(SEAT_W - 0.04, SEAT_D - 0.04, SEAT_W + 0.03, SEAT_D + 0.03, SEAT_H - 0.06, 0.0), Matrix(), cover_mat)
+    add(bevel_box(SEAT_W, 0.07, SEAT_D, 0.02), T(0, SEAT_H - 0.035, 0), cover_mat)                      # 좌판
+    add(bevel_box(SEAT_W - 0.04, BACK_H, BACK_T, 0.022), T(0, SEAT_H + BACK_H / 2 + 0.01, BZ, 0, 0.05), cover_mat)
+    add(bevel_box(SEAT_W - 0.07, 0.045, BACK_T + 0.015, 0.018), T(0, SEAT_H + BACK_H + 0.03, BZ), cover_mat)   # 등받이 윗마구리
 
-    # 새틴 띠: 등받이를 두르고 뒤에서 리본
+    # 새틴 띠: 등받이를 두르고 뒤(+z)에서 리본
     sh = SASH[1] - SASH[0]
-    for (w_, d_, x_, z_) in ((SEAT_W + 0.01, 0.012, 0.0, -SEAT_D / 2 + BACK_T + 0.012),
-                             (SEAT_W + 0.01, 0.012, 0.0, -SEAT_D / 2 - 0.006)):
-        add(box(w_, sh, d_), T(x_, (SASH[0] + SASH[1]) / 2, z_), sash_mat)
+    ym = (SASH[0] + SASH[1]) / 2
+    add(box(SEAT_W - 0.03, sh, 0.012), T(0, ym, BZ - BACK_T / 2 - 0.006), sash_mat)                     # 앞면(사람 등 쪽)
+    add(box(SEAT_W - 0.03, sh, 0.012), T(0, ym, BZ + BACK_T / 2 + 0.006), sash_mat)                     # 뒷면
     for sx in (-1, 1):
-        add(box(0.014, sh, BACK_T + 0.03), T(sx * (SEAT_W / 2 - 0.003), (SASH[0] + SASH[1]) / 2, -SEAT_D / 2 + BACK_T / 2), sash_mat)
-    rz = -SEAT_D / 2 - 0.02
-    for sx in (-1, 1):                                        # 리본 고리 두 개
-        add(sphere(0.055, 3), T(sx * 0.055, SASH[0] + sh * 0.5, rz - 0.035, 0, 0, sx * 0.5, 1.5, 1.0, 0.55), sash_mat)
-        add(box(0.035, 0.16, 0.012), T(sx * 0.05, SASH[0] - 0.06, rz - 0.02, 0, 0, sx * 0.35), sash_mat)   # 꼬리
-    add(sphere(0.028, 2), T(0, SASH[0] + sh * 0.5, rz - 0.03), sash_mat)   # 매듭
+        add(box(0.013, sh, BACK_T + 0.025), T(sx * (SEAT_W / 2 - 0.022), ym, BZ), sash_mat)
+    rz = BZ + BACK_T / 2 + 0.025
+    for sx in (-1, 1):                                                                                   # 리본 고리 두 개
+        add(sphere(0.032, 3), T(sx * 0.034, ym, rz + 0.018, 0, 0, sx * 0.5, 1.4, 0.9, 0.5), sash_mat)
+        add(box(0.024, 0.11, 0.009), T(sx * 0.032, SASH[0] - 0.04, rz + 0.010, 0, 0, sx * 0.30), sash_mat)
+    add(sphere(0.017, 2), T(0, ym, rz + 0.014), sash_mat)                                                 # 매듭
 
     mats = list(bm_by_mat.keys())
     out = bmesh.new()

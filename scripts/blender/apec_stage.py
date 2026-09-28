@@ -589,11 +589,18 @@ def place(x, z):
                 return
 
 
-for row in range(5):                                        # 5줄 x 5열 격자를 엇갈리게, 22개까지
-    tz = FIELD_Z0 + row * (FIELD_Z1 - FIELD_Z0) / 4
-    for col in range(5):
-        tx = FIELD_X0 + (col + (0.5 if row % 2 else 0.0)) * (FIELD_X1 - FIELD_X0) / 5
-        place(tx + jit.uniform(-0.55, 0.55), tz + jit.uniform(-0.5, 0.5))
+# 항공 사진의 배치: 반듯한 격자가 아니라 무대 쪽으로 약간 기울어진 줄이고,
+# 줄마다 개수가 다르며(뒤로 갈수록 짧다) 줄 간격도 고르지 않다.
+TILT = -0.19                                                 # 줄이 무대 쪽으로 기운 각
+ROWS = ((3, 0.36), (4, 0.20), (5, 0.06), (5, -0.10), (5, -0.24))   # (개수, 줄의 x 오프셋 비율)
+for ri, (cnt, off) in enumerate(ROWS):
+    tz = FIELD_Z0 + ri * (FIELD_Z1 - FIELD_Z0) / (len(ROWS) - 1)
+    span = (FIELD_X1 - FIELD_X0) * (0.62 + 0.09 * ri)
+    x0 = FIELD_X0 + (FIELD_X1 - FIELD_X0 - span) * (0.5 + off)
+    for c in range(cnt):
+        tx = x0 + (c + 0.5) * span / cnt
+        dz = (tx - (FIELD_X0 + FIELD_X1) / 2) * TILT
+        place(tx + jit.uniform(-0.5, 0.5), tz + dz + jit.uniform(-0.45, 0.45))
 print('tables', len(TABLES))
 
 
