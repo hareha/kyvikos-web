@@ -86,7 +86,7 @@ def _add_sash(me, sash_mat, at=0.76, band=0.092):
     # 띠는 도형을 덧대지 않고 의자 표면 자체를 칠한다.
     # (상자든 스윕이든 덧대면 등받이보다 넓게 떠서 챙처럼 보였다.)
     cx, ry = (bx0 + bx1) / 2, by0 - 0.010               # 등받이 뒷면 (블렌더 -y = 웹 +z)
-    bow = _bow_mesh(width=0.135)                          # 나비 고리는 받아온 모델 (deokpal, CC-BY)
+    bow = _bow_mesh(width=0.21)                          # 나비 고리는 받아온 모델 (deokpal, CC-BY)
     if bow is not None:
         bow.transform(Matrix.Translation((cx, ry - 0.022, zm - 0.008)))
         t = bpy.data.meshes.new('t')
@@ -96,11 +96,11 @@ def _add_sash(me, sash_mat, at=0.76, band=0.092):
         bpy.data.meshes.remove(t)
     for sx in (-1, 1):
         tail, tw = [], []
-        for k in range(10):                              # 좌판 아래까지 늘어뜨린 꼬리
+        for k in range(10):                              # 좌판 아래까지 늘어뜨린 꼬리 (두 갈래가 확실히 벌어지게)
             t = k / 9
-            tail.append((cx + sx * (0.030 + 0.085 * t * t), ry - 0.014 - 0.030 * math.sin(t * 2.3),
-                         zm - 0.020 - 0.050 * k))
-            tw.append(0.072 - 0.026 * t)
+            tail.append((cx + sx * (0.062 + 0.105 * t * t), ry - 0.016 - 0.034 * math.sin(t * 2.3),
+                         zm - 0.030 - 0.052 * k))
+            tw.append(0.082 - 0.028 * t)
         emit(_ribbon_bl(tail, tw, 0.007))
 
     sm = bpy.data.meshes.new('sash')

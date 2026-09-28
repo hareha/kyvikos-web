@@ -55,7 +55,7 @@ C_SRC.hide_viewport = True
 M = {
     'lawn': material('lawn', 'leafy_grass', (0.115, 0.215, 0.075), 0.95),     # 초록 잔디 (마른 갈색으로 잘못 깔아 뒀었다)
     # 디딤돌이 잔디보다 밝아서 하얀 덩어리로 떠 보였다. 사진에서는 잔디보다 어두운 회색 석재다.
-    'paver': material('paver', 'rock_tile_floor_02', (0.56, 0.56, 0.545), 0.92, normal=0.9),   # 밝은 회색 자연석
+    'paver': material('paver', 'rock_tile_floor_02', (1.55, 1.55, 1.52), 0.92, normal=0.45),  # 밝은 회색 판석 (텍스처가 갈색이라 틴트를 올린다)
     'plaza': material('plaza', 'asphalt_02', (0.35, 0.36, 0.38), 0.9),
     'stageFloor': material('stageFloor', image_base=f'{SHOTS}/apec_stage_floor.png', rough=0.25, coat=0.3),
     'stageBody': material('stageBody', None, (0.017, 0.026, 0.100), 0.7),             # 남색 치마 (#232A55)
@@ -150,22 +150,31 @@ def paver(px, pz):
     ground.add(bevel_box(0.52, 0.05, 0.52, 0.01), T(px, 0.11, pz, random.uniform(-0.05, 0.05)), M['paver'], 0.55)
 
 
-# 무대 앞에는 넓은 석재 마당이 깔려 있다 (사진: 무대와 테이블 사이가 포장면이고 거기 사람이 선다).
-# 잔디를 가로지르는 '연석 줄' 과 가운데 큰 원형 석재만 실제에 없는 것이라 그건 넣지 않는다.
-SFX, SFZ = 6.0, -11.5            # 무대 가운데 x, 무대 앞면 z (아래 CX/FRONT 와 같은 값)
-apz = SFZ + 0.6
-while apz <= SFZ + 7.6:
-    ax = SFX - 11.0 + (0.36 if int((apz - SFZ) / 0.72) % 2 else 0.0)
-    while ax <= SFX + 11.0:
-        paver(ax, apz)
-        ax += 0.72
-    apz += 0.72
+# 무대 앞 디딤돌 — 사진(항공)에 그대로 남아 있는 원래 패턴이다:
+#   무대 앞에 동심 원호로 판석이 깔리고, 거기서 객석 쪽으로 엇갈린 판석이 퍼져 나가며 성겨진다.
+#   격자로 반듯하게 깔면 안 된다 (한 번 그렇게 덮어 버렸다).
+def slab(px, pz, ang=0.0, w=0.92, d=0.46):
+    if not on_lawn(px, pz, 0.2):
+        return
+    ground.add(bevel_box(w, 0.05, d, 0.01), T(px, 0.11, pz, ang + random.uniform(-0.03, 0.03)), M['paver'], 0.55)
+
+
+rnd = random.Random(23)
+for r in (2.5, 3.6, 4.7, 5.8, 6.9):                     # 동심 원호 다섯 겹 (객석 쪽으로 열린다)
+    n = max(6, int(2 * PI * r * 0.62 / 1.18))
+    for k in range(n):
+        ang = -1.18 + 2.36 * k / (n - 1)                # 무대를 등지고 객석 쪽 부채꼴
+        slab(MED[0] + r * math.sin(ang), MED[1] + r * math.cos(ang), -ang)
+for ri in range(7):                                     # 원호에서 퍼져 나가는 엇갈린 디딤돌 (뒤로 갈수록 성겨진다)
+    rr = 8.0 + ri * 1.25
+    n = max(4, int(11 - ri * 1.1))
+    for k in range(n):
+        ang = -1.05 + 2.10 * (k + (0.5 if ri % 2 else 0.0)) / max(1, n - 1)
+        if rnd.random() < 0.10 + ri * 0.055:            # 뒤로 갈수록 듬성듬성
+            continue
+        slab(MED[0] + rr * math.sin(ang) + rnd.uniform(-0.3, 0.3),
+             MED[1] + rr * math.cos(ang) + rnd.uniform(-0.3, 0.3), -ang)
 # 회랑에서 잔디로 나오는 짧은 진입 동선
-z = 11.0
-while z <= 16.5:
-    paver(MED[0] - 0.35, z)
-    paver(MED[0] + 0.35, z + 0.35)
-    z += 0.72
 ground.build()
 
 outer = Assembly('outer', C_RENDER_ONLY)
@@ -590,6 +599,25 @@ TABLES = [(x + SHIFT_X, z) for x, z in
            (-10.7, 2.9), (-5.9, 2.9), (-0.4, 2.6), (5.5, 3.5),
            (-12.8, 7.3), (-7.3, 7.3), (-1.2, 7.6), (5.3, 7.9),
            (-1.5, 11.6)]]
+# 사진에서 찍은 좌표라도 환산 오차로 서로 붙는 곳이 생긴다.
+# 원탁 Ø1.8 + 의자 반경 1.32 이므로 중심 간격이 3.8m 밑으로 내려가면 의자가 겹친다.
+for _ in range(80):
+    moved = False
+    for i in range(len(TABLES)):
+        for j in range(i + 1, len(TABLES)):
+            ax, az = TABLES[i]
+            bx, bz = TABLES[j]
+            dx, dz = bx - ax, bz - az
+            dist = math.hypot(dx, dz) or 0.001
+            if dist < 3.85:
+                push = (3.85 - dist) / 2 + 0.01
+                ux, uz = dx / dist, dz / dist
+                TABLES[i] = (ax - ux * push, az - uz * push)
+                TABLES[j] = (bx + ux * push, bz + uz * push)
+                moved = True
+    if not moved:
+        break
+TABLES = [t for t in TABLES if on_lawn(t[0], t[1], 2.2)]
 FIELD_X0, FIELD_X1 = min(t[0] for t in TABLES), max(t[0] for t in TABLES)
 FIELD_Z0, FIELD_Z1 = min(t[1] for t in TABLES), max(t[1] for t in TABLES)
 print('tables', len(TABLES))
@@ -642,7 +670,8 @@ HEATERS = [(hx + 2.4, hz) for hx, hz in
            [(-15.9, -9.5), (-11.4, -9.8), (-7.7, -9.8), (-5.2, -10.0),
             (-16.4, -5.6), (-18.0, -3.0), (-17.6, 1.2), (-15.2, 4.6),
             (-14.1, 10.6), (-8.4, 10.2), (-2.6, 13.4),
-            (2.6, 11.0), (8.6, 8.0), (9.6, 12.0)]]
+            (2.6, 11.0), (8.6, 8.0), (9.6, 12.0),
+            (14.6, -6.4), (16.0, -2.6), (18.4, 1.6), (19.2, 6.4), (17.6, 11.0)]]
 HEATERS = [(hx, hz) for hx, hz in HEATERS if on_lawn(hx, hz, 0.7)]
 print('heaters', len(HEATERS))
 heaters = Assembly('heaters', C_STATIC)
