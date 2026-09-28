@@ -662,23 +662,33 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False):
     bands = [(0.0, 0.8)] + [(k * fh - 0.45, k * fh + 0.85) for k in range(1, floors)] + [(h - 0.45, h + parapet)]
     for y0, y1 in bands:
         asm.add(box(L - 1.8, y1 - y0, DEPTH), f @ T(L / 2, (y0 + y1) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
-    # 1층은 창이 아니라 둥근 아치 열이다 (클라이언트 사진: 연수동 1층 전면이 아케이드).
+    # 1층은 창이 아니라 둥근 아치 열이다 (클라이언트 사진: 연수동 잔디 쪽 1층이 아케이드).
+    # 아치 베이는 창 베이(7.6m)와 다르다 — 그 폭을 그대로 쓰면 반지름 3.2m 아치가
+    # 저층부(4.6m)보다 높아져 도형이 벽 밖으로 나가 버린다. 3.6m 피치로 따로 나눈다.
     if arcade:
-        SPR = 2.35                                                       # 아치 시작(기공) 높이
-        for k in range(n):
-            xa, xb = xs[k] + 0.55, xs[k + 1] - 0.55
-            ow, cx_ = xb - xa, (xa + xb) / 2
-            r = ow / 2
-            glow.add(plane(ow, SPR), f @ T(cx_, SPR / 2 + 0.25, -0.42), random.choice(ROOMS), tile=None)
-            glow.add(ring_segment(0, r, 0, PI, 0.04), f @ T(cx_, SPR + 0.25, -0.42, 0, PI / 2),
-                     random.choice(ROOMS), tile=None)                    # 아치 안쪽 (반원)
-            asm.add(ring_segment(r, ow * 0.98, 0, PI, DEPTH), f @ T(cx_, SPR + 0.25, -DEPTH, 0, PI / 2), M['granite_clad'], 1.2)
-            asm.add(box(ow + 0.4, bands[1][0] - (SPR + 0.25 + r), DEPTH),
-                    f @ T(cx_, (SPR + 0.25 + r + bands[1][0]) / 2, -DEPTH / 2), M['granite_clad'], 1.2)   # 아치 위 벽
-            asm.add(box(ow + 0.5, 0.14, DEPTH + 0.14), f @ T(cx_, SPR + 0.25, -DEPTH / 2 - 0.07), M['granite_clad'], 1.2)   # 기공선 돌띠
-            asm.add(box(ow, 0.25, 0.5), f @ T(cx_, 0.125, -0.25), M['granite'], 1.5)                     # 아치 아래 디딤돌
-        for x in xs[1:-1]:                                               # 아치 사이 피어
-            asm.add(box(1.1, bands[1][0], DEPTH), f @ T(x, bands[1][0] / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+        hb = bands[1][0]                                                 # 저층부 벽 상단
+        na = max(1, round((L - 1.6) / 3.6))
+        wa = (L - 1.6) / na
+        ow = min(wa - 0.95, 2.9)                                         # 아치 개구 폭
+        r = ow / 2
+        spr = min(2.30, hb - r - 0.55)                                   # 아치 꼭대기가 벽 위로 안 나가게
+        top = spr + r
+        for k in range(na):
+            cx_ = 0.8 + (k + 0.5) * wa
+            glow.add(plane(ow, spr - 0.18), f @ T(cx_, (spr + 0.18) / 2, -0.40), random.choice(ROOMS), tile=None)
+            glow.add(ring_segment(0, r, 0, PI, 0.04), f @ T(cx_, spr, -0.40, 0, -PI / 2), random.choice(ROOMS), tile=None)
+            asm.add(ring_segment(r, r + 0.45, 0, PI, DEPTH), f @ T(cx_, spr, -DEPTH, 0, -PI / 2), M['granite_clad'], 1.2)
+            asm.add(box(wa - 0.02, hb - top - 0.45, DEPTH),               # 아치 위 벽
+                    f @ T(cx_, (top + 0.45 + hb) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+            for sx_ in (-1, 1):                                          # 아치 옆 스팬드럴 (반원 밖 모서리)
+                asm.add(box((wa - ow) / 2 - 0.01, top - spr + 0.45, DEPTH),
+                        f @ T(cx_ + sx_ * (ow + wa) / 4, (spr + top + 0.45) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+                asm.add(box((wa - ow) / 2 - 0.01, spr, DEPTH),            # 아치 사이 피어
+                        f @ T(cx_ + sx_ * (ow + wa) / 4, spr / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+            asm.add(box(ow + 0.55, 0.12, DEPTH + 0.16), f @ T(cx_, spr, -DEPTH / 2 - 0.08), M['granite_clad'], 1.2)   # 기공선 돌띠
+            asm.add(box(ow, 0.22, 0.55), f @ T(cx_, 0.11, -0.28), M['granite'], 1.5)                                 # 아치 아래 디딤돌
+        for sx_ in (0.8, 0.8 + na * wa):                                 # 양 끝 마구리 벽
+            asm.add(box(0.8, hb, DEPTH), f @ T(sx_ - 0.4 if sx_ > L / 2 else sx_ - 0.4, hb / 2, -DEPTH / 2), M['granite_clad'], 1.2)
     # 창: 기둥·띠 사이 구멍마다 안쪽 유리(방 불빛) + 창살
     for fl in range(1 if arcade else 0, floors):
         ya = 0.8 if fl == 0 else fl * fh + 0.85

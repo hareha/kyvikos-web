@@ -196,14 +196,14 @@ def step_unit(cx_, cz_, w_, ry_=0.0):
         stage.add(box(w_, 0.03, 0.3), f @ T(0, h + 0.015, zc), M['stairTread'], 1)
 
 
-# 무대 앞 (클라이언트 사진 z_ramp / 마지막 무대 정면 사진):
-# 계단 한 짝과 경사면 한 짝이 붙어 한 벌을 이루고, 그 벌이 좌우에 하나씩 있다.
-# 경사면은 안쪽(가운데 쪽)이고 사면 가운데에 APEC + 경상북도 로고가 한 벌 박힌다.
-RMP_W, RMP_L, STP_W = 4.2, 1.9, 3.4
+# 무대 앞 — 클라이언트 지시 그대로: 가운데가 경사면이고 그 양옆에 계단이 붙는다.
+# (직전에 '계단+경사로 한 벌이 좌우에 하나씩'으로 바꾼 것은 내가 지어낸 배치다.
+#  z_ramp 크롭은 무대 앞의 일부만 잘린 것이라 계단 한 짝과 경사로만 보였을 뿐이다.)
+RMP_W, RMP_L, STP_W = 4.6, 1.9, 4.4
 
 
 def _ramp(bm):
-    """경사면 — 무대 앞면(z=0)에서 갑판 높이, 객석 쪽(z=RMP_L)에서 바닥"""
+    """가운데 경사면 — 무대 앞면(z=0)에서 갑판 높이, 객석 쪽(z=RMP_L)에서 바닥"""
     import bmesh as _bm
     hw = RMP_W / 2
     vs = [bm.verts.new(p) for p in ((-hw, TOP, 0), (hw, TOP, 0), (hw, 0, RMP_L), (-hw, 0, RMP_L),
@@ -216,15 +216,13 @@ def _ramp(bm):
     _bm.ops.recalc_face_normals(bm, faces=bm.faces[:])
 
 
-SL = math.hypot(RMP_L, TOP)
-for sgn in (-1, 1):                                                 # 좌우 한 벌씩
-    rx_ = CX + sgn * (RMP_W / 2 + 0.6)
-    RF = T(rx_, 0, FRONT)
-    stage.add(_ramp, RF, M['stairBlue'], 1)
-    stage.add(plane(RMP_W * 0.78, RMP_W * 0.78 * 360 / 1600),
-              RF @ T(0, TOP / 2 + 0.006, RMP_L / 2, 0, math.atan2(TOP, RMP_L) - PI / 2),
-              M['rampLogo'], tile=None)
-    step_unit(rx_ + sgn * (RMP_W / 2 + STP_W / 2 + 0.25), FRONT + 0.45, STP_W)   # 경사면 바깥쪽에 계단
+RF = T(CX, 0, FRONT)
+stage.add(_ramp, RF, M['stairBlue'], 1)
+stage.add(plane(RMP_W * 0.80, RMP_W * 0.80 * 360 / 1600),
+          RF @ T(0, TOP / 2 + 0.006, RMP_L / 2, 0, math.atan2(TOP, RMP_L) - PI / 2),
+          M['rampLogo'], tile=None)                                 # 사면 가운데 로고 한 벌
+for sgn in (-1, 1):                                                 # 경사면에 딱 붙는 계단 두 짝
+    step_unit(CX + sgn * (RMP_W / 2 + STP_W / 2), FRONT + 0.45, STP_W)
 for k in range(7):                                                 # 무대 앞 잔디의 검은 모니터 스피커
     stage.add(bevel_box(0.44, 0.3, 0.34, 0.02), T(CX - 7.5 + k * 2.6, 0.16, FRONT + 0.32, 0, -0.12), M['black'], 1)
 # 무대 뒤 계단 — 사진은 파란 챌판 + 흰 디딤판의 줄무늬 계단이다 (앞 계단과 다르다)
@@ -286,16 +284,17 @@ SCR_PW, SCR_PH = 0.42, 2.02                                               # 한 
 # 사진에는 무대 뒤가 LED 뿐이다.
 
 
-def podium(f, w=0.56, h=1.18, d=0.46):
-    """연단 — 아래가 넓고 위가 좁은 단순한 사다리꼴 기둥에 앞면 로고.
-       gear.lectern 은 윗판이 밖으로 크게 나와 정면에서 망치상어처럼 보였다."""
-    stage.add(cyl(w * 0.72 * 1.414 / 2, w * 1.414 / 2, h - 0.06, 4), f @ T(0, (h - 0.06) / 2, 0, PI / 4), M['lectern'], 1)
-    stage.add(bevel_box(w * 0.78, 0.055, d * 0.78, 0.012), f @ T(0, h - 0.03, 0), M['black'], 1)   # 어두운 윗판
-    stage.add(bevel_box(w + 0.04, 0.04, d + 0.04, 0.01), f @ T(0, 0.02, 0), M['lectern'], 1)       # 밑동
-    stage.add(plane(w * 0.80, w * 0.80 * 1152 / 1792), f @ T(0, h * 0.58, d * 0.425 + 0.004), M['lecternPanel'], tile=None)
-    stage.add(cyl(0.007, 0.007, 0.22, 8), f @ T(-0.14, h + 0.10, 0.06, 0, -0.55), M['black'], 1)   # 구즈넥
-    stage.add(cyl(0.006, 0.006, 0.14, 8), f @ T(-0.14, h + 0.21, 0.16, 0, -1.15), M['black'], 1)
-    stage.add(sphere(0.014, 2), f @ T(-0.14, h + 0.25, 0.215), M['black'])
+def podium(f, w=0.58, h=1.18, d=0.44):
+    """연단 — 거의 곧은 상자에 어두운 윗판과 앞면 로고.
+       사다리꼴(cyl seg=4)로 만들었더니 앞면이 기울어 로고 판이 면에 안 붙었다.
+       곧은 상자로 바꿔 로고를 앞면에 정확히 붙인다."""
+    stage.add(bevel_box(w, h - 0.06, d, 0.012), f @ T(0, (h - 0.06) / 2 + 0.02, 0), M['lectern'], 1)
+    stage.add(bevel_box(w + 0.05, 0.055, d + 0.05, 0.012), f @ T(0, h - 0.03, 0), M['black'], 1)   # 어두운 윗판
+    stage.add(bevel_box(w + 0.06, 0.04, d + 0.06, 0.01), f @ T(0, 0.02, 0), M['lectern'], 1)       # 밑동
+    stage.add(plane(w * 0.74, w * 0.74 * 1152 / 1792), f @ T(0, h * 0.56, d / 2 + 0.006), M['lecternPanel'], tile=None)
+    stage.add(cyl(0.007, 0.007, 0.22, 8), f @ T(-0.15, h + 0.10, 0.06, 0, -0.55), M['black'], 1)   # 구즈넥
+    stage.add(cyl(0.006, 0.006, 0.14, 8), f @ T(-0.15, h + 0.21, 0.16, 0, -1.15), M['black'], 1)
+    stage.add(sphere(0.014, 2), f @ T(-0.15, h + 0.25, 0.215), M['black'])
 
 
 M['lecternPanel'] = material('lecternPanel', image_base=f'{SHOTS}/apec_clad_panel.png', rough=0.25, coat=0.5)
