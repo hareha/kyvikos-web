@@ -456,12 +456,30 @@ def corridor():
     t_ = (CW / 2) / ((CW + 3.2) / 2)
     gb = 4.1 - (1.9 * (1 - t_) - 0.18 * math.sin(PI * t_)) - 0.04               # 밑면이 도리 위에 얹힘
     half_w = (CW + 3.2) / 2
-    rafters(halls, f, L, CW / 2, half_w - 0.3,
-            lambda r: gb + 1.9 * (1 - r / half_w) - 0.18 * math.sin(PI * r / half_w), step=0.6)
-    halls.add(gable_roof(L + 1.2, CW + 3.2, 1.9, sag=0.18), f @ T(0, gb, 0), M['tileGrey'], 1.4)
-    ridge(halls, f, L + 1.0, gb + 1.9)
     # 가운데 누각 (위성사진의 밝은 지붕 칸, x -10 ~ -1)
     px = -5.5 - mid
+    # 누각 기둥(z ±2.7)이 회랑 지붕 폭(±3.7) 안에 있어서 지붕을 뚫고 올라와 있었다.
+    # 실제 한옥 회랑은 누각 자리에서 지붕이 끊기고 누각 지붕이 그 위를 덮는다.
+    slope = lambda r: gb + 1.9 * (1 - r / half_w) - 0.18 * math.sin(PI * r / half_w)
+    GAP = 5.9
+    for (a_, b_) in ((-L / 2 - 0.6, px - GAP), (px + GAP, L / 2 + 0.6)):
+        if b_ - a_ < 1.0:
+            continue
+        sf = f @ T((a_ + b_) / 2, 0, 0)
+        rafters(halls, sf, b_ - a_, CW / 2, half_w - 0.3, slope, step=0.6)
+        halls.add(gable_roof(b_ - a_, CW + 3.2, 1.9, sag=0.18), sf @ T(0, gb, 0), M['tileGrey'], 1.4)
+        ridge(halls, sf, b_ - a_ - 0.2, gb + 1.9)
+    def gable_board(bm):                                      # 끊긴 자리를 막는 박공 마구리 (삼각 판)
+        vs = [bm.verts.new(p) for p in ((-half_w, 0, -0.06), (half_w, 0, -0.06), (0, 1.9, -0.06),
+                                        (-half_w, 0, 0.06), (half_w, 0, 0.06), (0, 1.9, 0.06))]
+        bm.faces.new([vs[i] for i in (0, 1, 2)])
+        bm.faces.new([vs[i] for i in (5, 4, 3)])
+        for q in ((0, 3, 4, 1), (1, 4, 5, 2), (0, 2, 5, 3)):
+            bm.faces.new([vs[i] for i in q])
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+
+    for s_ in (-1, 1):
+        halls.add(gable_board, f @ T(px + s_ * GAP, gb, 0, PI / 2), M['rafter'], 1.2)
     for x in (px - 3.5, px + 3.5):
         for z in (-CW / 2 - 0.6, CW / 2 + 0.6):
             halls.add(cyl(0.3, 0.32, 5.4, 16), f @ T(x, 0.4 + 2.7, z), M['vermilion'], 1)
@@ -1049,27 +1067,59 @@ foh_glow.build()
 #    그 밖에 석양(石羊) 한 점, 탑 앞 당간지주형 표석, 북동 모서리 연못의 금룡이 있다.
 stones = Assembly('site_stones', C_STATIC)
 stones_glow = Assembly('site_stones_emissive', C_EMIT)
-M_STONE = mat('siteGranite', None, (0.62, 0.61, 0.58), 0.85)
+# 새하얗게 떠 보여서 사진의 화강암 회색으로 낮추고 석재 결을 넣었다
+M_STONE = mat('siteGranite', 'granite_tile_03', (0.30, 0.295, 0.275), 0.92, normal=0.6)
 M_GOLD = mat('siteGold', None, (0.66, 0.5, 0.18), 0.35, 0.85)
 M_REDBAR = mat('siteRedBar', None, (0.42, 0.07, 0.06), 0.8)
 M_LGLOW = mat('siteLanternGlow', None, (1, 0.8, 0.55), 0.5, emit=(1.0, 0.75, 0.45), emit_strength=4)
 
 
 def lion_lantern(x, z, h=3.1):
-    """쌍사자 석등 — 등을 맞댄 사자 두 마리가 화사석을 인다 (법주사 쌍사자석등 사본)"""
+    """쌍사자 석등 (법주사 쌍사자석등 형식) — 팔각 지대석·복련 하대석 위에 등을 맞댄
+       사자 두 마리가 앙련 상대석을 이고, 그 위 팔각 화사석(화창 넷)과 처마가 들린
+       팔각 옥개석, 꼭대기에 보주. 전에는 상자 몸통에 공 하나 얹은 정도였다."""
     f = T(x, 0, z)
-    stones.add(cyl(0.62, 0.62, 0.12, 8), f @ T(0, 0.06, 0), M_STONE, 1)              # 팔각 지대석
-    stones.add(cyl(0.44, 0.5, 0.26, 8), f @ T(0, 0.25, 0), M_STONE, 1)               # 하대석 (연꽃)
-    for sgn in (-1, 1):                                                              # 사자 두 마리
-        lf = f @ T(sgn * 0.17, 0.38, 0, 0, 0, sgn * 0.08)
-        stones.add(bevel_box(0.26, 0.82, 0.4, 0.06), lf @ T(0, 0.41, 0), M_STONE, 1)
-        stones.add(sphere(0.17, 3), lf @ T(0, 0.92, 0.06, 0, 0, 0, 0.9, 1.0, 1.1), M_STONE)
-        stones.add(cyl(0.07, 0.05, 0.34, 6), lf @ T(0, 0.3, -0.24, 0.5), M_STONE, 1)  # 꼬리
-    stones.add(cyl(0.42, 0.42, 0.14, 8), f @ T(0, 1.36, 0), M_STONE, 1)              # 상대석
-    stones.add(cyl(0.4, 0.4, 0.62, 8), f @ T(0, 1.74, 0), M_STONE, 1)                # 화사석 (불집)
-    stones.add(cyl(0.72, 0.28, 0.3, 8), f @ T(0, 2.2, 0), M_STONE, 1)                # 옥개석
-    stones.add(sphere(0.13, 3), f @ T(0, 2.46, 0), M_STONE)                          # 보주
-    stones_glow.add(cyl(0.3, 0.3, 0.5, 8), f @ T(0, 1.74, 0), M_LGLOW, 1)
+    OCT = PI / 8
+    stones.add(cyl(0.68, 0.68, 0.14, 8), f @ T(0, 0.07, 0, OCT), M_STONE, 1)             # 팔각 지대석
+    stones.add(_sq(1.06, 0.86, 0.14, 8), f @ T(0, 0.21, 0, OCT), M_STONE, 1)             # 하대석 굄
+    stones.add(_sq(0.86, 0.50, 0.26, 8), f @ T(0, 0.41, 0, OCT), M_STONE, 1)             # 복련 (엎은 연꽃)
+    for i in range(8):                                                                   # 연꽃잎 여덟 장
+        a = OCT + i * PI / 4
+        stones.add(sphere(0.115, 2), f @ T(0.35 * math.sin(a), 0.36, 0.35 * math.cos(a),
+                   a, 0, 0, 1.0, 0.62, 0.55), M_STONE)
+    for sgn in (-1, 1):                                                                  # 등을 맞댄 사자 두 마리
+        lf = f @ T(sgn * 0.165, 0.54, 0, 0, 0, sgn * 0.06)
+        stones.add(bevel_box(0.235, 0.60, 0.40, 0.07), lf @ T(0, 0.32, -0.02), M_STONE, 1)   # 몸통
+        stones.add(bevel_box(0.22, 0.30, 0.20, 0.06), lf @ T(0, 0.70, 0.07, 0, -0.30), M_STONE, 1)  # 가슴
+        stones.add(sphere(0.155, 3), lf @ T(0, 0.90, 0.10, 0, 0, 0, 0.95, 1.0, 1.05), M_STONE)      # 갈기
+        stones.add(bevel_box(0.115, 0.115, 0.13, 0.04), lf @ T(0, 0.86, 0.20), M_STONE, 1)          # 주둥이
+        for sx_ in (-0.075, 0.075):                                                                  # 앞다리
+            stones.add(cyl(0.045, 0.05, 0.40, 8), lf @ T(sx_, 0.20, 0.17, 0, 0.12), M_STONE, 1)
+            stones.add(bevel_box(0.09, 0.05, 0.13, 0.02), lf @ T(sx_, 0.02, 0.22), M_STONE, 1)       # 발
+        stones.add(cyl(0.05, 0.035, 0.36, 6), lf @ T(0, 0.34, -0.22, 0.55), M_STONE, 1)              # 꼬리
+    stones.add(_sq(0.52, 0.86, 0.22, 8), f @ T(0, 1.52, 0, OCT), M_STONE, 1)             # 앙련 상대석
+    for i in range(8):
+        a = OCT + i * PI / 4
+        stones.add(sphere(0.105, 2), f @ T(0.33 * math.sin(a), 1.52, 0.33 * math.cos(a),
+                   a, 0, 0, 1.0, 0.58, 0.5), M_STONE)
+    stones.add(cyl(0.48, 0.48, 0.07, 8), f @ T(0, 1.66, 0, OCT), M_STONE, 1)             # 화사석 받침
+    HS, HH = 0.40, 0.60                                                                  # 화사석: 기둥 여덟 + 벽 넷
+    for i in range(8):
+        a = OCT + i * PI / 4
+        stones.add(box(0.075, HH, 0.075), f @ T(HS * math.sin(a), 1.70 + HH / 2, HS * math.cos(a), a), M_STONE, 1)
+    for i in range(4):
+        a = OCT + (i * 2 + 1) * PI / 4 - PI / 8
+        stones.add(box(0.30, HH, 0.07), f @ T((HS - 0.02) * math.sin(a), 1.70 + HH / 2, (HS - 0.02) * math.cos(a), a), M_STONE, 1)
+    stones.add(cyl(0.46, 0.46, 0.06, 8), f @ T(0, 1.70 + HH + 0.03, 0, OCT), M_STONE, 1)  # 화사석 갑
+    ry_ = 1.70 + HH + 0.06
+    stones.add(_sq(0.96, 0.92, 0.09, 8), f @ T(0, ry_ + 0.045, 0, OCT), M_STONE, 1)      # 옥개석 처마
+    stones.add(_sq(0.92, 0.30, 0.30, 8), f @ T(0, ry_ + 0.24, 0, OCT), M_STONE, 1)       # 낙수면
+    for i in range(8):                                                                   # 처마 귀 반전
+        a = OCT + i * PI / 4
+        stones.add(bevel_box(0.14, 0.07, 0.11, 0.025), f @ T(0.44 * math.sin(a), ry_ + 0.10, 0.44 * math.cos(a), a, 0, -0.30), M_STONE, 1)
+    stones.add(_sq(0.26, 0.14, 0.07, 8), f @ T(0, ry_ + 0.42, 0, OCT), M_STONE, 1)       # 노반
+    stones.add(sphere(0.115, 3), f @ T(0, ry_ + 0.54, 0), M_STONE)                       # 보주
+    stones_glow.add(cyl(0.30, 0.30, HH - 0.06, 8), f @ T(0, 1.70 + HH / 2, 0, OCT), M_LGLOW, 1)
 
 
 def stone_ram(x, z, ry=0.0):
@@ -1109,20 +1159,65 @@ def gold_dragon_pool(x, z):
     stones.add(sphere(0.2, 3), f @ T(-2.0, 1.05, 0.0, 0, 0, 0, 1.3, 0.9, 0.9), M_GOLD)
 
 
+def _sq(bot, top, h, seg=4):
+    """정사각 뿔대 (밑변 bot, 윗변 top). seg=8 이면 팔각."""
+    k = math.sqrt(2) if seg == 4 else 1.0 / math.cos(PI / seg)
+    return cyl(top * k / 2, bot * k / 2, h, seg)
+
+
+def _roof_stone(asm, f, y, w, steps=5, rise=0.30, lip=0.07):
+    """옥개석 — 밑에 층급받침 여러 단, 위에 낙수면, 네 귀퉁이 살짝 들림"""
+    for k in range(steps):                                                   # 층급받침 (아래로 갈수록 좁다)
+        sw = w - 0.24 + k * 0.24 / steps
+        asm.add(box(sw, 0.055, sw), f @ T(0, y + 0.028 + k * 0.055, 0), M_STONE, 1)
+    y0 = y + steps * 0.055
+    asm.add(box(w, lip, w), f @ T(0, y0 + lip / 2, 0), M_STONE, 1)           # 처마 끝 (수평 띠)
+    asm.add(_sq(w - 0.05, w * 0.42, rise), f @ T(0, y0 + lip + rise / 2, 0, PI / 4), M_STONE, 1)   # 낙수면
+    for sx in (-1, 1):                                                       # 네 귀퉁이 반전 (전각)
+        for sz in (-1, 1):
+            asm.add(bevel_box(0.20, 0.10, 0.20, 0.03),
+                    f @ T(sx * (w / 2 - 0.10), y0 + lip + 0.05, sz * (w / 2 - 0.10), 0, 0, sz * sx * 0.22), M_STONE, 1)
+    return y0 + lip + rise
+
+
+def _body_stone(asm, f, y, w, hh):
+    """탑신 — 네 귀퉁이에 우주(모서리 기둥)를 얕게 새긴다"""
+    asm.add(box(w, hh, w), f @ T(0, y + hh / 2, 0), M_STONE, 1)
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            asm.add(box(0.10, hh - 0.04, 0.10), f @ T(sx * (w / 2 - 0.03), y + hh / 2, sz * (w / 2 - 0.03)), M_STONE, 1)
+    return y + hh
+
+
 def three_storey_pagoda(x, z, h=4.6):
-    """삼층석탑 — 기단 + 3층 옥개석 + 상륜부 (잔디 가장자리, 만찬석 뒤로 보인다)"""
+    """삼층석탑 — 통일신라식 이중기단 + 3층 탑신·옥개석 + 상륜부.
+       전에는 상자를 다섯 개 쌓고 공을 얹은 것뿐이었다 (층급받침·우주·전각이 없었다)."""
     f = T(x, 0, z)
-    stones.add(box(2.0, 0.26, 2.0), f @ T(0, 0.13, 0), M_STONE, 1)
-    stones.add(box(1.5, 0.5, 1.5), f @ T(0, 0.51, 0), M_STONE, 1)
-    y = 0.76
-    for k in range(3):
-        bw = 1.0 - k * 0.16
-        stones.add(box(bw, 0.78 - k * 0.1, bw), f @ T(0, y + (0.78 - k * 0.1) / 2, 0), M_STONE, 1)
-        y += 0.78 - k * 0.1
-        stones.add(box(bw + 0.62, 0.16, bw + 0.62), f @ T(0, y + 0.08, 0), M_STONE, 1)
-        y += 0.2
-    stones.add(cyl(0.12, 0.09, 0.5, 8), f @ T(0, y + 0.25, 0), M_STONE, 1)
-    stones.add(sphere(0.13, 3), f @ T(0, y + 0.58, 0), M_STONE)
+    stones.add(box(2.30, 0.20, 2.30), f @ T(0, 0.10, 0), M_STONE, 1)                     # 지대석
+    y = _body_stone(stones, f, 0.20, 1.92, 0.56)                                         # 하층기단 면석
+    for sx_ in (-0.48, 0.48):                                                            # 하층기단 탱주
+        stones.add(box(0.09, 0.52, 1.94), f @ T(sx_, 0.20 + 0.28, 0), M_STONE, 1)
+        stones.add(box(1.94, 0.52, 0.09), f @ T(0, 0.20 + 0.28, sx_), M_STONE, 1)
+    stones.add(box(2.08, 0.15, 2.08), f @ T(0, y + 0.075, 0), M_STONE, 1)                # 하층기단 갑석
+    y += 0.15
+    y = _body_stone(stones, f, y, 1.46, 0.72)                                            # 상층기단 면석
+    stones.add(box(0.09, 0.68, 1.48), f @ T(0, y - 0.36, 0), M_STONE, 1)                 # 상층기단 탱주
+    stones.add(box(1.48, 0.68, 0.09), f @ T(0, y - 0.36, 0), M_STONE, 1)
+    stones.add(box(1.66, 0.14, 1.66), f @ T(0, y + 0.07, 0), M_STONE, 1)                 # 상층기단 갑석
+    stones.add(_sq(1.66, 1.10, 0.12), f @ T(0, y + 0.20, 0, PI / 4), M_STONE, 1)         # 갑석 위 괴임
+    y += 0.26
+    for k, (bw, bh, rw) in enumerate(((0.98, 0.86, 1.60), (0.80, 0.40, 1.34), (0.66, 0.34, 1.10))):
+        y = _body_stone(stones, f, y, bw, bh)                                            # 탑신
+        y = _roof_stone(stones, f, y, rw, steps=5 - k, rise=0.30 - k * 0.04)             # 옥개석
+    stones.add(box(0.52, 0.12, 0.52), f @ T(0, y + 0.06, 0), M_STONE, 1)                 # 노반
+    stones.add(sphere(0.17, 3), f @ T(0, y + 0.20, 0, 0, 0, 0, 1, 0.7, 1), M_STONE)      # 복발
+    stones.add(_sq(0.46, 0.22, 0.10, 8), f @ T(0, y + 0.33, 0), M_STONE, 1)              # 앙화
+    for k in range(3):                                                                   # 보륜 세 개
+        stones.add(cyl(0.17 - k * 0.02, 0.17 - k * 0.02, 0.05, 12), f @ T(0, y + 0.44 + k * 0.13, 0), M_STONE, 1)
+        stones.add(cyl(0.035, 0.035, 0.13, 8), f @ T(0, y + 0.50 + k * 0.13, 0), M_STONE, 1)
+    stones.add(_sq(0.34, 0.12, 0.09, 8), f @ T(0, y + 0.86, 0), M_STONE, 1)              # 보개
+    stones.add(cyl(0.03, 0.03, 0.16, 8), f @ T(0, y + 0.98, 0), M_STONE, 1)
+    stones.add(sphere(0.10, 3), f @ T(0, y + 1.10, 0), M_STONE)                          # 보주
 
 
 def buddha_triad_stele(x, z, ry=0.0):

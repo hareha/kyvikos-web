@@ -126,10 +126,18 @@ MED = (6, -7.6)  # 무대 앞 동심원 중심 (위성사진 기준점)
 LAWN_PINES = ((22, 8, 4.6), (14.5, 14.5, 2.6))  # 잔디 위 소나무 (x, z, 비울 반지름) — apec_context.py 와 같은 값
 
 
+# apec_context.py 가 잔디 가장자리에 세우는 석조물·카메라 단상 자리 (x, z, 반경).
+# 여기를 비워 두지 않으면 원탁이 석등·석탑을 뚫고 앉는다.
+SITE_OBSTACLES = [(1.0, 14.2, 2.4), (-13.5, 15.6, 2.6), (9.5, 15.2, 2.6),
+                  (-19.5, 13.0, 2.4), (-16.5, 11.0, 1.8), (-21.5, -11.0, 1.8),
+                  (-4.5, 14.9, 3.6), (24.0, 16.5, 3.0)]
+
+
 def on_lawn(x, z, margin=0.0):
     inside = LAWN[0] + margin <= x <= LAWN[1] - margin and LAWN[2] + margin <= z <= LAWN[3] - margin
     clear = all(math.hypot(x - px, z - pz) > r + margin * 0.5 for px, pz, r in LAWN_PINES)
-    return inside and clear and math.hypot(x - TOWER_C[0], z - TOWER_C[1]) > TOWER_R + margin
+    free = all(math.hypot(x - ox, z - oz) > r + margin * 0.5 for ox, oz, r in SITE_OBSTACLES)
+    return inside and clear and free and math.hypot(x - TOWER_C[0], z - TOWER_C[1]) > TOWER_R + margin
 
 
 def paver(px, pz):
@@ -604,17 +612,28 @@ TABLES = []
 # layout_v2 guest_field: 22개 원탁(Ø1.8)이 줄이 아니라 '느슨하게 엇갈린' 격자로 놓이고
 #   사이에 통행 레인이 남으며 잔디 소나무를 피해 돌아간다. 반듯한 격자로 읽히지 않게 흔들어 준다.
 jit = random.Random(11)
+def place(x, z):
+    """막히면 버리지 말고 가까운 빈자리로 밀어 놓는다 (실측 22 개를 채운다)"""
+    if len(TABLES) >= 22:
+        return
+    if on_lawn(x, z, 2.4) and all(math.hypot(x - a, z - b) > 3.4 for a, b in TABLES):
+        TABLES.append((x, z))
+        return
+    for r in (1.2, 2.0, 2.8, 3.6):
+        for k in range(12):
+            a = k * PI / 6
+            nx, nz = x + r * math.cos(a), z + r * math.sin(a)
+            if on_lawn(nx, nz, 2.4) and all(math.hypot(nx - p, nz - q) > 3.4 for p, q in TABLES):
+                TABLES.append((nx, nz))
+                return
+
+
 for row, tz in enumerate((-3, 2.5, 8, 13.5)):
     for tx in (-20, -14, -8, -2):
-        x = tx + (3 if row % 2 else 0) + jit.uniform(-0.7, 0.7)
-        z = tz + jit.uniform(-0.6, 0.6)
-        if on_lawn(x, z, 2.4):
-            TABLES.append((x, z))
+        place(tx + (3 if row % 2 else 0) + jit.uniform(-0.7, 0.7), tz + jit.uniform(-0.6, 0.6))
 for tz in (-3, 2.5, 8, 13.5):
     for tx in (13, 19.5, 26):
-        x, z = tx + jit.uniform(-0.7, 0.7), tz + jit.uniform(-0.6, 0.6)
-        if on_lawn(x, z, 2.4):
-            TABLES.append((x, z))
+        place(tx + jit.uniform(-0.7, 0.7), tz + jit.uniform(-0.6, 0.6))
 print('tables', len(TABLES))
 
 
