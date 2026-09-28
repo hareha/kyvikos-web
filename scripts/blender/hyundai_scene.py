@@ -418,6 +418,14 @@ def pipe_rail(a, b, y, rails=5, h=1.1, asm=None):
 for i in (6, 5, 4):
     pipe_rail(VOID[i], VOID[i - 1], LV['2F'])
 pipe_rail(VOID[3], VOID[2], LV['2F'])
+# 메자닌 슬래브 엣지: 가로 아연도 강관으로 감싼 깊이 0.7m 파시아 (난간이 슬래브 아래로 이어지는 듯 보인다)
+for i in (6, 5, 4, 3):
+    a_, b_ = VOID[i], VOID[i - 1]
+    fr, L_ = seg_frame(a_, b_)
+    for k in range(8):
+        dy = LV['2F'] - 0.08 - k * 0.09
+        g, m = tube(fr @ V((-L_ / 2, dy, 0.02)), fr @ V((L_ / 2, dy, 0.02)), 0.02, 6)
+        bld.add(g, m, M['pipe'])
 
 # ── 대형 스크린 (모따기 안쪽 0.55m, 11.2 × 3.95m, +3.15~+7.10) ─────────────
 SC = B['screen']
@@ -890,10 +898,22 @@ for (slug, cx, cz, yaw, w_) in (('3f_scoupe_ads_wall', -6.8, -1.8, 45, 4.4), ('3
 
 # 설계실 (1980년대 제도실): 흰 판 벽 2.8m (북쪽 열림), 베이지 바닥
 DR = X3['drafting_room']
-(dx0, dz0), _, (dx1, dz1), _ = DR['outline_xz']
+dx0, dx1, dz0, dz1 = L2['3F']['design_room']['box_xz']       # 리플릿 평면도 (9.1 x 3.7)
 prism(expo, [(dx0, dz0), (dx1, dz0), (dx1, dz1), (dx0, dz1)], Y3, Y3 + 0.03, M['vinyl'], 2, bottom=False)
-for (a, b) in (((dx0, dz0), (dx0, dz1)), ((dx0, dz1), (dx1, dz1)), ((dx1, dz1), (dx1, dz0))):
+for (a, b) in (((dx0, dz0), (dx0, dz1)), ((dx0, dz1), (dx1, dz1)), ((dx1, dz1), (dx1, dz0)),
+               ((dx0, dz0), (-6.9, dz0)), ((-5.1, dz0), (dx1, dz0))):     # 북쪽 벽 x=-6.0 에 출입구
     gallery.wall(expo, a, b, 2.8, 0.1, M['creamWall'], y0=Y3)
+for k in range(4):                                            # 봉에 매단 쌍관 형광등 4조 (2.9m)
+    lx = dx0 + 1.6 + k * (dx1 - dx0 - 3.2) / 3
+    lz = (dz0 + dz1) / 2
+    for s_ in (-1, 1):
+        g, m = tube(V((lx + s_ * 0.5, Y3 + 2.9, lz)), V((lx + s_ * 0.5, Y3 + 3.55, lz)), 0.012, 6)
+        expo.add(g, m, M['steelGrey'])
+    expo.add(box(1.3, 0.09, 0.28), T(lx, Y3 + 2.86, lz), M['white'], 1)
+    for s_ in (-1, 1):
+        emit.add(cyl(0.02, 0.02, 1.2, 10), T(lx, Y3 + 2.81, lz + s_ * 0.07, 0, 0, PI / 2), M['ledStrip'])
+    light(C_LIGHT, f'dr_fl_{k}', 'AREA', (lx, Y3 + 2.78, lz), (lx, Y3, lz),
+          energy=110, color=(1.0, 0.98, 0.92), size=1.2)
 for it in DR['contents']:
     nm = it['name']
     cx, cz = it['centre_xz']
@@ -1077,7 +1097,7 @@ camera(C_CAM, 'cam_media', (-6.395 + 0.7 * 10.5, 5.2, -6.569 + 0.714 * 10.5), (-
 camera(C_CAM, 'cam_conveyor', (3.0, LV['2F'] + 1.5, -7.0), (-6.4, 5.4, -6.4), 76)            # 2F_view_conveyor-from-2F
 camera(C_CAM, 'cam_2f_dark', (-6.0, LV['2F'] + 1.6, 5.0), (-6.6, LV['2F'] + 0.9, 12.8), 76)  # 2F_center_dark-room-overview
 camera(C_CAM, 'cam_3f', (3.2, LV['3F'] + 1.4, -9.2), (-2.4, LV['3F'] + 0.95, -5.9), 66)       # 3F_overview_scoupe-toward-archive
-camera(C_CAM, 'cam_drafting', (-5.6, LV['3F'] + 1.6, 6.6), (-5.6, LV['3F'] + 1.2, 13.0), 72)  # 3F_drafting_room-straight
+camera(C_CAM, 'cam_drafting', (-9.6, LV['3F'] + 1.6, 9.95), (-2.6, LV['3F'] + 1.05, 12.6), 70)   # 3F_drafting_room-straight (방을 가로질러)
 camera(C_CAM, 'cam_4f', (1.7, LV['4F'] + 1.5, -8.9), (-3.0, LV['4F'] + 1.0, -4.6), 70)        # 4F_santafe_front-wide-rotators
 camera(C_CAM, 'cam_5f', (1.7, LV['5F'] + 1.45, -8.9), (-3.0, LV['5F'] + 1.0, -4.6), 70)       # 5F_ioniq5_front-wide-lightbox
 scene.camera = bpy.data.objects['cam_1f']
