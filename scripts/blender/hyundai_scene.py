@@ -590,29 +590,37 @@ def light_box(cx, cz, yaw_deg, y_under, w=6.4, d=3.4, r=0.9, th=0.32):
     rig.add(g, m, M['black'])
 
 
-def rotator(cx, cz, axis, span, fy, shell_key, backing=True, panel=None):
-    """로테이터: 끝을 잡는 A자 기둥 두 개(빗금 피복) + 뒤집힌 하부 셸(아랫면이 방을 봄) + 유리 쪽 어두운 패널"""
+def rotator(cx, cz, axis, span, fy, car_key, loaded=True, panel=None):
+    """로테이터 (layout_v2 rotators): 유리 앞 바닥~천장 아연도 기둥 두 개 + 캐리지의 수평 클램프 팔이
+    차의 사이드실을 물고, 긴 축으로 90° 굴려 하부가 실내를 보게 한다. 실려 있는 것은 완성차다
+    (도장·유리·등화·바퀴 모두 있음, 화이트 바디나 하부 셸이 아니다).
+    거리에서 보이는 '노란 걸이에 매달린 차' 그림은 로테이터가 아니라 유리에 인쇄된 필름이다."""
     ax, az = axis
     ry = math.atan2(-az, ax)
     f = T(cx, fy, cz, ry)
-    for s in (-1, 1):
-        post = f @ T(s * span / 2, 0, 0)
-        for k in (-1, 1):
-            g, m = tube(post @ V((0, 0, k * 0.55)), post @ V((0, 1.55, 0)), 0.06, 8, caps=True)
-            expo.add(g, m, M['hazard'])
-        expo.add(box(0.3, 0.3, 0.3), post @ T(0, 1.55, 0), M['steelGrey'], 1)
-        expo.add(box(0.5, 0.05, 1.3), post @ T(0, 0.025, 0), M['steelGrey'], 1)
-    src = car_src(shell_key)
-    # 하부가 실내를 보도록 긴 축으로 90° 굴림 (사진: 'DO NOT TOUCH' 기둥 사이 세워진 하부)
     nz = V((math.sin(ry), 0, math.cos(ry)))
-    side = 1 if nz.dot(V((-cx, 0, -cz))) > 0 else -1
-    h = src.dimensions.z
-    instance(src, C_DYNAMIC, f'shell_{shell_key}_{cx:.0f}_{cz:.0f}_{fy:.0f}', f @ T(0, 1.55, 0, 0, -side * PI / 2) @ T(0, -h / 2, 0))
-    if backing:
-        # 유리 쪽 판: 실내 쪽은 검정, 거리 쪽은 노란 걸이에 매단 차 그림 발광 패널 (야간 외관 사진)
-        expo.add(box(span - 0.6, 2.4, 0.05), f @ T(0, 1.55, -side * 1.1), M['black'], 1)
-        if panel:
-            emit.add(plane(span - 0.7, (span - 0.7) / 2.6), f @ T(0, 1.55, -side * 1.17, PI if side > 0 else 0), gm(panel, 1.4), tile=None)
+    side = 1 if nz.dot(V((-cx, 0, -cz))) > 0 else -1          # +1 이면 로컬 -z 가 유리 쪽
+    for s_ in (-1, 1):                                        # 바닥~천장 기둥 두 개 + 캐리지
+        post = f @ T(s_ * span / 2, 0, 0)
+        expo.add(box(0.26, 4.2, 0.26), post @ T(0, 2.1, 0), M['steelGrey'], 1)
+        expo.add(box(0.5, 0.06, 1.3), post @ T(0, 0.03, 0), M['steelGrey'], 1)
+        expo.add(box(0.34, 0.62, 0.34), post @ T(0, 1.55, 0), M['steelGrey'], 1)     # 캐리지
+        if loaded:                                            # 수평 클램프 팔 + 흰 클램프판
+            arm_l = (span - 4.75) / 2 + 0.35
+            g, m = tube(post @ V((0, 1.55, 0)), post @ V((-s_ * arm_l, 1.55, 0)), 0.05, 8, caps=True)
+            expo.add(g, m, M['steelGrey'])
+            expo.add(bevel_box(0.1, 0.34, 0.5, 0.02), post @ T(-s_ * arm_l, 1.55, 0), M['white'], 1)
+    if loaded:                                                # 완성차를 긴 축으로 90° 굴림
+        src = car_src(car_key)
+        h = src.dimensions.z
+        instance(src, C_DYNAMIC, f'rot_{car_key}_{cx:.0f}_{cz:.0f}_{fy:.0f}',
+                 f @ T(0, 1.55, 0, 0, -side * PI / 2) @ T(0, -h / 2, 0))
+        expo.add(box(4.9, 1.9, 0.05), f @ T(0, 1.55, -side * 1.05), M['black'], 1)   # 차 뒤 검은 판
+    if panel:
+        # 유리에 인쇄된 필름 (7.6 x 2.95, 밑단 FL+0.17). 실내 쪽으로 새는 빛이 아니라 인쇄물이다.
+        gf = f @ T(0, 0, -side * 1.25, 0 if side > 0 else PI)
+        expo.add(plane(7.6, 2.95), gf @ T(0, 0.17 + 2.95 / 2, 0.01), gm(panel), tile=None)
+        expo.add(plane(7.6, 2.95), gf @ T(0, 0.17 + 2.95 / 2, -0.01, PI), gm(panel), tile=None)
 
 
 # ── 1F 〈1억 대의 첫걸음〉 ───────────────────────────────────────
@@ -978,6 +986,8 @@ for FL in ('4F', '5F'):
     for k_, bay in CAR_BAY[FL].items():
         bay_ = BAYS[bay]
         cx, cz = bay_['centre_xz']
+        d_ = math.hypot(cx, cz)                              # 리플릿 좌표(±1.5m)를 로테이터 철골과 겹치지 않게
+        cx, cz = cx - cx / d_ * 1.6, cz - cz / d_ * 1.6      # 실내 쪽으로 1.6m 물림
         yaw = bay_['yaw_deg']
         mw, md = bay_['mat_m']
         blue_cyc(cx, cz, yaw, Y, mw, md)
@@ -1036,10 +1046,15 @@ for k in range(5):
 expo.add(cyl(0.3, 0.3, 0.4, 24), T(bb[0], LV['5F'] + 0.2, bb[1]), material('hyPink', None, srgb('#E9A9B5'), 0.6), 1)
 
 # ── 3~5F 로테이터 (셸 하부가 방을 봄) + 유리 쪽 낮은 강관 레일 ────────────────
-for FL, shell in (('3F', 'elantra'), ('4F', 'santafe'), ('5F', 'ioniq5')):
+#    3층 로테이터는 2024년에 비어 있었다 — 빈 철골만 유리 앞에 서 있고 1990년대 차는 바닥에 있었다.
+ROT_LOAD = {'3F': None, '4F': 'santafe', '5F': 'ioniq5'}
+ROT_SPAN = L2['rotators']['clamp_to_clamp_m']
+for FL in ('3F', '4F', '5F'):
     for rid, r in ROT.items():
         col = {'west': 'left', 'chamfer': 'center', 'north': 'right'}[rid]
-        rotator(*r['centre_xz'], r['axis_dir_xz'], r['clamp_to_clamp_m'], LV[FL], shell, panel=f'rotator_{FL}_{col}')
+        cx_, cz_ = L2['rotators']['centres_xz'][rid]
+        rotator(cx_, cz_, r['axis_dir_xz'], ROT_SPAN[rid], LV[FL], ROT_LOAD[FL] or 'santafe',
+                loaded=ROT_LOAD[FL] is not None, panel=f'rotator_{FL}_{col}')
     for rl in B['rails_at_glass_3F_5F']:
         pipe_rail(rl['from_xz'], rl['to_xz'], LV[FL], rails=2, h=0.45, asm=expo)
 
@@ -1063,8 +1078,8 @@ camera(C_CAM, 'cam_conveyor', (3.0, LV['2F'] + 1.5, -7.0), (-6.4, 5.4, -6.4), 76
 camera(C_CAM, 'cam_2f_dark', (-6.0, LV['2F'] + 1.6, 5.0), (-6.6, LV['2F'] + 0.9, 12.8), 76)  # 2F_center_dark-room-overview
 camera(C_CAM, 'cam_3f', (3.2, LV['3F'] + 1.4, -9.2), (-2.4, LV['3F'] + 0.95, -5.9), 66)       # 3F_overview_scoupe-toward-archive
 camera(C_CAM, 'cam_drafting', (-5.6, LV['3F'] + 1.6, 6.6), (-5.6, LV['3F'] + 1.2, 13.0), 72)  # 3F_drafting_room-straight
-camera(C_CAM, 'cam_4f', (2.0, LV['4F'] + 1.4, 1.7), (-4.0, LV['4F'] + 1.0, -5.5), 74)         # 4F_santafe_front-wide-rotators
-camera(C_CAM, 'cam_5f', (1.6, LV['5F'] + 1.3, 1.4), (-4.0, LV['5F'] + 1.2, -5.0), 74)         # 5F_ioniq5_front-wide-lightbox
+camera(C_CAM, 'cam_4f', (1.7, LV['4F'] + 1.5, -8.9), (-3.0, LV['4F'] + 1.0, -4.6), 70)        # 4F_santafe_front-wide-rotators
+camera(C_CAM, 'cam_5f', (1.7, LV['5F'] + 1.45, -8.9), (-3.0, LV['5F'] + 1.0, -4.6), 70)       # 5F_ioniq5_front-wide-lightbox
 scene.camera = bpy.data.objects['cam_1f']
 scene.render.engine = 'CYCLES'
 scene.cycles.device = 'GPU'
