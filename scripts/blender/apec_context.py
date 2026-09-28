@@ -628,6 +628,8 @@ FLOOR = 4.0
 ROOF_Y = FLOOR * 3
 DEPTH = 0.45        # 기둥·띠가 몸체에서 나온 깊이
 M['granite_clad'] = mat('graniteClad', 'granite_tile_03', (0.86, 0.86, 0.84), 0.7)
+M['winFrame'] = mat('winFrame', None, (0.030, 0.031, 0.034), 0.35, 0.75)      # 짙은 아노다이즈 알루미늄 창틀
+M['winGlass'] = mat('winGlass', None, (0.021, 0.026, 0.033), 0.08, 0.15)      # 짙은 복층유리
 ROOMS = [mat(f'roomGlass_{t}', emit_image=f'{SHOTS}/apec_room_{t}.png', emit_strength=1.1, rough=0.1) for t in 'abc']
 
 
@@ -652,8 +654,20 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3):
         for k in range(n):
             xa = xs[k] + (0.4 if k > 0 else 0)
             xb = xs[k + 1] - (0.4 if k < n - 1 else 0)
-            glow.add(plane(xb - xa, yb - ya), f @ T((xa + xb) / 2, (ya + yb) / 2, -0.3), random.choice(ROOMS), tile=None)
-            asm.add(box(xb - xa, 0.08, 0.3), f @ T((xa + xb) / 2, ya + 0.04, -0.15), M['granite_clad'], 1.2)   # 창대
+            ow, oh = xb - xa, yb - ya
+            cx_, cy_ = (xa + xb) / 2, (ya + yb) / 2
+            glow.add(plane(ow, oh), f @ T(cx_, cy_, -0.34), random.choice(ROOMS), tile=None)
+            # 전에는 발광 판 하나 + 창대뿐이라 멀리서 보면 납작한 네모 불빛이었다.
+            # 실제 연수동은 짙은 알루미늄 창틀에 중간 멀리언·가로 창틀이 들어간 커튼월이다.
+            asm.add(box(ow, oh, 0.012), f @ T(cx_, cy_, -0.20), M['winGlass'], 1)          # 유리면
+            for (bw, bh, by) in ((ow + 0.12, 0.11, ya - 0.03), (ow + 0.12, 0.11, yb + 0.03)):
+                asm.add(box(bw, bh, 0.11), f @ T(cx_, by, -0.15), M['winFrame'], 1)        # 상·하 창틀
+            for sx_ in (xa - 0.05, xb + 0.05):
+                asm.add(box(0.1, oh + 0.16, 0.11), f @ T(sx_, cy_, -0.15), M['winFrame'], 1)   # 좌·우 선틀
+            for j in range(1, max(2, round(ow / 1.35))):                                   # 세로 멀리언
+                asm.add(box(0.07, oh, 0.10), f @ T(xa + j * ow / max(2, round(ow / 1.35)), cy_, -0.155), M['winFrame'], 1)
+            asm.add(box(ow, 0.07, 0.10), f @ T(cx_, ya + oh * 0.62, -0.155), M['winFrame'], 1)   # 가로 창틀
+            asm.add(box(ow + 0.2, 0.09, 0.34), f @ T(cx_, ya - 0.10, -0.17), M['granite_clad'], 1.2)   # 석재 창대
 
 
 def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True):
@@ -957,28 +971,76 @@ glow.build()
 foh = Assembly('foh_corridor', C_STATIC)
 foh_glow = Assembly('foh_emissive', C_EMIT)
 FOH_X, FOH_Z, FOH_Y = -5.5, 19.4, 0.45
-M_OLIVE = mat('fohOlive', 'cotton_jersey', (0.16, 0.19, 0.11), 0.9)
+# 회랑 아래 운영 부스 — onsite_085621_010 / _085619_007 실측.
+# 전에는 상자 몇 개(192면)로 때워 놨었다. 실제로는 올리브색 파티션 패널 줄 +
+# 그 위 전구 줄 + 플라이트 케이스에 올린 조명 콘솔 + 스탠드 PGM 모니터 +
+# 노트북 올린 접이 테이블 + 쌓아 둔 랙 케이스 + 접이 의자다.
+M_OLIVE = mat('fohOlive', 'cotton_jersey', (0.115, 0.135, 0.075), 0.92, normal=0.5)
+M_ALU = mat('fohAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8)
 M_DESK = mat('fohDesk', None, (0.08, 0.08, 0.085), 0.5)
-for k in range(9):                                            # 9m 콘솔 줄 (1m 칸)
-    dx = FOH_X - 4.0 + k
-    foh.add(box(0.98, 0.75, 0.8), T(dx, FOH_Y + 0.375, FOH_Z), M_DESK, 1)
-    foh.add(box(1.0, 0.04, 0.84), T(dx, FOH_Y + 0.77, FOH_Z), M_DESK, 1)
-    if k in (1, 3, 5, 7):                                     # 콘솔 페이더 판 (살짝 기울여)
-        foh.add(box(0.9, 0.05, 0.5), T(dx, FOH_Y + 0.82, FOH_Z - 0.1, 0, -0.18), M['consoleBody'], 1)
-        for j in range(9):
-            foh_glow.add(box(0.02, 0.012, 0.02), T(dx - 0.36 + j * 0.09, FOH_Y + 0.87, FOH_Z - 0.22, 0, -0.18),
-                     mat('fohLed', None, (0.4, 1, 0.5), 0.4, emit=(0.3, 1.0, 0.4), emit_strength=4))
-    if k in (0, 2, 4, 6, 8):                                  # 모니터
-        foh.add(box(0.62, 0.38, 0.03), T(dx, FOH_Y + 1.06, FOH_Z + 0.32, 0, 0, 0.12), M_DESK, 1)
-        foh_glow.add(plane(0.58, 0.34), T(dx, FOH_Y + 1.06, FOH_Z + 0.30, 0, 0, 0.12),
-                 mat('fohScreen', None, (0.5, 0.6, 0.8), 0.3, emit=(0.35, 0.5, 0.85), emit_strength=2.2), tile=None)
-for (a_, b_) in (((FOH_X - 4.8, FOH_Z - 1.1), (FOH_X + 4.8, FOH_Z - 1.1)),
-                 ((FOH_X + 4.8, FOH_Z - 1.1), (FOH_X + 4.8, FOH_Z + 1.6))):
-    fr, L_ = seg_frame(a_, b_) if 'seg_frame' in dir() else (T((a_[0] + b_[0]) / 2, 0, (a_[1] + b_[1]) / 2,
-             math.atan2(-(b_[1] - a_[1]), b_[0] - a_[0])), math.dist(a_, b_))
-    foh.add(box(L_, 1.8, 0.04), fr @ T(0, FOH_Y + 0.9, 0), M_OLIVE, 2)     # 올리브 초록 칸막이
-for k in range(3):                                            # 랙 세 대
-    foh.add(box(0.6, 1.3, 0.75), T(FOH_X + 5.6, FOH_Y + 0.65, FOH_Z - 0.4 + k * 0.8), M_DESK, 1)
+M_TABLE = mat('fohTable', None, (0.62, 0.60, 0.56), 0.6)
+M_BULB = mat('fohBulb', None, (1.0, 0.86, 0.6), 0.3, emit=(1.0, 0.82, 0.52), emit_strength=22)
+
+
+def foh_panel(f):
+    """파티션 한 짝 1.2 x 1.0m: 알루미늄 테두리 + 올리브 천 + 밑에 받침발"""
+    foh.add(box(1.2, 1.0, 0.035), f @ T(0, 0.5, 0), M_OLIVE, 1)
+    for (yy, hh, ww) in ((0.985, 0.03, 1.22), (0.015, 0.03, 1.22)):
+        foh.add(box(ww, hh, 0.045), f @ T(0, yy, 0), M_ALU, 1)
+    for sx in (-0.6, 0.6):
+        foh.add(box(0.03, 1.0, 0.045), f @ T(sx, 0.5, 0), M_ALU, 1)
+        foh.add(box(0.05, 0.02, 0.26), f @ T(sx, 0.01, 0), M_ALU, 1)
+
+
+def foh_table(f, w=1.5):
+    """접이 테이블 — 상판 + X 다리"""
+    foh.add(box(w, 0.035, 0.68), f @ T(0, 0.735, 0), M_TABLE, 1)
+    foh.add(box(w - 0.04, 0.05, 0.05), f @ T(0, 0.70, 0), M_ALU, 1)
+    for sx in (-w / 2 + 0.16, w / 2 - 0.16):
+        for sz in (-1, 1):
+            g_, m_ = tube(f @ V((sx, 0.70, sz * 0.28)), f @ V((sx, 0.0, sz * 0.32)), 0.016, 6)
+            foh.add(g_, m_, M_ALU)
+        g_, m_ = tube(f @ V((sx, 0.70, -0.28)), f @ V((sx, 0.0, 0.32)), 0.014, 6)
+        foh.add(g_, m_, M_ALU)
+
+
+def foh_laptop(f):
+    """노트북 (화면 발광)"""
+    foh.add(box(0.34, 0.015, 0.24), f, M_DESK, 1)
+    lid = f @ T(0, 0.005, -0.12, 0, -1.85)
+    foh.add(box(0.34, 0.012, 0.23), lid @ T(0, 0, 0.115), M_DESK, 1)
+    foh_glow.add(plane(0.31, 0.20), lid @ T(0, 0.008, 0.115), M['uiVideo'], tile=None)
+
+
+PZ = FOH_Z - 1.15
+for k in range(8):                                            # 회랑 앞을 막은 파티션 줄
+    foh_panel(T(FOH_X - 4.2 + k * 1.22, FOH_Y, PZ))
+for k in range(3):                                            # 오른쪽으로 꺾인 세 짝
+    foh_panel(T(FOH_X + 5.02, FOH_Y, PZ + 0.61 + k * 1.22, PI / 2))
+for k in range(11):                                           # 파티션 위에 늘어뜨린 전구 줄
+    bx = FOH_X - 4.6 + k * 1.02
+    sag = 0.10 * math.sin(PI * (k % 2 + 0.5) / 2)
+    foh.add(cyl(0.012, 0.012, 0.07, 8), T(bx, FOH_Y + 1.30 - sag, PZ - 0.02), M_DESK, 1)
+    foh_glow.add(sphere(0.045, 2), T(bx, FOH_Y + 1.24 - sag, PZ - 0.02), M_BULB)
+    light(C_LIGHT, f'foh_bulb_{k}', 'POINT', (bx, FOH_Y + 1.24 - sag, PZ - 0.02),
+          energy=26, color=(1.0, 0.82, 0.55), size=0.05)
+
+gear.road_case(foh, T(FOH_X - 2.6, FOH_Y, FOH_Z + 0.1), M, 1.35, 0.72, 0.78)   # 콘솔 받침 케이스
+gear.lighting_console(foh, T(FOH_X - 2.6, FOH_Y + 0.72, FOH_Z + 0.1, PI), M, foh_glow)
+gear.program_monitor(foh, T(FOH_X - 5.0, FOH_Y, PZ + 0.5), M, foh_glow, M['uiVideo'],
+                     height=1.62, w=1.18, hgt=0.68, facing=0.0)                # 스탠드 PGM 모니터
+for (tx, tz, tw) in ((FOH_X + 0.6, FOH_Z + 0.2, 1.5), (FOH_X + 2.3, FOH_Z + 0.35, 1.5),
+                     (FOH_X - 4.9, FOH_Z + 0.5, 1.2)):
+    foh_table(T(tx, FOH_Y, tz))
+    foh_laptop(T(tx - 0.3, FOH_Y + 0.755, tz - 0.03, 0.15))
+gear.program_monitor(foh, T(FOH_X + 0.9, FOH_Y + 0.77, FOH_Z - 0.12), M, foh_glow, M['uiAudio'],
+                     height=0.46, w=0.54, hgt=0.33, facing=0.0)
+gear.video_switcher(foh, T(FOH_X + 2.4, FOH_Y + 0.77, FOH_Z + 0.3, PI), M, foh_glow)
+for k in range(3):                                            # 쌓아 둔 랙 케이스
+    gear.road_case(foh, T(FOH_X + 4.3, FOH_Y + k * 0.56, FOH_Z + 0.2), M, 0.62, 0.55, 0.72, handles=(k == 2))
+for (cx_, cz_, cr) in ((FOH_X - 2.6, FOH_Z + 1.1, PI), (FOH_X + 0.7, FOH_Z + 1.2, PI),
+                       (FOH_X + 2.4, FOH_Z + 1.3, PI + 0.2)):
+    gear.folding_chair(foh, T(cx_, FOH_Y, cz_, cr), M)
 foh.build()
 foh_glow.build()
 
