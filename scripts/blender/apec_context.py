@@ -952,6 +952,36 @@ needles.build()
 leaves.build()
 glow.build()
 
+# ── FOH: 회랑 가운데 누각 아래 콘솔 줄 (layout_v2 #14) ─────────────────────────
+#    현장 사진의 오퍼레이터 줄은 신평루가 아니라 잔디를 마주 보는 회랑 누각 아래에 있었다.
+foh = Assembly('foh_corridor', C_STATIC)
+foh_glow = Assembly('foh_emissive', C_EMIT)
+FOH_X, FOH_Z, FOH_Y = -5.5, 19.4, 0.45
+M_OLIVE = mat('fohOlive', 'cotton_jersey', (0.16, 0.19, 0.11), 0.9)
+M_DESK = mat('fohDesk', None, (0.08, 0.08, 0.085), 0.5)
+for k in range(9):                                            # 9m 콘솔 줄 (1m 칸)
+    dx = FOH_X - 4.0 + k
+    foh.add(box(0.98, 0.75, 0.8), T(dx, FOH_Y + 0.375, FOH_Z), M_DESK, 1)
+    foh.add(box(1.0, 0.04, 0.84), T(dx, FOH_Y + 0.77, FOH_Z), M_DESK, 1)
+    if k in (1, 3, 5, 7):                                     # 콘솔 페이더 판 (살짝 기울여)
+        foh.add(box(0.9, 0.05, 0.5), T(dx, FOH_Y + 0.82, FOH_Z - 0.1, 0, -0.18), M['consoleBody'], 1)
+        for j in range(9):
+            foh_glow.add(box(0.02, 0.012, 0.02), T(dx - 0.36 + j * 0.09, FOH_Y + 0.87, FOH_Z - 0.22, 0, -0.18),
+                     mat('fohLed', None, (0.4, 1, 0.5), 0.4, emit=(0.3, 1.0, 0.4), emit_strength=4))
+    if k in (0, 2, 4, 6, 8):                                  # 모니터
+        foh.add(box(0.62, 0.38, 0.03), T(dx, FOH_Y + 1.06, FOH_Z + 0.32, 0, 0, 0.12), M_DESK, 1)
+        foh_glow.add(plane(0.58, 0.34), T(dx, FOH_Y + 1.06, FOH_Z + 0.30, 0, 0, 0.12),
+                 mat('fohScreen', None, (0.5, 0.6, 0.8), 0.3, emit=(0.35, 0.5, 0.85), emit_strength=2.2), tile=None)
+for (a_, b_) in (((FOH_X - 4.8, FOH_Z - 1.1), (FOH_X + 4.8, FOH_Z - 1.1)),
+                 ((FOH_X + 4.8, FOH_Z - 1.1), (FOH_X + 4.8, FOH_Z + 1.6))):
+    fr, L_ = seg_frame(a_, b_) if 'seg_frame' in dir() else (T((a_[0] + b_[0]) / 2, 0, (a_[1] + b_[1]) / 2,
+             math.atan2(-(b_[1] - a_[1]), b_[0] - a_[0])), math.dist(a_, b_))
+    foh.add(box(L_, 1.8, 0.04), fr @ T(0, FOH_Y + 0.9, 0), M_OLIVE, 2)     # 올리브 초록 칸막이
+for k in range(3):                                            # 랙 세 대
+    foh.add(box(0.6, 1.3, 0.75), T(FOH_X + 5.6, FOH_Y + 0.65, FOH_Z - 0.4 + k * 0.8), M_DESK, 1)
+foh.build()
+foh_glow.build()
+
 # ── 잔디에서 보이는 석조물 (assets-src/refs/apec/_notes_site_permanent.md) ────────
 #    황룡원에 해태상은 없다. 잔디에서 보이는 사자 조각은 쌍사자 석등 하나뿐이고,
 #    그 밖에 석양(石羊) 한 점, 탑 앞 당간지주형 표석, 북동 모서리 연못의 금룡이 있다.
@@ -1017,7 +1047,36 @@ def gold_dragon_pool(x, z):
     stones.add(sphere(0.2, 3), f @ T(-2.0, 1.05, 0.0, 0, 0, 0, 1.3, 0.9, 0.9), M_GOLD)
 
 
+def three_storey_pagoda(x, z, h=4.6):
+    """삼층석탑 — 기단 + 3층 옥개석 + 상륜부 (잔디 가장자리, 만찬석 뒤로 보인다)"""
+    f = T(x, 0, z)
+    stones.add(box(2.0, 0.26, 2.0), f @ T(0, 0.13, 0), M_STONE, 1)
+    stones.add(box(1.5, 0.5, 1.5), f @ T(0, 0.51, 0), M_STONE, 1)
+    y = 0.76
+    for k in range(3):
+        bw = 1.0 - k * 0.16
+        stones.add(box(bw, 0.78 - k * 0.1, bw), f @ T(0, y + (0.78 - k * 0.1) / 2, 0), M_STONE, 1)
+        y += 0.78 - k * 0.1
+        stones.add(box(bw + 0.62, 0.16, bw + 0.62), f @ T(0, y + 0.08, 0), M_STONE, 1)
+        y += 0.2
+    stones.add(cyl(0.12, 0.09, 0.5, 8), f @ T(0, y + 0.25, 0), M_STONE, 1)
+    stones.add(sphere(0.13, 3), f @ T(0, y + 0.58, 0), M_STONE)
+
+
+def buddha_triad_stele(x, z, ry=0.0):
+    """삼존불 석비 — 기단 위 판석에 삼존불 부조"""
+    f = T(x, 0, z, ry)
+    stones.add(box(2.6, 0.3, 1.0), f @ T(0, 0.15, 0), M_STONE, 1)
+    stones.add(box(2.2, 2.5, 0.36), f @ T(0, 1.55, 0), M_STONE, 1)
+    for (sx_, sh) in ((-0.62, 1.2), (0.0, 1.5), (0.62, 1.2)):        # 삼존 부조 (얕게 돋은 세 몸)
+        stones.add(bevel_box(0.44, sh, 0.1, 0.12), f @ T(sx_, 0.75 + sh / 2, 0.2), M_STONE, 1)
+        stones.add(sphere(0.16, 3), f @ T(sx_, 0.78 + sh, 0.2), M_STONE)
+
+
 lion_lantern(1.0, 14.2)                    # 잔디 북동쪽 가장자리, 신평루 쪽 — 만찬석에서 보인다
+three_storey_pagoda(-13.5, 15.6)           # 잔디 가장자리 (회랑 쪽) 삼층석탑
+three_storey_pagoda(9.5, 15.2)
+buddha_triad_stele(-19.5, 13.0, 0.7)       # 삼존불 석비
 stone_ram(-16.5, 11.0, 0.6)                # 잔디 동남 모서리 화강석 보도 위
 danggan_marker(-21.5, -11.0, 1.57)         # 중도타워 잔디 쪽 기단 정면 축
 gold_dragon_pool(24.0, 16.5)               # 잔디 북동 모서리 반사 연못
