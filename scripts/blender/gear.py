@@ -58,37 +58,42 @@ def pyramid_heater(asm, frame, M, glass=None, emit=None):
             asm.add(bevel_box(0.07, 0.035, 0.07, 0.008), frame @ T(sx * (B0 - 0.05), 0.017, sz * (B0 - 0.05)), s)
     for sx in (-1, 1):                                                                 # 모서리 스테인리스 기둥 (통으로 테이퍼)
         for sz in (-1, 1):
-            gm, mm = tube(frame @ V((sx * B0, 0.03, sz * B0)), frame @ V((sx * B2, HC, sz * B2)), 0.019, 4)
+            gm, mm = tube(frame @ V((sx * B0, 0.03, sz * B0)), frame @ V((sx * B1, HB, sz * B1)), 0.018, 4)
             asm.add(gm, mm, s)
+            gm, mm = tube(frame @ V((sx * B1, HB, sz * B1)), frame @ V((sx * B2, HC, sz * B2)), 0.011, 4)
+            asm.add(gm, mm, s)                                                         # 케이지 구간은 가늘게
     asm.add(_frustum(B0 - 0.012, B1 - 0.012, HB - 0.03, 4), frame @ T(0, (HB - 0.03) / 2 + 0.03, 0, PI / 4), body)   # 크림 패널 몸통
     asm.add(cyl(0.016, 0.016, 0.26, 12), frame @ T(0, 0.60, B1 + 0.035, 0, PI / 2), s)         # 앞면 가로 크롬 손잡이
     for sx in (-1, 1):
         asm.add(cyl(0.012, 0.012, 0.05, 8), frame @ T(sx * 0.12, 0.60, B1 + 0.012), s)
     asm.add(bevel_box(0.07, 0.035, 0.012, 0.004), frame @ T(B1 + 0.012, 0.66, 0.0, 0, 0, 0, 1, 1, 1), M['black'])   # 옆면 점검구
     asm.add(bevel_box(2 * B1 + 0.03, 0.025, 2 * B1 + 0.03, 0.006), frame @ T(0, HB, 0), s)     # 몸통 상단 판
-    for k in range(10):                                                                # 철망 케이지: 가로 링 열 개
-        t = k / 9
-        y = HB + 0.05 + t * (HC - HB - 0.09)
+    # 철망은 가늘고 성기게. 전에는 굵은 살을 촘촘히 넣어 흰 기둥 덩어리로 뭉쳐 보였다.
+    wire = M.get('heaterMesh', s)
+    for k in range(7):                                                                 # 가로 링 일곱
+        t = k / 6
+        y = HB + 0.06 + t * (HC - HB - 0.11)
         hw = B1 + (B2 - B1) * (y - HB) / (HC - HB)
-        for (ax, az, ww, dd) in ((0, hw, 2 * hw, 0.008), (0, -hw, 2 * hw, 0.008), (hw, 0, 0.008, 2 * hw), (-hw, 0, 0.008, 2 * hw)):
-            asm.add(box(ww, 0.009, dd), frame @ T(ax, y, az), s)
-    for i in range(12):                                                                # 세로 철사
-        u = (i % 3 + 1) / 4 * 2 - 1
-        side = i // 3
-        p0 = V((u * B1, HB + 0.05, B1)) if side == 0 else V((u * B1, HB + 0.05, -B1)) if side == 1 else \
-            V((B1, HB + 0.05, u * B1)) if side == 2 else V((-B1, HB + 0.05, u * B1))
-        p1 = V((u * B2, HC - 0.04, B2)) if side == 0 else V((u * B2, HC - 0.04, -B2)) if side == 1 else \
-            V((B2, HC - 0.04, u * B2)) if side == 2 else V((-B2, HC - 0.04, u * B2))
-        gm, mm = tube(frame @ p0, frame @ p1, 0.005, 4)
-        asm.add(gm, mm, s)
-    asm.add(_frustum(0.23, 0.05, 0.13, 4), frame @ T(0, HC + 0.065, 0, PI / 4), s)             # 밖으로 벌어진 갓
-    asm.add(bevel_box(0.47, 0.016, 0.47, 0.006), frame @ T(0, HC + 0.008, 0), s)               # 갓 아래 립
-    asm.add(bevel_box(0.075, 0.05, 0.075, 0.008), frame @ T(0, HC + 0.155, 0), s)              # 꼭지
-    asm.add(sphere(0.022, 2), frame @ T(0, HC + 0.195, 0), s)
+        for (ax, az, ww, dd) in ((0, hw, 2 * hw, 0.005), (0, -hw, 2 * hw, 0.005), (hw, 0, 0.005, 2 * hw), (-hw, 0, 0.005, 2 * hw)):
+            asm.add(box(ww, 0.006, dd), frame @ T(ax, y, az), wire)
+    for i in range(8):                                                                 # 세로 철사 (면마다 둘)
+        u = (i % 2) * 2 - 1
+        side = i // 2
+        p0 = V((u * B1 * 0.5, HB + 0.06, B1)) if side == 0 else V((u * B1 * 0.5, HB + 0.06, -B1)) if side == 1 else \
+            V((B1, HB + 0.06, u * B1 * 0.5)) if side == 2 else V((-B1, HB + 0.06, u * B1 * 0.5))
+        p1 = V((u * B2 * 0.5, HC - 0.05, B2)) if side == 0 else V((u * B2 * 0.5, HC - 0.05, -B2)) if side == 1 else \
+            V((B2, HC - 0.05, u * B2 * 0.5)) if side == 2 else V((-B2, HC - 0.05, u * B2 * 0.5))
+        gm, mm = tube(frame @ p0, frame @ p1, 0.0035, 4)
+        asm.add(gm, mm, wire)
+    # 갓: 접시처럼 퍼진 원뿔이 아니라 작고 뾰족한 사각 피라미드 + 꼭지
+    asm.add(bevel_box(0.42, 0.014, 0.42, 0.005), frame @ T(0, HC + 0.012, 0), s)               # 갓 아래 립
+    asm.add(_frustum(0.40, 0.06, 0.18, 4), frame @ T(0, HC + 0.11, 0, PI / 4), s)
+    asm.add(bevel_box(0.065, 0.045, 0.065, 0.007), frame @ T(0, HC + 0.222, 0), s)             # 꼭지
+    asm.add(sphere(0.020, 2), frame @ T(0, HC + 0.258, 0), s)
     if glass is not None:
-        glass.add(cyl(0.062, 0.062, 1.14, 24), frame @ T(0, HB + 0.62, 0), g)
-    if emit is not None:
-        emit.add(cyl(0.024, 0.032, 1.0, 12), frame @ T(0, HB + 0.56, 0), f)
+        glass.add(cyl(0.050, 0.050, 1.10, 20), frame @ T(0, HB + 0.60, 0), g)
+    if emit is not None:                                                               # 불꽃을 굵고 길게 (밖에서 보이게)
+        emit.add(cyl(0.030, 0.042, 1.06, 12), frame @ T(0, HB + 0.58, 0), f)
 
 
 # ── 연설대 ──────────────────────────────────────────────────────

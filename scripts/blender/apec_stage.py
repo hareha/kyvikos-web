@@ -88,6 +88,7 @@ M = {
     'stainless': material('stainless', None, (0.8, 0.81, 0.82), 0.22, 1.0),
     'cladPanel': material('apCladPanel', image_base=f'{SHOTS}/apec_clad_panel.png', rough=0.72),   # 실제 사진에서 뜬 벽체 인쇄면
     'grating': material('grating', None, (0.045, 0.046, 0.05), 0.55, 0.7),   # 발판 강재 그레이팅
+    'heaterMesh': material('heaterMesh', None, (0.10, 0.10, 0.105), 0.55, 0.65),   # 히터 철망 (밝은 크롬이 아니라 어두운 강선)
     'heaterBody': material('heaterBody', None, (0.84, 0.81, 0.70), 0.42),   # 히터 크림색 철판 (kakao 16)
     'flame': material('flame', None, (1, 0.5, 0.15), emit=(1.0, 0.5, 0.15), emit_strength=70),
     'sign': material('sign', emit_image=f'{SHOTS}/apec_real_sign.png', emit_strength=0.35, rough=0.5),
@@ -700,13 +701,8 @@ glass.build(smooth=True)
 # layout_v2 #13: 피라미드 히터가 주류지만 버섯형(돔) 히터도 몇 대 섞여 있었다
 M['heaterCream'] = material('heaterCream', None, (0.86, 0.84, 0.78), 0.5)
 extra = Assembly('extra_kit', C_STATIC)
-for (hx, hz) in ((-3.0, 6.5), (11.0, 3.0), (18.0, -2.0), (-12.0, 1.0)):
-    hf = T(hx, 0.12, hz)
-    extra.add(cyl(0.22, 0.3, 0.05, 20), hf @ T(0, 0.025, 0), M['heaterCream'], 1)
-    extra.add(cyl(0.06, 0.06, 1.95, 12), hf @ T(0, 0.98, 0), M['heaterCream'], 1)
-    extra.add(cyl(0.12, 0.12, 0.42, 16), hf @ T(0, 2.06, 0), M['steelGrey'] if 'steelGrey' in M else M['heaterCream'], 1)
-    extra.add(cyl(0.44, 0.06, 0.16, 24), hf @ T(0, 2.34, 0), M['heaterCream'], 1)      # 반사 돔
-    emit.add(cyl(0.11, 0.11, 0.3, 16), hf @ T(0, 2.06, 0), M['flame'])
+# 여기 있던 버섯형 히터 네 대는 옛 버전이다. 현장은 오벨리스크형 한 종류뿐이고
+# 그건 heaters 어셈블리(gear.pyramid_heater)가 이미 세운다 — 접시 달린 옛 것은 지운다.
 
 # layout_v2 #15: 백스테이지 쪽에 깔린 어두운 바닥 보호 매트 (행사 당일에도 남아 있었다)
 M['groundMat'] = material('groundMat', None, (0.14, 0.15, 0.13), 0.9)

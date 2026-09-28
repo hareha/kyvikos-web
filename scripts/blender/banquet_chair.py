@@ -103,16 +103,16 @@ def build(coll, cover_mat, sash_mat, name='banquet_chair'):
     # 2) 원단 곡면: 리메시(물 샐 틈 없는 한 겹) → 스무딩 → 1cm 부풀림 → 감축
     m = cover.modifiers.new('remesh', 'REMESH')
     m.mode = 'VOXEL'
-    m.voxel_size = 0.008
+    m.voxel_size = 0.0065
     m = cover.modifiers.new('smooth', 'CORRECTIVE_SMOOTH')
-    m.iterations = 18
+    m.iterations = 6      # 18 은 등받이 모서리까지 뭉개서 둥근 덩어리가 됐다
     m.smooth_type = 'LENGTH_WEIGHTED'
     m.use_only_smooth = True
     m = cover.modifiers.new('inflate', 'DISPLACE')
     m.strength = 0.004
     m.mid_level = 0.0
     m = cover.modifiers.new('decimate', 'DECIMATE')
-    m.ratio = 0.08
+    m.ratio = 0.20        # 0.08 은 의자 형태가 남지 않는다
     _apply_modifiers(cover)
     bpy.data.objects.remove(base, do_unlink=True)
     cover.data.materials.append(cover_mat)
