@@ -150,31 +150,22 @@ def paver(px, pz):
     ground.add(bevel_box(0.52, 0.05, 0.52, 0.01), T(px, 0.11, pz, random.uniform(-0.05, 0.05)), M['paver'], 0.55)
 
 
-# 무대 앞 디딤돌 — 사진(항공)에 그대로 남아 있는 원래 패턴이다:
-#   무대 앞에 동심 원호로 판석이 깔리고, 거기서 객석 쪽으로 엇갈린 판석이 퍼져 나가며 성겨진다.
-#   격자로 반듯하게 깔면 안 된다 (한 번 그렇게 덮어 버렸다).
-def slab(px, pz, ang=0.0, w=0.92, d=0.46):
-    if not on_lawn(px, pz, 0.2):
-        return
-    ground.add(bevel_box(w, 0.05, d, 0.01), T(px, 0.11, pz, ang + random.uniform(-0.03, 0.03)), M['paver'], 0.55)
-
-
-rnd = random.Random(23)
-for r in (2.5, 3.6, 4.7, 5.8, 6.9):                     # 동심 원호 다섯 겹 (객석 쪽으로 열린다)
-    n = max(6, int(2 * PI * r * 0.62 / 1.18))
-    for k in range(n):
-        ang = -1.18 + 2.36 * k / (n - 1)                # 무대를 등지고 객석 쪽 부채꼴
-        slab(MED[0] + r * math.sin(ang), MED[1] + r * math.cos(ang), -ang)
-for ri in range(7):                                     # 원호에서 퍼져 나가는 엇갈린 디딤돌 (뒤로 갈수록 성겨진다)
-    rr = 8.0 + ri * 1.25
-    n = max(4, int(11 - ri * 1.1))
-    for k in range(n):
-        ang = -1.05 + 2.10 * (k + (0.5 if ri % 2 else 0.0)) / max(1, n - 1)
-        if rnd.random() < 0.10 + ri * 0.055:            # 뒤로 갈수록 듬성듬성
-            continue
-        slab(MED[0] + rr * math.sin(ang) + rnd.uniform(-0.3, 0.3),
-             MED[1] + rr * math.cos(ang) + rnd.uniform(-0.3, 0.3), -ang)
-# 회랑에서 잔디로 나오는 짧은 진입 동선
+# 원래 배치 그대로. 지우는 것은 '중앙으로 뻗어나가는' 두 줄과 가운데 원판뿐이다.
+# (한 번은 이 일대를 통째로 지웠고, 한 번은 벽돌 격자로 덮었다. 둘 다 내가 지어낸 것이다.)
+# 무대 앞을 가로지르는 흰 디딤돌 두 줄
+x = -24.0
+while x <= 34:
+    if abs(x - MED[0]) > 4.1:
+        paver(x, MED[1] - 0.35)
+        paver(x + 0.35, MED[1] + 0.35)
+    x += 0.7
+# 앞쪽으로 뻗는 동선 두 줄 — 중앙에서 뻗어나가는 부분이라 뺀다
+# 동심원 패턴: 끊어진 고리 세 겹 (가운데 원판은 실제에 없어 뺀다)
+for r0, r1, count in ((1.45, 1.9, 12), (2.35, 2.75, 20), (3.15, 3.45, 28)):
+    span = 2 * PI / count
+    for i in range(count):
+        a = i * span
+        ground.add(ring_segment(r0, r1, a + span * 0.1, a + span * 0.9, 0.12), T(MED[0], 0.075, MED[1]), M['paver'], 1.2)
 ground.build()
 
 outer = Assembly('outer', C_RENDER_ONLY)
