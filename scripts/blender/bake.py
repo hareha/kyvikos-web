@@ -33,7 +33,10 @@ bake.margin_type = 'EXTEND'
 NAME = CFG.get('name', 'apec_stage')   # 다른 행사장: BAKE={'name': 'hyundai', 'groups': {...}}
 GROUPS = CFG.get('groups') or {
     'ground': (['ground'], CFG.get('ground_size', 4096)),
-    'objects': (['stage', 'roof', 'tables', 'heaters', 'sign', 'lanterns', 'backstage'], CFG.get('objects_size', 4096)),
+    # 여기 빠진 오브젝트는 웹에서 라이트맵 그룹이 없다고 보고 텍스처를 아예 안 붙인다.
+    # stage_kit(클래딩 타워)이 빠져 있어서 인쇄면이 흰 판으로 나왔다.
+    'objects': (['stage', 'roof', 'tables', 'heaters', 'sign', 'lanterns', 'backstage',
+                 'stage_kit', 'extra_kit', 'foh_corridor', 'site_stones'], CFG.get('objects_size', 4096)),
     'pagoda': (['pagoda'], CFG.get('pagoda_size', 4096)),
     'halls': (['halls', 'garden', 'pines'], CFG.get('halls_size', 4096)),
     'yeonsu_ne': (['yeonsu_ne'], CFG.get('yeonsu_size', 4096)),
@@ -122,8 +125,22 @@ for o in hidden:
 
 MANIFEST = f'{OUT}/{NAME}.json'
 if CFG.get('export_only'):
+    # 라이트맵은 옛 것을 그대로 쓰되, 오브젝트-그룹 대응표는 지금 씬 기준으로 다시 만든다.
+    # 전에는 옛 json 을 통째로 읽어 써서, 어셈블리 이름을 바꾸면(backstage -> stage_kit)
+    # 그 덩어리가 "그룹 없음" 이 되고 웹에서 인쇄면이 흰 판으로 나왔다.
     with open(MANIFEST) as f:
         manifest = json.load(f)
+    manifest['objects'], manifest['materials'] = {}, {}
+    for name, (names, size) in GROUPS.items():
+        for o in [bpy.data.objects[n] for n in names if n in bpy.data.objects]:
+            manifest['objects'][o.name] = name
+            for m in o.data.materials:
+                manifest['materials'][m.name] = name
+    missing = [o.name for o in bpy.data.objects
+               if o.type == 'MESH' and o.name not in manifest['objects']
+               and any(c.name == 'STATIC' for c in o.users_collection)]
+    if missing:
+        print('WARNING: GROUPS 에 빠진 STATIC 오브젝트 ->', missing)
 else:
     manifest = {'groups': {}, 'materials': {}, 'objects': {}}
     for name, (names, size) in GROUPS.items():

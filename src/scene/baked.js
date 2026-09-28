@@ -152,11 +152,13 @@ export async function loadBakedScene(root, name, { context = [] } = {}) {
         envMapIntensity: 1.6,
       });
     } else {
+      // web.image 를 여기서 빠뜨리면, 라이트맵 그룹에 안 들어간 오브젝트는
+      // 인쇄면이 통째로 흰 판으로 나온다 (stage_kit 이 그랬다). 안전망으로 같이 본다.
       material = new THREE.MeshStandardMaterial({
-        color,
+        color: web.image ? new THREE.Color('#ffffff') : color,
         roughness: web.rough ?? 0.6,
         metalness: web.metal ?? 0,
-        map: web.tex ? library(web.tex) : null,
+        map: web.image ? graphic(web.image) : web.tex ? library(web.tex) : null,
       });
     }
     mesh.material = revealable(material);
