@@ -399,74 +399,88 @@ line_array(T(X1 - 1.2, 0, FRONT - 1.0))
 M['cladNavy'] = material('apCladNavy', None, (0.026, 0.038, 0.125), 0.72)   # 남색 클래딩 (#2E3C6B, cladtower_8)
 
 
-def clad_tower(f, w=3.0, d=2.6, h=3.3, cam=True, mover=True, face_graphic=True, aim=None):
-    """남색으로 감싼 비계 기둥 + 윗면 그레이팅 발판에 무빙라이트·중계카메라.
-       client_cladtower_8.jpg 실측: 벽체 3.3m, 발판이 무대 쪽으로 조금 내밀고,
-       그 위 난간 두 줄(무대 쪽은 비움), 발판에 무빙헤드 한 대 + ENG 카메라 한 대."""
+def side_tower(f, w=6.4, h=3.3, d=2.4, floods=5, aim=None):
+    """남색 클래딩 벽체 + 윗면 그레이팅 발판 + 그 위 비계 프레임에 워시·무빙·중계카메라.
+
+    위치를 두 번 틀렸다. 잔디 한가운데(x -8.5 / 20.5)가 아니다.
+    client_cladtower_10 왼쪽: 벽체가 연수동 석조 아케이드에 딱 붙어 서 있고 프레임에 워시 넷.
+    client_cladtower_8:      같은 것을 가까이서 — 발판·난간·무빙헤드·ENG 카메라가 다 보인다.
+    onsite_085824_023:       반대쪽 것은 중도타워 정면에 붙어 있다.
+    로컬 +z 가 잔디(테이블) 쪽이다 — 그래픽과 워시가 그리로 향한다. 무빙헤드와 중계카메라는
+    발판에서 무대를 보므로, 벽체 방향과 상관없이 무대 좌표를 보고 각을 따로 계산한다."""
     boh.add(bevel_box(w, h, d, 0.02), f @ T(0, h / 2, 0), M['cladNavy'], 1)
-    if face_graphic:                                                   # 무대 반대쪽(관객이 보는 면)에 APEC·경상북도
-        boh.add(plane(w - 0.12, h - 0.5), f @ T(0, h / 2 + 0.1, d / 2 + 0.012), M['sign'], tile=None)
-    boh.add(box(0.9, 2.0, 0.04), f @ T(w / 2 - 0.55, 1.0, -d / 2 - 0.022), M['cladNavy'], 1)   # 옆면 출입문
-    boh.add(cyl(0.02, 0.02, 0.12, 8), f @ T(w / 2 - 0.15, 1.05, -d / 2 - 0.05, 0, PI / 2), M['scaffold'], 1)
+    boh.add(plane(w - 0.5, h - 0.7), f @ T(0, h / 2 + 0.05, d / 2 + 0.012), M['sign'], tile=None)
+    for s_ in (-1, 1):                                                  # 좌우 면 로고 (cladtower_10 왼쪽 끝)
+        boh.add(plane(d - 0.5, h - 1.3), f @ T(s_ * (w / 2 + 0.012), h / 2 + 0.05, 0, s_ * PI / 2), M['sign'], tile=None)
+    boh.add(box(0.04, 2.0, 0.9), f @ T(w / 2 + 0.022, 1.0, -d / 2 + 0.6), M['cladNavy'], 1)   # 옆면 출입문
     for (sx, sz) in ((-w / 2 + 0.12, -d / 2 + 0.12), (w / 2 - 0.12, -d / 2 + 0.12),
                      (-w / 2 + 0.12, d / 2 - 0.12), (w / 2 - 0.12, d / 2 - 0.12)):
         boh.add(cyl(0.024, 0.024, h + 1.65, 8), f @ T(sx, (h + 1.65) / 2, sz), M['scaffold'], 1)
-    dd = d + 0.5                                                        # 발판은 무대 쪽(-z)으로 0.5m 내민다
+    dd = d + 0.5                                                        # 발판은 잔디 쪽(+z)으로 0.5m 내민다
     for k in range(14):                                                 # 윗면 그레이팅 발판
-        boh.add(box(w - 0.16, 0.04, (dd - 0.2) / 14 - 0.02), f @ T(0, h + 0.02, -dd + 0.14 + d / 2 + k * (dd - 0.2) / 14), M['scaffold'], 1)
-    for k in (0, 1):                                                    # 상부 난간 두 줄 (무대 쪽은 비워 둔다)
+        boh.add(box(w - 0.16, 0.04, (dd - 0.2) / 14 - 0.02), f @ T(0, h + 0.02, -d / 2 + 0.14 + k * (dd - 0.2) / 14), M['scaffold'], 1)
+    for k in (0, 1):                                                    # 상부 난간 두 줄 (잔디 쪽 한 변만 비워 둔다)
         yy = h + 0.62 + k * 0.5
-        for (a_, b_) in (((-w / 2, d / 2), (w / 2, d / 2)), ((-w / 2, -d / 2), (-w / 2, d / 2)), ((w / 2, -d / 2), (w / 2, d / 2))):
+        for (a_, b_) in (((-w / 2, -d / 2), (w / 2, -d / 2)), ((-w / 2, -d / 2), (-w / 2, dd - d / 2)), ((w / 2, -d / 2), (w / 2, dd - d / 2))):
             g, m = tube(f @ V((a_[0], yy, a_[1])), f @ V((b_[0], yy, b_[1])), 0.018, 6)
             boh.add(g, m, M['scaffold'])
-    if mover:                                                           # 무빙헤드 (실제 프롭, 무대 쪽 앞 모서리)
-        boh.add(mesh_source(SRC_MOVER), f @ T(w / 2 - 0.6, h + 0.28, -d / 2 - 0.1), list(SRC_MOVER.data.materials))
-        pos = f @ V((w / 2 - 0.6, h + 0.72, -d / 2 - 0.1))
-        light(C_LIGHT, f'clad_mover_{round(pos.x, 1)}_{round(pos.z, 1)}', 'SPOT', pos[:],
-              aim or (CX, 2.0, FRONT - 2), energy=900, color=(0.35, 0.55, 1.0), spot=0.22, blend=0.4, size=0.05)
-    if cam:                                                             # 중계카메라 (삼각대 + 본체 + 렌즈 후드)
-        cx_, cz_ = -w / 2 + 0.6, -d / 2 - 0.05
-        boh.add(cyl(0.035, 0.035, 1.25, 8), f @ T(cx_, h + 0.65, cz_), M['black'], 1)
+    for yy in (h + 1.18, h + 1.62):                                     # 워시 다는 가로 장선
+        g, m = tube(f @ V((-w / 2 + 0.12, yy, 0.1)), f @ V((w / 2 - 0.12, yy, 0.1)), 0.019, 6)
+        boh.add(g, m, M['scaffold'])
+    for k in range(floods):                                             # 워시 (따뜻한 색, 테이블로 내려쏜다)
+        lx = (k - (floods - 1) / 2) * (w - 1.6) / max(1, floods - 1)
+        boh.add(mesh_source(SRC_WASH), f @ T(lx, h + 1.5, 0.3, 0, PI / 2 + 0.45), list(SRC_WASH.data.materials))   # 테이블(+z)·아래를 봄
+        pos = f @ V((lx, h + 1.4, 0.55))
+        tgt = f @ V((lx, 0.9, 9.0))
+        light(C_LIGHT, f'sidewash_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], tgt[:],
+              energy=1500, color=(1.0, 0.84, 0.6), spot=0.85, blend=0.6, size=0.22)
+    # 발판 위 무빙헤드 + 중계카메라 — 무대(aim)를 보도록 각을 따로 계산한다
+    tx_, ty_, tz_ = aim or (CX, 2.0, FRONT - 2.0)
+    for (ex, kind) in ((-1, 'mover'), (1, 'cam')):
+        p = f @ V((ex * (w / 2 - 0.75), h, 0.15))
+        yaw = math.atan2(-(tx_ - p.x), -(tz_ - p.z))                    # 로컬 -z 가 무대를 보게
+        g_ = T(p.x, 0, p.z, yaw)
+        if kind == 'mover':
+            boh.add(mesh_source(SRC_MOVER), g_ @ T(0, h + 0.28, 0), list(SRC_MOVER.data.materials))
+            light(C_LIGHT, f'sidemover_{round(p.x, 1)}', 'SPOT', (p.x, h + 0.72, p.z),
+                  (tx_, ty_, tz_), energy=900, color=(0.35, 0.55, 1.0), spot=0.22, blend=0.4, size=0.05)
+            continue
+        boh.add(cyl(0.035, 0.035, 1.25, 8), g_ @ T(0, h + 0.65, 0), M['black'], 1)   # 삼각대 기둥
         for sgn in (-1, 1):
-            g, m = tube(f @ V((cx_, h + 0.9, cz_)), f @ V((cx_ + sgn * 0.35, h + 0.04, cz_ + sgn * 0.2)), 0.016, 6)
-            boh.add(g, m, M['black'])
-        cf = f @ T(cx_, h + 1.42, cz_)
+            gg, mm = tube(g_ @ V((0, h + 0.9, 0)), g_ @ V((sgn * 0.35, h + 0.04, sgn * 0.2)), 0.016, 6)
+            boh.add(gg, mm, M['black'])
+        cf = g_ @ T(0, h + 1.42, 0)
         boh.add(bevel_box(0.3, 0.26, 0.62, 0.02), cf, M['black'], 1)
         boh.add(cyl(0.1, 0.11, 0.34, 16), cf @ T(0, 0.02, -0.44, 0, PI / 2), M['black'], 1)
         boh.add(box(0.2, 0.14, 0.02), cf @ T(0.2, 0.06, 0.1, 0, 0, 0.25), M['black'], 1)
 
 
-def flood_wall(f, w=6.4, h=3.2, d=1.1, n=5):
-    """중도타워 정면을 가리고 선 낮고 넓은 남색 가벽 + 그 위 비계 프레임에 워시 다섯 대.
-       onsite_090013_030 / _085633_027 / client_cladtower_9·10: 만찬 테이블을 정면으로 씻어 준다."""
+def cam_riser(f, w=3.6, d=2.6, h=1.0):
+    """무대를 정면으로 보는 낮은 중계카메라 단상 — client_cladtower_10 오른쪽:
+       회랑 열주 앞 잔디에 놓인 낮은 남색 단상 + 그 위 삼각대 카메라. 옆 벽체보다 훨씬 낮다."""
     boh.add(bevel_box(w, h, d, 0.02), f @ T(0, h / 2, 0), M['cladNavy'], 1)
-    boh.add(plane(w - 0.4, h - 0.7), f @ T(0, h / 2 + 0.05, d / 2 + 0.012), M['sign'], tile=None)
-    for sx in (-w / 2 + 0.2, -w / 6, w / 6, w / 2 - 0.2):                # 비계 기둥 네 대
-        for sz in (-d / 2 + 0.1, d / 2 - 0.1):
-            boh.add(cyl(0.024, 0.024, h + 0.75, 8), f @ T(sx, (h + 0.75) / 2, sz), M['scaffold'], 1)
-    for yy in (h + 0.3, h + 0.72):                                       # 가로 장선 두 줄
-        for sz in (-d / 2 + 0.1, d / 2 - 0.1):
-            g, m = tube(f @ V((-w / 2 + 0.2, yy, sz)), f @ V((w / 2 - 0.2, yy, sz)), 0.019, 6)
-            boh.add(g, m, M['scaffold'])
-    for k in range(n):                                                   # 워시 다섯 대 (따뜻한 색, 테이블로 내려쏨)
-        lx = (k - (n - 1) / 2) * (w - 1.4) / (n - 1)
-        boh.add(mesh_source(SRC_WASH), f @ T(lx, h + 0.52, 0, 0, -0.55), list(SRC_WASH.data.materials))
-        pos = f @ V((lx, h + 0.45, d / 2 + 0.1))
-        tgt = f @ V((lx, 0.8, d / 2 + 9.0))                              # 앞(그래픽 면) 잔디로 내려쏜다
-        light(C_LIGHT, f'flood_{k}_{round(pos.x, 1)}', 'SPOT', pos[:], tgt[:],
-              energy=1400, color=(1.0, 0.84, 0.6), spot=0.9, blend=0.6, size=0.25)
+    for k in range(9):                                                   # 윗면 합판 발판
+        boh.add(box(w - 0.1, 0.05, (d - 0.1) / 9 - 0.02), f @ T(0, h + 0.025, -d / 2 + 0.08 + k * (d - 0.1) / 9), M['black'], 1)
+    for s_ in (-1, 1):                                                   # 뒤·옆 낮은 난간 한 줄
+        g, m = tube(f @ V((s_ * w / 2, h + 0.95, -d / 2)), f @ V((s_ * w / 2, h + 0.95, d / 2)), 0.018, 6)
+        boh.add(g, m, M['scaffold'])
+        boh.add(cyl(0.022, 0.022, 0.95, 8), f @ T(s_ * w / 2, h + 0.48, d / 2), M['scaffold'], 1)
+        boh.add(cyl(0.022, 0.022, 0.95, 8), f @ T(s_ * w / 2, h + 0.48, -d / 2), M['scaffold'], 1)
+    g, m = tube(f @ V((-w / 2, h + 0.95, d / 2)), f @ V((w / 2, h + 0.95, d / 2)), 0.018, 6)
+    boh.add(g, m, M['scaffold'])
+    for k in range(2):                                                   # 계단 두 단 (뒤쪽)
+        boh.add(box(1.1, h * (k + 1) / 2, 0.32), f @ T(w / 2 - 0.8, h * (k + 1) / 4, d / 2 + 0.48 - k * 0.32), M['cladNavy'], 1)
+    tripod_cam(f @ T(-0.4, h + 0.05, -0.2), h=1.35)
 
 
-# 무대를 보는 양옆에 하나씩 (client_cladtower_8.jpg) — 잔디 좌우, 무대 쪽 면을 비워 둔다
-clad_tower(T(-8.5, 0, -5.0, -0.5))
-clad_tower(T(20.5, 0, -5.0, 0.5))
-# 무대를 정면으로 마주 보는 낮은 중계카메라 단상 (사용자 지적: 옆 두 기둥보다 낮다)
-clad_tower(T(CX + 1.0, 0, FRONT + 21.0, PI), w=5.4, d=2.4, h=2.2, mover=False)
-# 중도타워(기단 동쪽 면 x=-24) 정면, 계단 북쪽으로 비켜 선 워시 가벽 — 잔디 쪽(+x)을 향한다
-flood_wall(T(-22.2, 0, -1.5, PI / 2))      # 기단 계단(z -16.5~-5.5) 을 비켜 북쪽으로
+# 잔디 좌우 긴 변, 건물에 붙여 하나씩 — 무대 쪽 면을 비우고 테이블 쪽에 그래픽
+side_tower(T(-22.4, 0, -2.0, PI / 2), floods=5)      # 서쪽: 중도타워 기단(동쪽 면 x=-24) 앞, 잔디(+x)를 본다
+side_tower(T(34.6, 0, -1.0, -PI / 2), floods=4)      # 동쪽: 연수동 석조 아케이드(잔디 끝 x=35) 앞, 잔디(-x)를 본다
+# 무대를 정면으로 보는 낮은 중계카메라 단상 — 회랑(z≈19) 열주 앞 잔디
+cam_riser(T(1.5, 0, 14.6, PI))
 # 무대 정면 잔디에 세운 중계카메라 두 대 (onsite_090013_030)
-tripod_cam(T(CX - 3.2, 0, FRONT + 4.6, 0.12))
-tripod_cam(T(CX + 2.4, 0, FRONT + 5.4, -0.08))
+tripod_cam(T(CX - 3.2, 0, FRONT + 4.6, PI + 0.12))
+tripod_cam(T(CX + 2.4, 0, FRONT + 5.4, PI - 0.08))
 for k in range(5):                                                  # 5 x 5m 몽골텐트 (실측), 무대 뒤에 맞붙여 다섯 동
     marquee(T(CX - 10.4 + k * 5.2, 0, ZB - 4.6), 5.0, 5.0, eave=2.2, ridge=3.3)
 boh.build()
