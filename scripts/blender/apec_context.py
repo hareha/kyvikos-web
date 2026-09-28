@@ -1325,6 +1325,39 @@ def buddha_triad_stele(x, z, ry=0.0):
     stones.add(sphere(0.12, 3), f @ T(0, 3.32, 0), M_STONE)                                       # 보주
 
 
+def stone_dome(x, z, r=11.0, drum=5.6, dome=7.6, ry=0.0):
+    """석굴암을 본뜬 돔 구조물 — 원통 드럼 위에 반구 돔, 잔디 쪽으로 낸 출입 포치.
+       (바닥 원판만 그려 놓고 본체를 빼먹었다.)"""
+    f = T(x, 0, z, ry)
+    M_D = mat('domeStone', 'granite_tile_03', (0.62, 0.62, 0.60), 0.8, normal=0.4)
+    stones.add(cyl(r + 2.6, r + 2.6, 0.45, 64), f @ T(0, 0.22, 0), M['terrace'], 1.6)      # 기단 포장
+    for k in range(3):                                                                      # 기단 세 단
+        stones.add(cyl(r + 1.9 - k * 0.5, r + 1.9 - k * 0.5, 0.3, 64), f @ T(0, 0.45 + k * 0.3, 0), M['granite'], 1.5)
+    stones.add(cyl(r, r, drum, 64), f @ T(0, 1.35 + drum / 2, 0), M_D, 2.0)                  # 드럼
+    for yy in (1.35 + drum * 0.34, 1.35 + drum * 0.68):                                      # 드럼 가로 줄눈
+        stones.add(cyl(r + 0.10, r + 0.10, 0.10, 64), f @ T(0, yy, 0), M_D, 1.2)
+    stones.add(cyl(r + 0.45, r + 0.25, 0.55, 64), f @ T(0, 1.35 + drum + 0.2, 0), M['granite'], 1.5)   # 처마 돌림띠
+
+    def half_dome(bm):                                                                      # 반구 (아래 절반을 자른다)
+        bmesh.ops.create_uvsphere(bm, u_segments=48, v_segments=24, radius=1.0)
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -0.02], context='VERTS')
+
+    stones.add(lambda bm: (half_dome(bm), bmesh.ops.scale(bm, vec=(r, dome, r), verts=bm.verts))[0],
+               f @ T(0, 1.35 + drum + 0.45, 0), M_D, 2.4)
+    stones.add(cyl(1.1, 0.7, 0.9, 24), f @ T(0, 1.35 + drum + 0.45 + dome - 0.2, 0), M['granite'], 1.2)   # 정상 채광부
+    stones.add(sphere(0.55, 3), f @ T(0, 1.35 + drum + 0.45 + dome + 0.5, 0), M['granite'])
+    pf = f @ T(0, 0, r - 0.4)                                                               # 잔디 쪽 출입 포치
+    stones.add(box(7.4, 4.6, 4.2), pf @ T(0, 1.35 + 2.3, 2.1), M_D, 1.6)
+    stones.add(box(8.2, 0.5, 4.8), pf @ T(0, 1.35 + 4.7, 2.1), M['granite'], 1.5)
+    stones.add(box(3.2, 3.4, 0.3), pf @ T(0, 1.35 + 1.7, 4.2), M['black'], 1)                # 출입구
+    for k in range(4):                                                                       # 포치 앞 계단
+        stones.add(box(6.0, 0.34, 0.5), pf @ T(0, 1.35 - 0.17 - k * 0.34, 4.5 + k * 0.5), M['granite'], 1.5)
+    light(C_LIGHT, f'dome_up_{round(x)}', 'SPOT', (x, 0.6, z + r + 5.0), (x, drum + 4, z),
+          energy=2200, color=(1.0, 0.92, 0.78), spot=0.7, blend=0.5, size=0.3)
+
+
+stone_dome(-30.0, -50.0, ry=0.55)          # 중도타워 기단(중심 -43,-11 / 반경 27.5) 밖, 무대 왼편 뒤
+
 # 회랑에서 잔디로 나오는 포장길 (클라이언트 사진). 입구 석수는 생략 — 형태가 복잡해 뺀다.
 PATH_X, PATH_W = 4.6, 3.2
 for k in range(9):                                                                                # 큰 판석 포장
