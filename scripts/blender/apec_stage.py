@@ -462,7 +462,8 @@ def side_tower(f, w=5.6, h=3.6, d=2.4, floods=6, aim=None):
 
     치수는 클라이언트 사진(kakao 11·13·14)에서 잰 값이다. 잔디에 선 파라솔 히터(2.2m)와
     벽체 앞에 선 사람(1.75m)을 자로 썼다 — 벽체 약 5.6 x 3.6m, 프레임 꼭대기 5.3m.
-    프레임에는 조명이 두 대씩 세 짝, 모두 여섯 대. 한쪽 끝에 검은 우비를 씌운 기구 하나.
+    박스 위에 비계 1단(폭의 0.27 높이)을 얹고, 앞 장선에 4구 블라인더 네 조,
+    그 아래 무빙헤드 세 대, 프레임 중간 발판 위에 우비 씌운 중계카메라를 올린다.
     잔디 한가운데가 아니라 양옆 건물 앞이다.
     로컬 +z 가 잔디(테이블) 쪽 — 그래픽과 블라인더가 그리로 향한다. 무빙헤드·중계카메라는
     벽체 방향과 상관없이 무대 좌표를 보고 각을 따로 계산한다."""
@@ -483,7 +484,7 @@ def side_tower(f, w=5.6, h=3.6, d=2.4, floods=6, aim=None):
     boh.add(bevel_box(w + 0.16, 0.05, d + 0.16, 0.015), f @ T(0, h + PAR - 0.05, 0), M['cladNavy'], 1)   # 파라펫 갓
     for (sx, sz) in ((-w / 2 + 0.16, -d / 2 + 0.16), (w / 2 - 0.16, -d / 2 + 0.16),
                      (-w / 2 + 0.16, d / 2 - 0.16), (w / 2 - 0.16, d / 2 - 0.16)):
-        boh.add(cyl(0.026, 0.026, h + 1.95, 8), f @ T(sx, (h + 1.95) / 2, sz), M['scaffold'], 1)
+        boh.add(cyl(0.026, 0.026, h + w * 0.27, 8), f @ T(sx, (h + w * 0.27) / 2, sz), M['scaffold'], 1)
     for k in range(12):                                                 # 어두운 강재 그레이팅 (파라펫 안쪽)
         boh.add(box(w - 0.22, 0.045, (d - 0.24) / 12 - 0.025), f @ T(0, h - 0.02, -d / 2 + 0.14 + k * (d - 0.24) / 12), M['grating'], 1)
     for k in range(4):                                                  # 잔디 쪽으로 0.45m 내민 캔틸레버 발판
@@ -496,23 +497,49 @@ def side_tower(f, w=5.6, h=3.6, d=2.4, floods=6, aim=None):
                          ((w / 2 - 0.16, -d / 2 + 0.16), (w / 2 - 0.16, d / 2 - 0.16))):
             g, m = tube(f @ V((a_[0], yy, a_[1])), f @ V((b_[0], yy, b_[1])), 0.018, 6)
             boh.add(g, m, M['scaffold'])
-    for yy in (h + 1.42, h + 1.86):                                     # 조명 다는 2단 가로 장선
-        g, m = tube(f @ V((-w / 2 + 0.16, yy, 0.1)), f @ V((w / 2 - 0.16, yy, 0.1)), 0.021, 6)
-        boh.add(g, m, M['scaffold'])
-    for k in range(floods):                                             # 블라인더 (두 대씩 짝지어 세 짝)
-        pair, side_ = k // 2, k % 2
-        npair = max(1, (floods + 1) // 2)
-        lx = (pair - (npair - 1) / 2) * (w - 1.5) / max(1, npair - 1) + (side_ - 0.5) * 0.52
-        boh.add(mesh_source(SRC_WASH), f @ T(lx, h + 1.76, 0.25, 0, PI / 2 + 0.45), list(SRC_WASH.data.materials))
-        pos = f @ V((lx, h + 1.66, 0.5))
-        tgt = f @ V((lx, 0.9, 9.0))
-        light(C_LIGHT, f'sidewash_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], tgt[:],
-              energy=1500, color=(1.0, 0.84, 0.6), spot=0.85, blend=0.6, size=0.22)
-    # 조명은 두 대씩 세 짝, 모두 여섯 대뿐이다 (클라이언트 확인). 전에는 여기에
-    # 무빙헤드 세 대를 더 매달아 열 대처럼 보였다 — 뺀다.
-    cov = f @ T(w / 2 - 1.0, h + 2.12, -0.1, 0, 0, 0.12)                # 한쪽 끝, 검은 우비 씌운 기구
-    boh.add(bevel_box(0.72, 0.46, 0.9, 0.06), cov, M['black'], 1)
-    boh.add(bevel_box(0.5, 0.3, 0.42, 0.05), cov @ T(0.04, -0.34, 0.2), M['black'], 1)
+    # ── 박스 위 비계 1단 + 조명 리그 ──────────────────────────────────
+    # 클라이언트 사진(19.png)을 4배 확대해 잰 값. 벽체 폭을 1 로 놓으면
+    # 프레임 높이 0.27, 발판은 프레임 중간, 덮개 카메라는 그 발판 위.
+    # 조명은 4구(2x2) 블라인더 네 조, 그 아래 무빙헤드 세 대.
+    RH = w * 0.27                                                       # 프레임 높이 (5.6m 벽체 -> 1.5m)
+    for yy in (h + RH * 0.30, h + RH * 0.72, h + RH):                   # 가로 장선 세 줄 (앞뒤)
+        for zz in (-d / 2 + 0.16, d / 2 - 0.16):
+            g, m = tube(f @ V((-w / 2 + 0.16, yy, zz)), f @ V((w / 2 - 0.16, yy, zz)), 0.021, 6)
+            boh.add(g, m, M['scaffold'])
+    for sx in (-w / 2 + 0.16, w / 2 - 0.16):                            # 양 끝면 가새 (사진의 X 브레이스)
+        for s_ in (-1, 1):
+            g, m = tube(f @ V((sx, h + 0.02, s_ * (d / 2 - 0.16))), f @ V((sx, h + RH, -s_ * (d / 2 - 0.16))), 0.017, 6)
+            boh.add(g, m, M['scaffold'])
+    for k in range(7):                                                  # 프레임 중간 작업 발판 (오른쪽 절반)
+        boh.add(box(w * 0.46, 0.04, (d - 0.36) / 7 - 0.02),
+                f @ T(-w * 0.25, h + RH * 0.74, -d / 2 + 0.2 + k * (d - 0.36) / 7), M['grating'], 1)
+    NB = 4                                                              # 4구 블라인더 네 조
+    for k in range(NB):
+        lx = (k - (NB - 1) / 2) * (w - 1.4) / (NB - 1)
+        bf = f @ T(lx, h + RH * 0.62, d / 2 - 0.30, 0, -0.55)
+        boh.add(bevel_box(0.52, 0.52, 0.22, 0.02), bf, M['black'], 1)   # 4구 몸체
+        for (ox, oy) in ((-0.135, 0.135), (0.135, 0.135), (-0.135, -0.135), (0.135, -0.135)):
+            boh.add(cyl(0.108, 0.108, 0.04, 16), bf @ T(ox, oy, 0.12, 0, PI / 2), M['black'], 1)
+            emit.add(cyl(0.098, 0.098, 0.015, 16), bf @ T(ox, oy, 0.145, 0, PI / 2), M['washLens'])
+        for s_ in (-1, 1):                                              # 요크 + 클램프
+            boh.add(box(0.03, 0.56, 0.05), bf @ T(s_ * 0.28, 0, 0), M['black'], 1)
+        boh.add(cyl(0.028, 0.028, 0.14, 8), f @ T(lx, h + RH * 0.62 + 0.34, d / 2 - 0.30), M['scaffold'], 1)
+        pos = f @ V((lx, h + RH * 0.62, d / 2 - 0.1))
+        light(C_LIGHT, f'sideblind_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], (f @ V((lx, 0.9, 9.0)))[:],
+              energy=2200, color=(1.0, 0.86, 0.66), spot=0.9, blend=0.6, size=0.26)
+    for k in range(3):                                                  # 장선 아래 매단 무빙헤드 셋 (사진대로)
+        lx = (k - 1) * (w - 2.4) / 2 + w * 0.12
+        boh.add(mesh_source(SRC_MOVER), f @ T(lx, h + RH * 0.34, d / 2 - 0.45, 0, PI + 0.35), list(SRC_MOVER.data.materials))
+    for k in range(6):                                                  # 프레임 꼭대기 카메라 발판
+        boh.add(box(w * 0.30, 0.04, (d - 0.4) / 6 - 0.02),
+                f @ T(-w * 0.26, h + RH + 0.02, -d / 2 + 0.22 + k * (d - 0.4) / 6), M['grating'], 1)
+    cov = f @ T(-w * 0.26, h + RH + 0.10, -0.05, 0, 0, 0.10)             # 그 위, 검은 우비 씌운 중계카메라
+    boh.add(bevel_box(1.55, 0.44, 0.62, 0.10), cov @ T(0, 0.30, 0), M['black'], 1)
+    boh.add(bevel_box(1.15, 0.26, 0.5, 0.09), cov @ T(-0.12, 0.05, 0.02), M['black'], 1)
+    boh.add(cyl(0.05, 0.05, 0.34, 10), cov @ T(0.1, -0.13, 0), M['black'], 1)   # 삼각대 머리
+    for s_ in (-1, 1):
+        g, m = tube(cov @ V((0.1, -0.24, 0)), cov @ V((0.1 + s_ * 0.3, -0.62, s_ * 0.2)), 0.02, 6)
+        boh.add(g, m, M['black'])
     # 발판 위 무빙헤드 + 중계카메라 — 무대(aim)를 보도록 각을 따로 계산한다
     tx_, ty_, tz_ = aim or (CX, 2.0, FRONT - 2.0)
     for (ex, kind) in ((-1, 'mover'), (1, 'cam')):
