@@ -187,7 +187,7 @@ def step_unit(cx_, cz_, w_, ry_=0.0):
 # 무대 앞 — 클라이언트 지시 그대로: 가운데가 경사면이고 그 양옆에 계단이 붙는다.
 # (직전에 '계단+경사로 한 벌이 좌우에 하나씩'으로 바꾼 것은 내가 지어낸 배치다.
 #  z_ramp 크롭은 무대 앞의 일부만 잘린 것이라 계단 한 짝과 경사로만 보였을 뿐이다.)
-RMP_W, RMP_L, STP_W = 4.6, 1.9, 4.4
+RMP_W, RMP_L, STP_W = 2.6, 1.9, 2.3     # 사진 실측: 계단 2.0 · 경사면 2.1m 남짓, 나머지는 민 치마
 
 
 def _ramp(bm):
@@ -475,7 +475,7 @@ M['benchBlue'] = material('apBenchBlue', None, (0.024, 0.068, 0.328), 0.72)   # 
 M['caseAlu'] = material('apCaseAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8)
 
 
-def side_tower(f, w=3.0, h=4.0, d=2.6, floods=0, aim=None):
+def side_tower(f, kind='tower', aim=None):
     """남색 클래딩 타워 — 클라이언트 근접 사진 기준으로 다시.
 
     전에는 폭 5.6 x 높이 3.6 의 납작한 벽체에 4구 블라인더 네 조를 얹어 놓았는데,
@@ -483,8 +483,13 @@ def side_tower(f, w=3.0, h=4.0, d=2.6, floods=0, aim=None):
     큰 무빙헤드 한 대와 검은 랙 상자 하나가 올라가 있다. 난간은 한 줄뿐이다.
     로고(APEC 위, 경상북도 아래)는 잔디 쪽 면 위쪽에 박힌다.
     """
+    # kind='wall'  : 중도타워 앞 — 폭이 넓고 낮은 벽체, 위 프레임에 워시 다섯 (항공 사진)
+    # kind='tower' : 잔디 동쪽 — 폭보다 높은 통, 발판에 큰 무빙헤드 한 대 + 랙 (근접 사진)
+    wide = kind == 'wall'
+    w, h, d = (6.0, 3.4, 2.4) if wide else (3.0, 4.0, 2.6)
     boh.add(bevel_box(w, h, d, 0.02), f @ T(0, h / 2, 0), M['cladNavy'], 1)
-    boh.add(plane(w * 0.84, w * 0.84 * 1152 / 1792), f @ T(0, h * 0.66, d / 2 + 0.009), M['cladPanel'], tile=None)
+    boh.add(plane(w * (0.46 if wide else 0.84), w * (0.46 if wide else 0.84) * 1152 / 1792),
+            f @ T(0, h * (0.58 if wide else 0.66), d / 2 + 0.009), M['cladPanel'], tile=None)
     boh.add(box(0.04, 2.0, 0.85), f @ T(w / 2 + 0.022, 1.0, -d / 2 + 0.75), M['cladNavy'], 1)      # 옆면 출입문
     boh.add(cyl(0.018, 0.018, 0.10, 8), f @ T(w / 2 + 0.05, 1.05, -d / 2 + 1.14, 0, PI / 2), M['scaffold'], 1)
     # 상부: 파라펫 없이 그레이팅 발판이 통 위에 바로 얹히고, 그 둘레에 낮은 난간 한 줄
@@ -502,6 +507,18 @@ def side_tower(f, w=3.0, h=4.0, d=2.6, floods=0, aim=None):
             g, m = tube(f @ V((a_[0], yy, a_[1])), f @ V((b_[0], yy, b_[1])), 0.018, 6)
             boh.add(g, m, M['scaffold'])
     tx_, ty_, tz_ = aim or (CX, 2.0, FRONT - 2.0)
+    if wide:
+        # 항공 사진: 벽체 위 프레임에 따뜻한 워시 다섯 대가 잔디(테이블)를 향해 늘어선다
+        for yy in (h + 0.62, h + 1.12):
+            g, m = tube(f @ V((-w / 2 + 0.14, yy, 0.12)), f @ V((w / 2 - 0.14, yy, 0.12)), 0.021, 6)
+            boh.add(g, m, M['scaffold'])
+        for k in range(5):
+            lx = (k - 2) * (w - 1.5) / 4
+            boh.add(mesh_source(SRC_WASH), f @ T(lx, h + 1.02, 0.22, 0, PI / 2 + 0.42), list(SRC_WASH.data.materials))
+            pos = f @ V((lx, h + 0.95, 0.45))
+            light(C_LIGHT, f'sidewash_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], (f @ V((lx, 0.9, 9.0)))[:],
+                  energy=1800, color=(1.0, 0.86, 0.66), spot=0.88, blend=0.6, size=0.24)
+        return
     p = f @ V((-w * 0.22, h, -d * 0.12))                                                           # 발판 위 큰 무빙헤드 한 대
     yaw = math.atan2(-(tx_ - p.x), -(tz_ - p.z))
     g_ = T(p.x, 0, p.z, yaw)
@@ -536,8 +553,8 @@ def cam_riser(f, run=5.0, ret=1.6, d=0.9, h=1.35):
 
 # 잔디 좌우 긴 변, 건물에 붙여 하나씩 — 무대 쪽 면을 비우고 테이블 쪽에 그래픽
 # 잔디 양옆에 마주 보게 한 대씩 (서쪽 중도타워 앞 / 동쪽 연수동 아케이드 앞), z 는 같게
-side_tower(T(-22.4, 0, -2.0, PI / 2), floods=6)      # 서쪽: 잔디(+x)를 본다
-side_tower(T(32.6, 0, -2.0, -PI / 2), floods=6)      # 동쪽: 잔디(-x)를 본다
+side_tower(T(-22.6, 0, -1.0, PI / 2), kind='wall')   # 중도타워 기단 앞 (항공 사진: 넓고 낮은 벽체 + 워시 다섯)
+side_tower(T(26.5, 0, 4.0, -PI / 2 - 0.25), kind='tower')   # 잔디 동쪽 (근접 사진의 높은 통 + 무빙헤드 한 대)
 # 무대를 정면으로 보는 낮은 중계카메라 단상 — 회랑(z≈19) 열주 앞 잔디
 cam_riser(T(0.6, 0, 15.4, PI), run=4.2)   # 회랑 앞, 잔디로 나가는 포장길(x 3.0~6.2) 바로 서쪽
 # 무대 정면 잔디의 삼각대 카메라는 뺀다 — 만찬 사진에는 객석뿐이다 (리허설 때만 있었다)
@@ -626,8 +643,7 @@ HEATERS = []
 RING = []
 for k in range(9):                                          # 앞쪽(객석 뒤) 한 줄
     RING.append((FIELD_X0 - 1.2 + k * (FIELD_X1 - FIELD_X0 + 2.4) / 8, FIELD_Z1 + 2.6))
-for k in range(7):                                          # 무대 쪽 한 줄
-    RING.append((FIELD_X0 - 0.6 + k * (FIELD_X1 - FIELD_X0 + 1.2) / 6, FIELD_Z0 - 2.8))
+# 무대 쪽 한 줄은 두지 않는다 — 무대 앞을 가로막는다 (사진에도 무대 바로 앞엔 없다)
 for k in range(6):                                          # 좌우 두 줄
     zz = FIELD_Z0 - 1.0 + k * (FIELD_Z1 - FIELD_Z0 + 2.0) / 5
     RING.append((FIELD_X0 - 3.0, zz))

@@ -248,8 +248,37 @@ balustrade(pagoda, [(PX + e, BASE_Y, PZ + SW), (PX + e, BASE_Y, PZ + e), (PX - e
 for k in range(6):
     hstep = BASE_Y - k * BASE_Y / 6
     pagoda.add(box(0.42, hstep, SW * 2), T(PX + PH + 0.21 + k * 0.42, hstep / 2, PZ), M['granite'], 1.5)
-for sz in (-1, 1):  # 계단 옆 소맷돌
-    pagoda.add(bevel_box(2.8, BASE_Y + 0.9, 0.5, 0.05), T(PX + PH + 1.2, (BASE_Y + 0.9) / 2, PZ + sz * (SW + 0.25)), M['balustrade'], 1)
+for sz in (-1, 1):  # 계단 옆 소맷돌 + 그 위 돌난간 (사진에서 제일 눈에 띄는 디테일)
+    pagoda.add(bevel_box(2.8, BASE_Y + 0.55, 0.42, 0.05), T(PX + PH + 1.2, (BASE_Y + 0.55) / 2, PZ + sz * (SW + 0.25)), M['balustrade'], 1)
+    balustrade(pagoda, [(PX + PH + 2.6, BASE_Y * 0.18, PZ + sz * (SW + 0.25)),
+                        (PX + PH - 0.1, BASE_Y + 0.55, PZ + sz * (SW + 0.25))], h=0.78, post=0.9)
+    pagoda.add(bevel_box(0.62, 0.7, 0.62, 0.05), T(PX + PH + 2.75, 0.35, PZ + sz * (SW + 0.25)), M['balustrade'], 1)   # 계단 끝 법수
+
+
+def stone_lamp(x, z, s_=1.0):
+    """석재 등불 (장명등) — 기단 가장자리에 줄지어 선다"""
+    f = T(x, 0, z) @ T(0, 0, 0, 0, 0, 0, s_, s_, s_)
+    OCT = PI / 8
+    pagoda.add(cyl(0.40, 0.40, 0.14, 8), f @ T(0, 0.07, 0, OCT), M['granite'], 1.2)
+    pagoda.add(cyl(0.22, 0.30, 0.22, 8), f @ T(0, 0.25, 0, OCT), M['granite'], 1.2)
+    pagoda.add(cyl(0.11, 0.13, 0.78, 8), f @ T(0, 0.75, 0, OCT), M['granite'], 1.2)      # 간주석
+    pagoda.add(cyl(0.30, 0.20, 0.16, 8), f @ T(0, 1.22, 0, OCT), M['granite'], 1.2)
+    for i in range(8):                                                                   # 화사석 (기둥 여덟)
+        a = OCT + i * PI / 4
+        pagoda.add(box(0.06, 0.40, 0.06), f @ T(0.25 * math.sin(a), 1.50, 0.25 * math.cos(a), a), M['granite'], 1.2)
+    for i in range(4):
+        a = OCT + i * PI / 2
+        pagoda.add(box(0.20, 0.40, 0.05), f @ T(0.24 * math.sin(a), 1.50, 0.24 * math.cos(a), a), M['granite'], 1.2)
+    glow.add(cyl(0.18, 0.18, 0.34, 8), f @ T(0, 1.50, 0, OCT), M['lanternGlow'] if 'lanternGlow' in M else M['hanji'], 1)
+    pagoda.add(cyl(0.52, 0.50, 0.07, 8), f @ T(0, 1.74, 0, OCT), M['granite'], 1.2)      # 옥개석 처마
+    pagoda.add(cyl(0.16, 0.50, 0.20, 8), f @ T(0, 1.87, 0, OCT), M['granite'], 1.2)
+    pagoda.add(sphere(0.09, 3), f @ T(0, 2.02, 0), M['granite'])
+    light(C_LIGHT, f'pagoda_lamp_s{round(x)}_{round(z)}', 'POINT', (x, 1.5 * s_, z),
+          energy=60, color=(1.0, 0.80, 0.52), size=0.16)
+
+
+for lz in (-14.5, -8.0, 8.0, 14.5):                     # 기단 잔디 쪽 가장자리를 따라
+    stone_lamp(PX + PH + 2.2, PZ + lz)
 
 eave_points = []
 y = BASE_Y
@@ -1009,8 +1038,9 @@ for k, (x, z, dens) in enumerate(SITE_TREES):
     rs = random.Random(k)
     size = 0.85 + 0.35 * dens + rs.uniform(-0.1, 0.15)
     in_garden = -32 <= x <= 24 and 24 <= z <= 52
-    if in_garden or rs.random() < 0.18:
-        pine(x, z, size * 0.95, seed=k + 100)
+    on_lawn_ = -25 <= x <= 35 and -33 <= z <= 17
+    if in_garden or on_lawn_ or rs.random() < 0.18:
+        pine(x, z, size * (0.62 if on_lawn_ else 0.95), seed=k + 100)
     else:
         tree(x, z, size)
 pines.build(smooth=True)
@@ -1307,7 +1337,7 @@ three_storey_pagoda(-13.5, 15.6)           # 잔디 가장자리 (회랑 쪽) �
 three_storey_pagoda(9.5, 15.2)
 buddha_triad_stele(-19.5, 13.0, 0.7)       # 삼존불 석비
 stone_ram(-16.5, 11.0, 0.6)                # 잔디 동남 모서리 화강석 보도 위
-danggan_marker(-21.5, -11.0, 1.57)         # 중도타워 잔디 쪽 기단 정면 축
+# 당간지주는 기단 계단 한복판을 막고 있었고 현장 사진에도 없다 → 뺀다
 gold_dragon_pool(24.0, 16.5)               # 잔디 북동 모서리 반사 연못
 stones.build()
 stones_glow.build()
