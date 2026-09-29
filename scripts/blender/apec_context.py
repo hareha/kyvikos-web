@@ -788,11 +788,13 @@ def yeonsu_block():
     ye_ne.add(box(8.0, 0.25, 12.0), T(59, ROOF_Y + 0.42, 27), M['granite_clad'], 1.2)          # 창틀 받침
     glass_roof.add(box(7.6, 1.2, 11.6), T(59, ROOF_Y + 1.15, 27), M['skylight'])
     # 귀빈동 테라스 가구 (파라솔 테이블)
-    for k, (x, z) in enumerate(((27, 26), (27, 34), (27, 42), (31, 47))):   # 야외 테이블 세트 + 파라솔 (불러온 모델)
-        ye_ne.add(mesh_source(SRC_TABLESET), T(x, Y, z, k * 0.7), list(SRC_TABLESET.data.materials))
-        # 파라솔이 공중에 떠 있었다: 프롭 원점이 캔버스 중심이라 바닥 높이로 놓으면 안 된다.
-        ye_ne.add(mesh_source(SRC_PARASOL), T(x, Y - 1.30, z), list(SRC_PARASOL.data.materials))
-    light(C_LIGHT, 'site_terrace', 'POINT', (27, Y + 2.6, 30), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
+    # 파라솔이 공중에 떠 있던 이유: Y(=ROOF_Y+0.3=12.3) 는 **맨 위 3층 옥상** 높이인데
+    # 가구는 x 23~30 (저층 옥상, 슬래브 윗면 4.6+0.3=4.9) 과 x 30~38 (중층, 9.4+0.3=9.7)
+    # 테라스에 놓인다. 두 프롭 모두 원점이 밑바닥(bound_box z=0)이라 그 높이에 그대로 얹으면 된다.
+    for k, (x, z, ty) in enumerate(((27, 26, 4.9), (27, 34, 4.9), (27, 42, 4.9), (32.5, 47, 9.7))):
+        ye_ne.add(mesh_source(SRC_TABLESET), T(x, ty, z, k * 0.7), list(SRC_TABLESET.data.materials))
+        ye_ne.add(mesh_source(SRC_PARASOL), T(x, ty, z), list(SRC_PARASOL.data.materials))
+    light(C_LIGHT, 'site_terrace', 'POINT', (27, 4.9 + 2.6, 30), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
 
     # 북서동 + 잔디 쪽 저층부(화분 줄)
     block(ye_nw, 46, 66, -35, 13, ROOF_Y, 3)
@@ -1367,6 +1369,7 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
             for i in range(NU):
                 bm.faces.new((a_[i], a_[(i + 1) % NU], b_[(i + 1) % NU], b_[i]))
         bm.faces.new(rows[-1])
+        bm.faces.new(rows[0])   # 밑면도 막는다. 열린 껍질이면 스치는 각도에서 속이 뚫려 보인다
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
         # 열린 껍질이라 recalc 가 안쪽을 고를 수 있다. 웹은 뒷면을 잘라내므로
         # 그 상태로 내보내면 돔이 반만 보인다 -> 윗면 법선이 위를 향하는지 보고 뒤집는다
@@ -1397,9 +1400,10 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
     SIDE = -1                      # 신평루(11,-41) 쪽이 아니라 빈 쪽으로 뻗는다
     x0 = -(r - 0.8)                # 첫 채는 드럼에 물려서 시작
     # 높이는 사진에서 드럼 처마돌림띠(6.75)와 천개석(11.4)을 자로 재서 뽑았다:
-    # 첫 채 벽 윗면 ≈ 5.1 / 처마 ≈ 6.4 / 용마루 ≈ 8.2. 뒤 두 채는 한 단씩 낮아진다.
-    # 깊이(D)는 사진으로 읽을 수 없어 앞채가 더 깊어 보이는 정도로만 잡았다.
-    for (L, WH, RH, D) in ((12.0, 5.0, 1.9, 8.6), (10.0, 4.1, 1.75, 7.6), (9.0, 3.4, 1.6, 6.8)):
+    # 첫 채 벽 윗면 ≈ 5.1 / 처마 ≈ 6.4 / 용마루 ≈ 8.2.
+    # 세 채가 순서대로 낮아지는 게 아니라 **가운데가 낮고 양옆이 높고 크다** (위성사진).
+    # 깊이(D)는 사진으로 읽을 수 없어 높은 채가 더 깊어 보이는 정도로만 잡았다.
+    for (L, WH, RH, D) in ((12.0, 5.0, 2.0, 8.6), (9.0, 3.4, 1.5, 6.6), (11.0, 4.7, 1.9, 8.2)):
         g = f @ T(x0 + SIDE * L / 2, 0, ZF - D / 2)
         stones.add(bevel_box(L + 0.6, 0.44, D + 0.8, 0.05), g @ T(0, 0.22, 0), M['granite'], 1.5)      # 기단
         stones.add(box(L, WH, D), g @ T(0, 0.44 + WH / 2, 0), S, 2.0)                                  # 석벽 몸체

@@ -525,6 +525,9 @@ def side_tower(f, kind='tower', aim=None):
         for k in range(5):
             lx = (k - 2) * (w - 1.5) / 4
             boh.add(mesh_source(SRC_WASH), f @ T(lx, h + 1.02, 0.22, 0, PI / 2 + 0.42), list(SRC_WASH.data.materials))
+            # 렌즈는 따로 EMISSIVE 로 둔다. 조명기가 stage_kit(STATIC, 라이트맵 그룹)에 들어가 있어서
+            # 재질에 발광을 줘도 웹에서는 무시되고 깜깜한 덩어리로만 나왔다 (baked.js 의 emit 분기는 그룹이 없을 때만 탄다)
+            emit.add(sphere(0.048, 2), f @ T(lx, h + 0.97, 0.35), M['washLens'])
             pos = f @ V((lx, h + 0.95, 0.45))
             light(C_LIGHT, f'sidewash_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], (f @ V((lx, 0.9, 9.0)))[:],
                   energy=1800, color=(1.0, 0.86, 0.66), spot=0.88, blend=0.6, size=0.24)
@@ -534,6 +537,7 @@ def side_tower(f, kind='tower', aim=None):
     g_ = T(p.x, 0, p.z, yaw)
     boh.add(bevel_box(0.46, 0.14, 0.46, 0.03), g_ @ T(0, h + 0.12, 0), M['black'], 1)              # 받침 플레이트
     boh.add(mesh_source(SRC_MOVER), g_ @ T(0, h + 0.19, 0, 0, 0, 0, 1.45, 1.45, 1.45), list(SRC_MOVER.data.materials))
+    emit.add(sphere(0.085, 2), g_ @ T(0, h + 0.50, -0.17), M['blueLens'])   # 위 주석 참고 — 렌즈는 EMISSIVE 로
     light(C_LIGHT, f'sidemover_{round(p.x, 1)}', 'SPOT', (p.x, h + 0.95, p.z), (tx_, ty_, tz_),
           energy=1600, color=(0.45, 0.6, 1.0), spot=0.20, blend=0.4, size=0.06)
     rf = f @ T(w * 0.26, h + 0.06, d * 0.10)                                                       # 그 옆 검은 랙 상자
