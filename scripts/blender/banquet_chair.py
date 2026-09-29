@@ -59,22 +59,41 @@ def _bow_mesh(width=0.23):
 def _add_sash(me, sash_mat, at=0.70, band=0.098):
     """등받이 단면을 실제로 재서 그 둘레에 새틴 띠를 감고, 뒤에 리본과 늘어뜨린 꼬리를 단다.
        (이 모델에는 리본이 없다. 커버만 씌워져 있다.)"""
+    NSEG = 56
+
+    def outline(z):
+        """그 높이에서 의자 단면의 실제 윤곽을 각도별 반지름으로 잰다.
+           네 장의 판을 덧대던 방식은 의자 표면에서 떠서 판때기로 보였다."""
+        sl_ = [v.co for v in me.vertices if abs(v.co.z - z) < 0.020]
+        if len(sl_) < 8:
+            return None
+        ymin_ = min(v.y for v in sl_)
+        bk = [v for v in sl_ if v.y < ymin_ + 0.12] or sl_   # 커버 자락이 섞이면 띠가 부푼다
+        ox = (min(v.x for v in bk) + max(v.x for v in bk)) / 2
+        oy = (min(v.y for v in bk) + max(v.y for v in bk)) / 2
+        rad = [0.0] * NSEG
+        for v in bk:
+            a = math.atan2(v.y - oy, v.x - ox) % (2 * math.pi)
+            i = int(a / (2 * math.pi) * NSEG) % NSEG
+            rad[i] = max(rad[i], math.hypot(v.x - ox, v.y - oy))
+        for _ in range(6):                                  # 빈 칸은 이웃에서 메운다
+            for i in range(NSEG):
+                if rad[i] <= 0:
+                    nb = [r for r in (rad[(i - 1) % NSEG], rad[(i + 1) % NSEG]) if r > 0]
+                    if nb:
+                        rad[i] = sum(nb) / len(nb)
+        if min(rad) <= 0:
+            return None
+        for _ in range(2):                                  # 들쭉날쭉한 것만 다듬는다
+            rad = [(rad[(i - 1) % NSEG] + 2 * rad[i] + rad[(i + 1) % NSEG]) / 4 for i in range(NSEG)]
+        return ox, oy, rad
+
     zs = [v.co.z for v in me.vertices]
     top = max(zs)
     zm = top * at
-    sl = [v.co for v in me.vertices if abs(v.co.z - zm) < 0.012]
-    if len(sl) < 8:
+    lo, hi = outline(zm - band / 2), outline(zm + band / 2)
+    if lo is None or hi is None:
         return
-    cx = sum(v.x for v in sl) / len(sl)
-    cy = sum(v.y for v in sl) / len(sl)
-    # 등받이는 납작한 판이다. 윤곽을 각도로 추적하면 점이 성겨 띠가 들쭉날쭉해지니,
-    # 단면의 가로·세로만 재서 상자 하나로 두른다 (밖에서 보면 감긴 띠로 읽힌다).
-    # 이 높이 단면에는 등받이 말고 커버 자락 등도 섞여 들어와 폭이 부풀어 띠가 옆으로 튀어나온다.
-    # 뒤쪽(등받이) 두께 안에 드는 점만 골라 잰다.
-    ymin = min(v.y for v in sl)
-    back = [v for v in sl if v.y < ymin + 0.10] or sl
-    bx0, bx1 = min(v.x for v in back), max(v.x for v in back)
-    by0, by1 = min(v.y for v in back), max(v.y for v in back)
 
     bm = bmesh.new()
 
@@ -87,18 +106,27 @@ def _add_sash(me, sash_mat, at=0.70, band=0.098):
         bm.from_mesh(t)
         bpy.data.meshes.remove(t)
 
-    # 띠: 단면 네 면에 얇은 판을 덧대 두른다. (면을 칠하는 방식은 저폴리 메시라
-    #     큰 면 하나가 통째로 칠해지거나 아예 안 칠해져 띠가 파묻혀 보였다.)
-    cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
-    ww, dd, t_ = bx1 - bx0, by1 - by0, 0.008
-    # 등받이가 위로 갈수록 좁아져서, 잰 폭을 그대로 쓰면 띠가 귀처럼 옆으로 튀어나온다 -> 안으로 접어 넣는다
-    for (ax, az, sw, sd) in ((cx, by0 - t_, ww - 0.012, t_ * 2), (cx, by1 + t_, ww - 0.012, t_ * 2),
-                             (bx0 + t_, cy, t_ * 2, dd + 2 * t_), (bx1 - t_, cy, t_ * 2, dd + 2 * t_)):
-        emit(lambda b_, ax=ax, az=az, sw=sw, sd=sd: bmesh.ops.create_cube(
-            b_, size=1.0, matrix=Matrix.Translation((ax, az, zm)) @ Matrix.Diagonal((sw, sd, band, 1))))
+    # 띠: 잰 윤곽을 따라 0.006 만 띄워 두르는 한 장의 면 (의자 표면에 밀착한다)
+    GAP = 0.006
 
-    ry = by0 - t_ * 2                                    # 등받이 뒷면 (블렌더 -y = 웹 +z)
-    bow = _bow_mesh(width=0.21)                          # 나비 고리는 받아온 모델 (deokpal, CC-BY)
+    def band_build(b_):
+        rings = []
+        for (ox, oy, rad), zz in ((lo, zm - band / 2), (hi, zm + band / 2)):
+            rings.append([b_.verts.new((ox + math.cos(2 * math.pi * i / NSEG) * (rad[i] + GAP),
+                                        oy + math.sin(2 * math.pi * i / NSEG) * (rad[i] + GAP), zz))
+                          for i in range(NSEG)])
+        for i in range(NSEG):
+            j = (i + 1) % NSEG
+            b_.faces.new((rings[0][i], rings[0][j], rings[1][j], rings[1][i]))
+        bmesh.ops.recalc_face_normals(b_, faces=b_.faces[:])
+        bmesh.ops.solidify(b_, geom=b_.faces[:], thickness=0.004)
+
+    emit(band_build)
+
+    cx = (lo[0] + hi[0]) / 2
+    back_i = int(NSEG * 0.75)                              # 각도 270도 = 블렌더 -y = 웹 +z (등받이 뒤)
+    ry = min(lo[1] - lo[2][back_i], hi[1] - hi[2][back_i]) - GAP
+    bow = _bow_mesh(width=0.21)                            # 나비 고리는 받아온 모델 (deokpal, CC-BY)
     if bow is not None:
         bow.transform(Matrix.Translation((cx, ry - 0.030, zm - 0.008)))
         t = bpy.data.meshes.new('t')
@@ -106,13 +134,18 @@ def _add_sash(me, sash_mat, at=0.70, band=0.098):
         bow.free()
         bm.from_mesh(t)
         bpy.data.meshes.remove(t)
-    # 꼬리: 사진처럼 가운데 한 갈래가 곧게 내려와 띠와 T 자를 이룬다 (두 갈래가 아니다)
-    tail, tw = [], []
-    for k in range(9):
-        t = k / 8
-        tail.append((cx, ry - 0.012 - 0.016 * math.sin(t * 2.0), zm - 0.030 - 0.062 * k))
-        tw.append(0.115 - 0.022 * t)
-    emit(_ribbon_bl(tail, tw, 0.008))
+    # 꼬리: 한 갈래가 매듭에서 내려와 띠와 T 자를 이룬다. 곧은 각기둥이 아니라
+    #       아래로 갈수록 등에서 떨어졌다 다시 붙고, 옆으로 조금 흔들리며 비틀린다.
+    tail, tw, tt = [], [], []
+    N, LEN = 16, 0.44
+    for k in range(N):
+        t = k / (N - 1)
+        tail.append((cx + 0.020 * math.sin(t * math.pi * 1.7),
+                     ry - 0.012 - 0.032 * math.sin(t * math.pi * 0.95),
+                     zm - 0.034 - LEN * t))
+        tw.append(0.112 * (1 - 0.14 * t) * (1 - 0.80 * max(0.0, t - 0.90) / 0.10))   # 끝을 뾰족하게
+        tt.append(0.62 * math.sin(t * math.pi * 1.15))                               # 비틀림
+    emit(_ribbon_bl(tail, tw, 0.005, twist=tt))
     emit(lambda b_: bmesh.ops.create_cube(b_, size=1.0, matrix=Matrix.Translation((cx, ry - 0.020, zm))
          @ Matrix.Diagonal((0.055, 0.030, 0.055, 1))))   # 매듭
 
@@ -196,9 +229,10 @@ def build(coll, cover_mat, sash_mat, name='banquet_chair', decimate=0.22):
     return obj
 
 
-def _ribbon_bl(pts, widths, thick=0.006):
+def _ribbon_bl(pts, widths, thick=0.005, twist=None):
     """중심선을 따라 이어진 납작한 띠 (블렌더 좌표, z 가 위).
-       상자를 여러 개 쌓으면 마디가 생겨 계단처럼 보이므로 한 장의 면으로 뽑는다."""
+       상자를 여러 개 쌓으면 마디가 생겨 계단처럼 보이므로 한 장의 면으로 뽑는다.
+       twist[i] 가 있으면 단면을 그만큼 돌려 천이 비틀려 늘어지게 한다."""
     def build(bm):
         rows = []
         for i, (p, w) in enumerate(zip(pts, widths)):
@@ -208,8 +242,11 @@ def _ribbon_bl(pts, widths, thick=0.006):
             side = t.cross(Vector((0, 1, 0)))
             if side.length < 1e-6:
                 side = t.cross(Vector((1, 0, 0)))
-            side = side.normalized() * (w / 2)
+            side = side.normalized()
+            if twist:
+                side = (Matrix.Rotation(twist[i], 4, t) @ side).normalized()
             nrm = side.cross(t).normalized() * (thick / 2)
+            side = side * (w / 2)
             rows.append([bm.verts.new(p - side + nrm), bm.verts.new(p + side + nrm),
                          bm.verts.new(p + side - nrm), bm.verts.new(p - side - nrm)])
         for a_, b_ in zip(rows[:-1], rows[1:]):
