@@ -80,6 +80,7 @@ M = {
     'black': material('black', None, (0.012, 0.012, 0.015), 0.5),
     'washLens': material('washLens', None, (1, 0.9, 0.75), emit=(1.0, 0.86, 0.66), emit_strength=60),
     'blueLens': material('blueLens', None, (0.3, 0.5, 1), emit=(0.25, 0.45, 1.0), emit_strength=45),
+    'blinderLens': material('blinderLens', None, (1, 0.95, 0.85), emit=(1.0, 0.90, 0.72), emit_strength=130),
     'tableCloth': material('tableCloth', 'cotton_jersey', (0.022, 0.026, 0.05), 0.85, normal=0.7, sheen=0.4),
     'plate': material('plate', None, (0.7, 0.7, 0.68), 0.15, coat=0.6),
     'napkin': material('napkin', 'cotton_jersey', (0.95, 0.95, 0.93), 0.9, normal=0.4),
@@ -502,48 +503,90 @@ def side_tower(f, kind='tower', aim=None):
             f @ T(0, h * (0.58 if wide else 0.66), d / 2 + 0.009), M['cladPanel'], tile=None)
     boh.add(box(0.04, 2.0, 0.85), f @ T(w / 2 + 0.022, 1.0, -d / 2 + 0.75), M['cladNavy'], 1)      # 옆면 출입문
     boh.add(cyl(0.018, 0.018, 0.10, 8), f @ T(w / 2 + 0.05, 1.05, -d / 2 + 1.14, 0, PI / 2), M['scaffold'], 1)
-    # 상부: 파라펫 없이 그레이팅 발판이 통 위에 바로 얹히고, 그 둘레에 낮은 난간 한 줄
-    for k in range(10):
-        boh.add(box(w - 0.06, 0.05, (d - 0.1) / 10 - 0.02), f @ T(0, h + 0.03, -d / 2 + 0.1 + k * (d - 0.1) / 10), M['grating'], 1)
-    boh.add(box(w + 0.12, 0.06, 0.09), f @ T(0, h + 0.02, d / 2 + 0.03), M['scaffold'], 1)
-    for (sx, sz) in ((-w / 2 + 0.08, -d / 2 + 0.08), (w / 2 - 0.08, -d / 2 + 0.08),
-                     (-w / 2 + 0.08, d / 2 - 0.08), (w / 2 - 0.08, d / 2 - 0.08)):
-        boh.add(cyl(0.024, 0.024, 1.05, 8), f @ T(sx, h + 0.55, sz), M['scaffold'], 1)             # 난간 기둥
-    for yy in (h + 0.58, h + 1.02):
-        for (a_, b_) in (((-w / 2 + 0.08, -d / 2 + 0.08), (w / 2 - 0.08, -d / 2 + 0.08)),
-                         ((-w / 2 + 0.08, -d / 2 + 0.08), (-w / 2 + 0.08, d / 2 - 0.08)),
-                         ((w / 2 - 0.08, -d / 2 + 0.08), (w / 2 - 0.08, d / 2 - 0.08)),
-                         ((-w / 2 + 0.08, d / 2 - 0.08), (w / 2 - 0.08, d / 2 - 0.08))):
-            g, m = tube(f @ V((a_[0], yy, a_[1])), f @ V((b_[0], yy, b_[1])), 0.018, 6)
-            boh.add(g, m, M['scaffold'])
+    # ── 상부 — 결과물 폴더 사진 그대로 ───────────────────────────────
+    # 020(08-58-21): 통 위에 비계로 짠 강재 그레이팅 발판이 잔디 쪽으로 내밀려 얹히고,
+    #                난간은 상·중 두 줄. 발판 위에 폴로스팟 한 대(스탠드+요크+긴 경통)와
+    #                회색 제어함, 발판 밑에 무빙헤드가 매달린다.
+    # 014:           맨 위에 레인커버 씌운 방송 카메라가 한 대 선다.
+    # 011 / 항공 005: 중도타워 앞 넓은 벽체 쪽은 프레임 윗단에 4구 블라인더가 줄지어 탄다.
     tx_, ty_, tz_ = aim or (CX, 2.0, FRONT - 2.0)
-    if wide:
-        # 항공 사진: 벽체 위 프레임에 따뜻한 워시 다섯 대가 잔디(테이블)를 향해 늘어선다
-        for yy in (h + 0.62, h + 1.12):
-            g, m = tube(f @ V((-w / 2 + 0.14, yy, 0.12)), f @ V((w / 2 - 0.14, yy, 0.12)), 0.021, 6)
+    DECK_OUT = 0.0 if wide else 0.95                    # 020: 잔디 쪽으로 내민 발판
+    dz0, dz1 = -d / 2 + 0.05, d / 2 + DECK_OUT
+    dd = dz1 - dz0
+    NG = 12
+    for k in range(NG):                                                                            # 그레이팅 판재
+        boh.add(box(w - 0.06, 0.05, dd / NG - 0.02), f @ T(0, h + 0.03, dz0 + (k + 0.5) * dd / NG), M['grating'], 1)
+    RAIL = 1.18
+    corners = ((-w / 2 + 0.06, dz0), (w / 2 - 0.06, dz0), (-w / 2 + 0.06, dz1), (w / 2 - 0.06, dz1))
+    edges = (((-w / 2 + 0.06, dz0), (w / 2 - 0.06, dz0)), ((-w / 2 + 0.06, dz1), (w / 2 - 0.06, dz1)),
+             ((-w / 2 + 0.06, dz0), (-w / 2 + 0.06, dz1)), ((w / 2 - 0.06, dz0), (w / 2 - 0.06, dz1)))
+    for (a_, b_) in edges:                                                                         # 발판 테두리 앵글
+        g, m = tube(f @ V((a_[0], h + 0.01, a_[1])), f @ V((b_[0], h + 0.01, b_[1])), 0.042, 8)
+        boh.add(g, m, M['scaffold'])
+    for (sx, sz) in corners:
+        boh.add(cyl(0.026, 0.026, RAIL, 10), f @ T(sx, h + 0.05 + RAIL / 2, sz), M['scaffold'], 1)  # 난간 기둥
+    for yy in (h + 0.05 + RAIL * 0.52, h + 0.05 + RAIL):                                           # 상·중 난간대
+        for (a_, b_) in edges:
+            g, m = tube(f @ V((a_[0], yy, a_[1])), f @ V((b_[0], yy, b_[1])), 0.021, 6)
             boh.add(g, m, M['scaffold'])
-        for k in range(5):
-            lx = (k - 2) * (w - 1.5) / 4
-            boh.add(mesh_source(SRC_WASH), f @ T(lx, h + 1.02, 0.22, 0, PI / 2 + 0.42), list(SRC_WASH.data.materials))
-            # 렌즈는 따로 EMISSIVE 로 둔다. 조명기가 stage_kit(STATIC, 라이트맵 그룹)에 들어가 있어서
-            # 재질에 발광을 줘도 웹에서는 무시되고 깜깜한 덩어리로만 나왔다 (baked.js 의 emit 분기는 그룹이 없을 때만 탄다)
-            emit.add(sphere(0.048, 2), f @ T(lx, h + 0.97, 0.35), M['washLens'])
-            pos = f @ V((lx, h + 0.95, 0.45))
-            light(C_LIGHT, f'sidewash_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], (f @ V((lx, 0.9, 9.0)))[:],
-                  energy=1800, color=(1.0, 0.86, 0.66), spot=0.88, blend=0.6, size=0.24)
+    for sz in (dz0, dz1):                                                                          # 대각 가새
+        g, m = tube(f @ V((-w / 2 + 0.06, h + 0.06, sz)), f @ V((w / 2 - 0.06, h + 0.05 + RAIL, sz)), 0.019, 6)
+        boh.add(g, m, M['scaffold'])
+
+    def broadcast_camera(p):
+        """레인커버 씌운 방송 카메라 (사진 014 타워 꼭대기). p 는 발판 위 월드 좌표"""
+        kf = T(p.x, 0, p.z, math.atan2(tx_ - p.x, tz_ - p.z))                                      # 로컬 +z = 무대 쪽
+        y0_ = p.y
+        boh.add(cyl(0.05, 0.062, 0.56, 10), kf @ T(0, y0_ + 0.28, 0), M['scaffold'], 1)            # 기둥
+        boh.add(bevel_box(0.32, 0.10, 0.32, 0.02), kf @ T(0, y0_ + 0.61, 0), M['black'], 1)        # 헤드
+        cbf = kf @ T(0, y0_ + 0.74, 0, 0, 0.16)
+        boh.add(bevel_box(0.40, 0.34, 0.92, 0.10), cbf @ T(0, 0, 0.08), M['black'], 1)             # 커버 씌운 몸통
+        boh.add(bevel_box(0.26, 0.20, 0.30, 0.07), cbf @ T(0.06, 0.24, -0.10), M['black'], 1)      # 커버 주름
+        boh.add(cyl(0.105, 0.125, 0.26, 12), cbf @ T(0, -0.02, 0.62, 0, PI / 2), M['black'], 1)    # 렌즈 후드
+
+    if wide:
+        # 011 / 항공 005: 발판 위 프레임 윗단에 4구 블라인더 네 조가 잔디를 향해 늘어선다
+        for k in range(4):
+            lx = (k - 1.5) * (w - 1.2) / 3
+            bf = f @ T(lx, h + 0.05 + RAIL - 0.12, dz1 + 0.16, 0, -0.34)
+            boh.add(bevel_box(0.54, 0.50, 0.18, 0.02), bf, M['black'], 1)
+            boh.add(box(0.62, 0.05, 0.22), bf @ T(0, 0.29, 0), M['scaffold'], 1)                   # 요크
+            for sx_ in (-1, 1):
+                for sy_ in (-1, 1):
+                    emit.add(plane(0.19, 0.17), bf @ T(sx_ * 0.128, sy_ * 0.118, 0.095), M['blinderLens'], tile=None)
+            pos = f @ V((lx, h + 0.05 + RAIL - 0.12, dz1 + 0.30))
+            light(C_LIGHT, f'sideblinder_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], (f @ V((lx, 0.9, 9.0)))[:],
+                  energy=2600, color=(1.0, 0.86, 0.66), spot=1.05, blend=0.7, size=0.3)
+        broadcast_camera(f @ V((w / 2 - 0.55, h + 0.05, dz1 - 0.55)))
         return
-    p = f @ V((-w * 0.22, h, -d * 0.12))                                                           # 발판 위 큰 무빙헤드 한 대
-    yaw = math.atan2(-(tx_ - p.x), -(tz_ - p.z))
-    g_ = T(p.x, 0, p.z, yaw)
-    boh.add(bevel_box(0.46, 0.14, 0.46, 0.03), g_ @ T(0, h + 0.12, 0), M['black'], 1)              # 받침 플레이트
-    boh.add(mesh_source(SRC_MOVER), g_ @ T(0, h + 0.19, 0, 0, 0, 0, 1.45, 1.45, 1.45), list(SRC_MOVER.data.materials))
-    emit.add(sphere(0.085, 2), g_ @ T(0, h + 0.50, -0.17), M['blueLens'])   # 위 주석 참고 — 렌즈는 EMISSIVE 로
-    light(C_LIGHT, f'sidemover_{round(p.x, 1)}', 'SPOT', (p.x, h + 0.95, p.z), (tx_, ty_, tz_),
-          energy=1600, color=(0.45, 0.6, 1.0), spot=0.20, blend=0.4, size=0.06)
-    rf = f @ T(w * 0.26, h + 0.06, d * 0.10)                                                       # 그 옆 검은 랙 상자
-    boh.add(bevel_box(0.56, 0.72, 0.66, 0.03), rf @ T(0, 0.36, 0), M['black'], 1)
-    boh.add(box(0.58, 0.05, 0.68), rf @ T(0, 0.735, 0), M['scaffold'], 1)
-    boh.add(bevel_box(0.34, 0.24, 0.30, 0.02), rf @ T(0.02, 0.88, 0), M['black'], 1)
+
+    # 폴로스팟 — 스탠드 + 요크 + 긴 경통 (사진 020)
+    sp = f @ V((-w * 0.16, h + 0.05, dz1 - 0.55))
+    yaw = math.atan2(tx_ - sp.x, tz_ - sp.z)
+    sf = T(sp.x, 0, sp.z, yaw)                                                                     # 로컬 +z = 조준 방향
+    boh.add(bevel_box(0.40, 0.06, 0.40, 0.02), sf @ T(0, h + 0.08, 0), M['black'], 1)              # 베이스판
+    boh.add(cyl(0.075, 0.095, 0.48, 10), sf @ T(0, h + 0.35, 0), M['black'], 1)                    # 스탠드
+    boh.add(bevel_box(0.28, 0.20, 0.26, 0.03), sf @ T(0, h + 0.66, 0), M['black'], 1)              # 요크
+    bf = sf @ T(0, h + 0.76, 0, 0, 0.22)
+    boh.add(bevel_box(0.30, 0.34, 0.74, 0.03), bf @ T(0, 0, -0.32), M['black'], 1)                 # 램프 하우징
+    boh.add(bevel_box(0.20, 0.12, 0.26, 0.02), bf @ T(0, 0.22, -0.46), M['black'], 1)              # 위 제어패널
+    boh.add(cyl(0.105, 0.125, 0.64, 14), bf @ T(0, 0, 0.36, 0, PI / 2), M['black'], 1)             # 경통
+    emit.add(cyl(0.105, 0.105, 0.02, 14), bf @ T(0, 0, 0.685, 0, PI / 2), M['washLens'])           # 렌즈
+    light(C_LIGHT, f'sidespot_{round(sp.x, 1)}', 'SPOT', (sp.x, h + 0.82, sp.z), (tx_, ty_, tz_),
+          energy=2200, color=(1.0, 0.92, 0.80), spot=0.22, blend=0.4, size=0.08)
+    cf = f @ T(w * 0.26, h + 0.05, dz1 - 1.45)                                                     # 회색 제어함
+    boh.add(bevel_box(0.44, 0.60, 0.34, 0.03), cf @ T(0, 0.30, 0), M['caseAlu'], 1)
+    boh.add(box(0.38, 0.03, 0.22), cf @ T(0, 0.46, 0.175), M['black'], 1)
+    # 발판 밑에 매달린 무빙헤드 (사진 020: 발판 바깥 모서리 아래에 한 대)
+    for k, mx in enumerate((-w * 0.32,)):
+        p = f @ V((mx, h, dz1 - 0.30))
+        gm = T(p.x, 0, p.z, math.atan2(-(tx_ - p.x), -(tz_ - p.z)))
+        boh.add(box(0.30, 0.06, 0.30), gm @ T(0, h - 0.01, 0), M['scaffold'], 1)                   # 클램프 판
+        boh.add(mesh_source(SRC_MOVER), gm @ T(0, h - 0.10, 0, 0, PI, 0, 1.4, 1.4, 1.4), list(SRC_MOVER.data.materials))
+        emit.add(sphere(0.078, 2), gm @ T(0, h - 0.52, -0.15), M['blueLens'])
+        light(C_LIGHT, f'sidemover_{round(p.x, 1)}_{k}', 'SPOT', (p.x, h - 0.55, p.z), (tx_, ty_, tz_),
+              energy=1500, color=(0.45, 0.6, 1.0), spot=0.22, blend=0.4, size=0.06)
+    broadcast_camera(f @ V((w / 2 - 0.50, h + 0.05, dz1 - 0.45)))
 
 
 def cam_riser(f, run=5.0, ret=1.6, d=0.9, h=1.35):
