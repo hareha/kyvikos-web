@@ -56,6 +56,40 @@ def _bow_mesh(width=0.23):
     return bm
 
 
+def _hull2d(pts):
+    """2D 볼록 껍질 (Andrew monotone chain)"""
+    P = sorted(set((round(p[0], 5), round(p[1], 5)) for p in pts))
+    if len(P) < 3:
+        return P
+
+    def half(seq):
+        h = []
+        for p in seq:
+            while len(h) >= 2 and ((h[-1][0] - h[-2][0]) * (p[1] - h[-2][1])
+                                   - (h[-1][1] - h[-2][1]) * (p[0] - h[-2][0])) <= 0:
+                h.pop()
+            h.append(p)
+        return h
+    return half(P)[:-1] + half(P[::-1])[:-1]
+
+
+def _ray_hull(ox, oy, ang, hull):
+    """(ox,oy) 에서 ang 방향으로 쏜 광선이 껍질과 만나는 거리"""
+    dx, dy = math.cos(ang), math.sin(ang)
+    best, n = 0.0, len(hull)
+    for i in range(n):
+        ax, ay = hull[i]
+        ex, ey = hull[(i + 1) % n][0] - ax, hull[(i + 1) % n][1] - ay
+        den = dx * ey - dy * ex
+        if abs(den) < 1e-12:
+            continue
+        t = ((ax - ox) * ey - (ay - oy) * ex) / den
+        u = ((ax - ox) * dy - (ay - oy) * dx) / den
+        if t > 0 and -1e-9 <= u <= 1 + 1e-9:
+            best = max(best, t)
+    return best
+
+
 def _add_sash(me, sash_mat, at=0.70, band=0.098):
     """등받이 단면을 실제로 재서 그 둘레에 새틴 띠를 감고, 뒤에 리본과 늘어뜨린 꼬리를 단다.
        (이 모델에는 리본이 없다. 커버만 씌워져 있다.)"""
@@ -63,29 +97,27 @@ def _add_sash(me, sash_mat, at=0.70, band=0.098):
 
     def outline(z):
         """그 높이에서 의자 단면의 실제 윤곽을 각도별 반지름으로 잰다.
-           네 장의 판을 덧대던 방식은 의자 표면에서 떠서 판때기로 보였다."""
-        sl_ = [v.co for v in me.vertices if abs(v.co.z - z) < 0.020]
-        if len(sl_) < 8:
+
+        각도 칸마다 최대 반지름을 담는 방식은 못 쓴다 — 감축된 메시라 이 높이 단면에
+        정점이 30개뿐이고 56칸 중 52칸이 비어, 빈 칸 채우기가 최대값을 전체에 퍼뜨려
+        반지름 0.2m 짜리 원형 후프가 됐다. 단면의 볼록 껍질을 뜬 뒤 중심에서
+        광선을 쏴 껍질과 만나는 거리를 쓴다 (등받이 단면은 볼록하다)."""
+        sl_ = [v.co for v in me.vertices if abs(v.co.z - z) < 0.014]
+        if len(sl_) < 6:
             return None
         ymin_ = min(v.y for v in sl_)
         bk = [v for v in sl_ if v.y < ymin_ + 0.12] or sl_   # 커버 자락이 섞이면 띠가 부푼다
-        ox = (min(v.x for v in bk) + max(v.x for v in bk)) / 2
-        oy = (min(v.y for v in bk) + max(v.y for v in bk)) / 2
-        rad = [0.0] * NSEG
-        for v in bk:
-            a = math.atan2(v.y - oy, v.x - ox) % (2 * math.pi)
-            i = int(a / (2 * math.pi) * NSEG) % NSEG
-            rad[i] = max(rad[i], math.hypot(v.x - ox, v.y - oy))
-        for _ in range(6):                                  # 빈 칸은 이웃에서 메운다
-            for i in range(NSEG):
-                if rad[i] <= 0:
-                    nb = [r for r in (rad[(i - 1) % NSEG], rad[(i + 1) % NSEG]) if r > 0]
-                    if nb:
-                        rad[i] = sum(nb) / len(nb)
-        if min(rad) <= 0:
+        hull = _hull2d([(v.x, v.y) for v in bk])
+        if len(hull) < 3:
             return None
-        for _ in range(2):                                  # 들쭉날쭉한 것만 다듬는다
-            rad = [(rad[(i - 1) % NSEG] + 2 * rad[i] + rad[(i + 1) % NSEG]) / 4 for i in range(NSEG)]
+        ox = (min(p[0] for p in hull) + max(p[0] for p in hull)) / 2
+        oy = (min(p[1] for p in hull) + max(p[1] for p in hull)) / 2
+        rad = []
+        for i in range(NSEG):
+            r = _ray_hull(ox, oy, 2 * math.pi * i / NSEG, hull)
+            if r <= 0:
+                return None
+            rad.append(r)
         return ox, oy, rad
 
     zs = [v.co.z for v in me.vertices]
@@ -107,19 +139,21 @@ def _add_sash(me, sash_mat, at=0.70, band=0.098):
         bpy.data.meshes.remove(t)
 
     # 띠: 잰 윤곽을 따라 0.006 만 띄워 두르는 한 장의 면 (의자 표면에 밀착한다)
-    GAP = 0.006
+    # 볼록 껍질은 감축된 메시라 거칠어서 모서리에서 조금 부푼다. 살짝 안으로 당겨
+    # 표면에 붙게 한다 (밖으로 띄우면 모서리에 삼각 날개가 생긴다)
+    GAP, SHRINK = 0.003, 0.995
 
     def band_build(b_):
         rings = []
         for (ox, oy, rad), zz in ((lo, zm - band / 2), (hi, zm + band / 2)):
-            rings.append([b_.verts.new((ox + math.cos(2 * math.pi * i / NSEG) * (rad[i] + GAP),
-                                        oy + math.sin(2 * math.pi * i / NSEG) * (rad[i] + GAP), zz))
+            rings.append([b_.verts.new((ox + math.cos(2 * math.pi * i / NSEG) * (rad[i] * SHRINK + GAP),
+                                        oy + math.sin(2 * math.pi * i / NSEG) * (rad[i] * SHRINK + GAP), zz))
                           for i in range(NSEG)])
         for i in range(NSEG):
             j = (i + 1) % NSEG
             b_.faces.new((rings[0][i], rings[0][j], rings[1][j], rings[1][i]))
         bmesh.ops.recalc_face_normals(b_, faces=b_.faces[:])
-        bmesh.ops.solidify(b_, geom=b_.faces[:], thickness=0.004)
+        bmesh.ops.solidify(b_, geom=b_.faces[:], thickness=0.003)
 
     emit(band_build)
 
