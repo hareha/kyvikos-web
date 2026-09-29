@@ -191,6 +191,13 @@ for mat_name, group_name in manifest['materials'].items():
     lm_nodes.append((m, [uv, tex, sep, out]))
 
 export = [o for c in ('STATIC', 'DYNAMIC', 'EMISSIVE') for o in bpy.data.collections[c].objects]
+# apec_stage.py 의 reset() 이 씬을 비우므로 그 뒤에 apec_context.py 를 안 돌리면
+# 주변(중도타워·연수동·정원)이 통째로 빠진 채 나간다. 한 번 그렇게 배포했다.
+if NAME == 'apec_stage':
+    names = {o.name for o in export}
+    missing = [n for n in ('pagoda', 'halls', 'yeonsu_ne', 'garden', 'stage', 'tables') if n not in names]
+    if missing:
+        raise SystemExit(f'내보내기 중단: {missing} 가 없다. apec_context.py 를 먼저 돌려라.')
 with bpy.context.temp_override(**view3d_override()):
     select_only(export)
     bpy.ops.export_scene.gltf(
