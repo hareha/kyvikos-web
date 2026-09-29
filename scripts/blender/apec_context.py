@@ -1389,41 +1389,52 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
     stones.add(cyl(tr * 0.72, tr * 0.72, 0.28, 48), f @ T(0, ty + 1.24, 0), S, 1.4)              # 천개석
     stones.add(cyl(tr * 0.40, tr * 0.52, 0.22, 32), f @ T(0, ty + 1.48, 0), S, 1.2)
 
-    # 양옆의 기와통로 — 위성사진·근접사진: 돔 좌우로 높이 솟은 기와지붕 통로가 붙어 있다.
-    # 앞면(+z)이 잔디·무대 쪽, 통로는 그 면과 나란히 ±x 로 뻗는다.
-    # 전에는 한쪽에만 낮은 포치를 달았고 그것도 중도타워 쪽으로 틀어 옆 건물에 박혔다.
-    # 길이 10.5 이상이면 +x 쪽 지붕이 신평루(11,-41) 지붕(x 2.9~)과 겹친다.
-    CL, CD, CH = 10.5, 5.2, 4.6                                    # 길이 / 폭 / 처마 밑 벽 높이
-    hd_ = CD / 2 + 2.3
-    cb = seat(0.44 + CH + 1.05, hd_, 0.8, 2.8, overhang=2.3)       # 평방 윗면 = 0.44+4.6+1.05
-    for s_ in (-1, 1):
-        g = f @ T(s_ * (r + 0.2 + CL / 2), 0, 0)
-        stones.add(bevel_box(CL + 0.8, 0.44, CD + 1.2, 0.05), g @ T(0, 0.22, 0), M['granite'], 1.5)   # 기단
-        stones.add(box(CL, CH, CD), g @ T(0, 0.44 + CH / 2, 0), S, 2.0)                               # 석벽 몸체
-        for k in range(3):                                                                            # 앞면 사각 창
-            wx = (k - 1) * CL / 3
-            stones.add(box(2.0, 2.4, 0.22), g @ T(wx, 0.44 + 2.5, CD / 2 - 0.05), M['black'], 1)
-            stones.add(box(2.34, 0.26, 0.30), g @ T(wx, 0.44 + 3.83, CD / 2 - 0.05), S, 1)            # 인방
-        stones.add(box(CL + 0.4, 0.50, CD + 0.4), g @ T(0, 0.44 + CH + 0.25, 0), M['vermilion'], 1)   # 창방
-        stones.add(box(CL + 1.0, 0.55, CD + 1.0), g @ T(0, 0.44 + CH + 0.775, 0), M['bracket'], 1)    # 평방
-        rafters(stones, g, CL + 0.8, CD / 2 + 0.6, CD / 2 + 1.95, hip_under(cb, hd_, 0.8, 2.8))
-        stones.add(hip_roof(CL / 2 + 2.3, hd_, 2.8, ridge=0.8, lift=1.1), g @ T(0, cb, 0), M['tileGrey'], 1.4)
-        ridge(stones, g, CL * 0.78, cb + 2.8)
-    # 앞면 출입구 (돔 정면)
-    stones.add(box(3.4, 3.2, 1.2), f @ T(0, 0.30 + 1.60, r - 0.2), S, 1.6)
-    stones.add(box(2.0, 2.4, 0.25), f @ T(0, 0.30 + 1.20, r + 0.42), M['black'], 1)
-    for k in range(3):                                                                                # 정면 계단
-        stones.add(box(3.6, 0.16, 0.42), f @ T(0, 0.30 - 0.08 - k * 0.16, r + 0.55 + k * 0.42), M['granite'], 1.5)
-    # 앞쪽을 두르는 낮은 돌난간 (사진). 통로 사이 정면 구간만 — 더 벌리면 통로 벽을 뚫는다
-    SPAN, RB = PI * 0.64, r + 2.5
-    for k in range(22):
-        a_ = -SPAN / 2 + SPAN * k / 21
-        stones.add(bevel_box(0.20, 0.86, 0.20, 0.03),
-                   f @ T(RB * math.sin(a_), 0.30 + 0.43, RB * math.cos(a_), -a_), M['balustrade'], 1)
-        if k:
-            b_ = a_ - SPAN / 42
-            stones.add(box(0.60, 0.50, 0.09),
-                       f @ T(RB * math.sin(b_), 0.30 + 0.34, RB * math.cos(b_), -b_), M['balustrade'], 1)
+    # 옆으로 이어지는 기와채 — 사진(site_seokbulgwan_dome_1 / site_lawn_wide_seokbulgwan_dome_1):
+    # 돔은 한쪽에만 붙어 있고, 그 옆으로 높이가 한 단씩 낮아지는 기와지붕 세 채가 이어진다.
+    # 각 채는 앞에 흰 석벽이 서고(윗단에 작은 네모 돌이 줄지어 박힘) 기와지붕은 그 뒤로 물러앉는다.
+    # 돔 뒤쪽 반은 이 석채 몸체가 메운다 (사진에서도 돔은 몸체 앞으로 불룩 나온 반원이다).
+    ZF = 2.4                       # 석벽 앞면 (돔 앞면 r=4.6 보다 뒤 → 돔이 앞으로 튀어나온다)
+    SIDE = -1                      # 신평루(11,-41) 쪽이 아니라 빈 쪽으로 뻗는다
+    x0 = -(r - 0.8)                # 첫 채는 드럼에 물려서 시작
+    # 높이는 사진에서 드럼 처마돌림띠(6.75)와 천개석(11.4)을 자로 재서 뽑았다:
+    # 첫 채 벽 윗면 ≈ 5.1 / 처마 ≈ 6.4 / 용마루 ≈ 8.2. 뒤 두 채는 한 단씩 낮아진다.
+    # 깊이(D)는 사진으로 읽을 수 없어 앞채가 더 깊어 보이는 정도로만 잡았다.
+    for (L, WH, RH, D) in ((12.0, 5.0, 1.9, 8.6), (10.0, 4.1, 1.75, 7.6), (9.0, 3.4, 1.6, 6.8)):
+        g = f @ T(x0 + SIDE * L / 2, 0, ZF - D / 2)
+        stones.add(bevel_box(L + 0.6, 0.44, D + 0.8, 0.05), g @ T(0, 0.22, 0), M['granite'], 1.5)      # 기단
+        stones.add(box(L, WH, D), g @ T(0, 0.44 + WH / 2, 0), S, 2.0)                                  # 석벽 몸체
+        for k in range(int(L // 1.7)):                                                                 # 벽 윗단 네모 돌
+            stones.add(bevel_box(0.56, 0.34, 0.34, 0.03),
+                       g @ T(-L / 2 + 0.85 + k * 1.7, 0.44 + WH - 0.30, D / 2 + 0.06), S, 1)
+        # 기와지붕은 석벽보다 뒤에서 시작해 위로 솟는다 (사진: 벽 너머로 지붕만 보인다)
+        rb, rd = D / 2 - 0.9, D / 2 - 0.2                     # 지붕 몸체 중심 뒤로, 처마 깊이
+        rf = g @ T(0, 0, -0.9)
+        stones.add(box(L - 0.6, 0.46, D - 2.0), rf @ T(0, 0.44 + WH + 0.23, 0), M['vermilion'], 1)     # 창방
+        stones.add(box(L - 0.2, 0.50, D - 1.4), rf @ T(0, 0.44 + WH + 0.71, 0), M['bracket'], 1)       # 평방
+        hd_ = rd + 1.5
+        cb = 0.44 + WH + 0.95                                  # 처마 밑면이 벽 윗면보다 0.95 위 (사진)
+        rafters(stones, rf, L - 0.4, rd - 0.5, hd_ - 0.45, hip_under(cb, hd_, 0.78, RH))
+        stones.add(hip_roof(L / 2 + 1.6, hd_, RH, ridge=0.78, lift=1.0), rf @ T(0, cb, 0), M['tileGrey'], 1.4)
+        ridge(stones, rf, L * 0.74, cb + RH)
+        x0 += SIDE * L
+    # 돔 뒤를 메우는 몸체 — 사진에서 돔은 홀로 선 원통이 아니라 이 석채 앞으로 불룩 나온 반원이다.
+    # (이게 없어서 돔 뒤쪽 반이 빈 채로 보였다)
+    stones.add(bevel_box(10.0, 0.44, 9.4, 0.05), f @ T(0.9, 0.22, ZF - 8.6 / 2), M['granite'], 1.5)
+    stones.add(box(9.4, 5.0, 8.6), f @ T(0.9, 0.44 + 2.5, ZF - 8.6 / 2), S, 2.0)
+    for k in range(5):                                                  # 같은 벽 윗단 네모 돌
+        stones.add(bevel_box(0.56, 0.34, 0.34, 0.03), f @ T(-3.0 + k * 1.7, 5.14, ZF + 0.06), S, 1)
+    # 앞쪽 흰 돌난간 — 사진: 동자기둥 + 그 사이를 메운 판석. 돔 앞을 돌아 석채 앞을 따라 곧게 간다
+    RB = r + 2.6
+    pts = [(RB * math.sin(a), 0.30, RB * math.cos(a)) for a in
+           [PI * (0.34 - 0.68 * k / 13) for k in range(14)]]
+    pts += [(x0 + 1.0, 0.30, ZF + 2.6)]
+    for a_, b_ in zip(pts[:-1], pts[1:]):
+        ang = math.atan2(b_[0] - a_[0], b_[2] - a_[2])
+        mid = ((a_[0] + b_[0]) / 2, (a_[2] + b_[2]) / 2)
+        seg = math.dist((a_[0], a_[2]), (b_[0], b_[2]))
+        stones.add(box(seg, 0.52, 0.14), f @ T(mid[0], 0.30 + 0.40, mid[1], -ang + PI / 2), M['balustrade'], 1)   # 판석
+        stones.add(bevel_box(0.24, 0.94, 0.24, 0.03), f @ T(a_[0], 0.30 + 0.47, a_[2], -ang), M['balustrade'], 1)  # 동자기둥
+    stones.add(bevel_box(0.24, 0.94, 0.24, 0.03), f @ T(pts[-1][0], 0.77, pts[-1][2]), M['balustrade'], 1)
     light(C_LIGHT, f'seokbul_{round(x)}', 'SPOT', (x, 0.8, z + r + 6.5), (x, drum + 2.5, z),
           energy=2400, color=(1.0, 0.94, 0.82), spot=0.7, blend=0.5, size=0.3)
 
