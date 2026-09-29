@@ -486,107 +486,64 @@ M['benchBlue'] = material('apBenchBlue', None, (0.024, 0.068, 0.328), 0.72)   # 
 M['caseAlu'] = material('apCaseAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8)
 
 
-def side_tower(f, kind='tower', aim=None):
-    """남색 클래딩 타워 — 클라이언트 근접 사진 기준으로 다시.
+def side_tower(f, aim=None):
+    """남색 가림벽 + 그 위 비계 프레임에 4구 블라인더 네 조와 긴 방송 카메라 한 대.
 
-    전에는 폭 5.6 x 높이 3.6 의 납작한 벽체에 4구 블라인더 네 조를 얹어 놓았는데,
-    사진의 타워는 폭보다 높은 3.0 x 4.0m 짜리 통이고, 윗면 그레이팅 발판에
-    큰 무빙헤드 한 대와 검은 랙 상자 하나가 올라가 있다. 난간은 한 줄뿐이다.
-    로고(APEC 위, 경상북도 아래)는 잔디 쪽 면 위쪽에 박힌다.
+    결과물 폴더 08-59-54 006 을 확대해 읽었다 (오른쪽 타워, 연수동 아케이드 앞):
+    벽 위로 비계 가로대가 지나고 거기에 4구 블라인더가 네 조 걸려 잔디 쪽으로 숙이며,
+    그 아래 가로대에 긴 렌즈의 방송 카메라가 한 대 물려 있다.
+    왼쪽(중도타워 앞) 타워도 08-57-50 005 항공과 야간 사진에서 같은 리그다.
+    로고는 APEC 위, 경상북도 아래로 잔디 쪽 면에 박힌다.
     """
-    # kind='wall'  : 중도타워 앞 — 폭이 넓고 낮은 벽체, 위 프레임에 워시 다섯 (항공 사진)
-    # kind='tower' : 잔디 동쪽 — 폭보다 높은 통, 발판에 큰 무빙헤드 한 대 + 랙 (근접 사진)
-    wide = kind == 'wall'
-    w, h, d = (6.0, 3.4, 2.4) if wide else (3.0, 4.0, 2.6)
+    w, h, d = 6.0, 3.4, 2.0
     boh.add(bevel_box(w, h, d, 0.02), f @ T(0, h / 2, 0), M['cladNavy'], 1)
-    boh.add(plane(w * (0.46 if wide else 0.84), w * (0.46 if wide else 0.84) * 1152 / 1792),
-            f @ T(0, h * (0.58 if wide else 0.66), d / 2 + 0.009), M['cladPanel'], tile=None)
+    boh.add(plane(w * 0.46, w * 0.46 * 1152 / 1792), f @ T(0, h * 0.58, d / 2 + 0.009), M['cladPanel'], tile=None)
     boh.add(box(0.04, 2.0, 0.85), f @ T(w / 2 + 0.022, 1.0, -d / 2 + 0.75), M['cladNavy'], 1)      # 옆면 출입문
     boh.add(cyl(0.018, 0.018, 0.10, 8), f @ T(w / 2 + 0.05, 1.05, -d / 2 + 1.14, 0, PI / 2), M['scaffold'], 1)
-    # ── 상부 — 결과물 폴더 사진 그대로 ───────────────────────────────
-    # 020(08-58-21): 통 위에 비계로 짠 강재 그레이팅 발판이 잔디 쪽으로 내밀려 얹히고,
-    #                난간은 상·중 두 줄. 발판 위에 폴로스팟 한 대(스탠드+요크+긴 경통)와
-    #                회색 제어함, 발판 밑에 무빙헤드가 매달린다.
-    # 014:           맨 위에 레인커버 씌운 방송 카메라가 한 대 선다.
-    # 011 / 항공 005: 중도타워 앞 넓은 벽체 쪽은 프레임 윗단에 4구 블라인더가 줄지어 탄다.
-    tx_, ty_, tz_ = aim or (CX, 2.0, FRONT - 2.0)
-    DECK_OUT = 0.0 if wide else 0.95                    # 020: 잔디 쪽으로 내민 발판
-    dz0, dz1 = -d / 2 + 0.05, d / 2 + DECK_OUT
-    dd = dz1 - dz0
-    NG = 12
-    for k in range(NG):                                                                            # 그레이팅 판재
-        boh.add(box(w - 0.06, 0.05, dd / NG - 0.02), f @ T(0, h + 0.03, dz0 + (k + 0.5) * dd / NG), M['grating'], 1)
-    RAIL = 1.18
-    corners = ((-w / 2 + 0.06, dz0), (w / 2 - 0.06, dz0), (-w / 2 + 0.06, dz1), (w / 2 - 0.06, dz1))
-    edges = (((-w / 2 + 0.06, dz0), (w / 2 - 0.06, dz0)), ((-w / 2 + 0.06, dz1), (w / 2 - 0.06, dz1)),
-             ((-w / 2 + 0.06, dz0), (-w / 2 + 0.06, dz1)), ((w / 2 - 0.06, dz0), (w / 2 - 0.06, dz1)))
-    for (a_, b_) in edges:                                                                         # 발판 테두리 앵글
-        g, m = tube(f @ V((a_[0], h + 0.01, a_[1])), f @ V((b_[0], h + 0.01, b_[1])), 0.042, 8)
-        boh.add(g, m, M['scaffold'])
-    for (sx, sz) in corners:
-        boh.add(cyl(0.026, 0.026, RAIL, 10), f @ T(sx, h + 0.05 + RAIL / 2, sz), M['scaffold'], 1)  # 난간 기둥
-    for yy in (h + 0.05 + RAIL * 0.52, h + 0.05 + RAIL):                                           # 상·중 난간대
-        for (a_, b_) in edges:
-            g, m = tube(f @ V((a_[0], yy, a_[1])), f @ V((b_[0], yy, b_[1])), 0.021, 6)
+
+    # ── 벽 위 비계 프레임 (사진 006) ──────────────────────────────
+    FR, dzf = 1.55, d / 2 - 0.12                      # 프레임 높이 / 가로대가 지나는 면
+    posts = (-w / 2 + 0.25, -w / 6, w / 6, w / 2 - 0.25)
+    for px in posts:
+        for pz in (dzf, -d / 2 + 0.12):
+            boh.add(cyl(0.026, 0.026, FR, 10), f @ T(px, h + FR / 2, pz), M['scaffold'], 1)
+    Y_TOP, Y_MID = h + FR - 0.10, h + FR - 0.72       # 블라인더 가로대 / 카메라 가로대
+    for yy in (Y_TOP, Y_MID, h + 0.14):
+        for pz in (dzf, -d / 2 + 0.12):
+            g, m = tube(f @ V((-w / 2 + 0.25, yy, pz)), f @ V((w / 2 - 0.25, yy, pz)), 0.022, 6)
             boh.add(g, m, M['scaffold'])
-    for sz in (dz0, dz1):                                                                          # 대각 가새
-        g, m = tube(f @ V((-w / 2 + 0.06, h + 0.06, sz)), f @ V((w / 2 - 0.06, h + 0.05 + RAIL, sz)), 0.019, 6)
+    for px in (posts[0], posts[-1]):                  # 앞뒤 연결
+        for yy in (Y_TOP, h + 0.14):
+            g, m = tube(f @ V((px, yy, dzf)), f @ V((px, yy, -d / 2 + 0.12)), 0.020, 6)
+            boh.add(g, m, M['scaffold'])
+    for (a_, b_) in ((posts[0], posts[1]), (posts[2], posts[3])):   # 대각 가새
+        g, m = tube(f @ V((a_, h + 0.14, dzf)), f @ V((b_, Y_TOP, dzf)), 0.019, 6)
         boh.add(g, m, M['scaffold'])
 
-    def broadcast_camera(p):
-        """레인커버 씌운 방송 카메라 (사진 014 타워 꼭대기). p 는 발판 위 월드 좌표"""
-        kf = T(p.x, 0, p.z, math.atan2(tx_ - p.x, tz_ - p.z))                                      # 로컬 +z = 무대 쪽
-        y0_ = p.y
-        boh.add(cyl(0.05, 0.062, 0.56, 10), kf @ T(0, y0_ + 0.28, 0), M['scaffold'], 1)            # 기둥
-        boh.add(bevel_box(0.32, 0.10, 0.32, 0.02), kf @ T(0, y0_ + 0.61, 0), M['black'], 1)        # 헤드
-        cbf = kf @ T(0, y0_ + 0.74, 0, 0, 0.16)
-        boh.add(bevel_box(0.40, 0.34, 0.92, 0.10), cbf @ T(0, 0, 0.08), M['black'], 1)             # 커버 씌운 몸통
-        boh.add(bevel_box(0.26, 0.20, 0.30, 0.07), cbf @ T(0.06, 0.24, -0.10), M['black'], 1)      # 커버 주름
-        boh.add(cyl(0.105, 0.125, 0.26, 12), cbf @ T(0, -0.02, 0.62, 0, PI / 2), M['black'], 1)    # 렌즈 후드
+    # 4구 블라인더 네 조 — 윗 가로대에 걸려 잔디 쪽으로 숙인다
+    tx_, ty_, tz_ = aim or (CX, 2.0, FRONT - 2.0)
+    for k in range(4):
+        lx = (k - 1.5) * (w - 1.3) / 3
+        bf = f @ T(lx, Y_TOP - 0.30, dzf + 0.14, 0, 0.30)
+        boh.add(box(0.60, 0.05, 0.22), bf @ T(0, 0.31, -0.02), M['scaffold'], 1)                   # 요크
+        boh.add(bevel_box(0.54, 0.50, 0.18, 0.02), bf, M['black'], 1)
+        for sx_ in (-1, 1):
+            for sy_ in (-1, 1):
+                # 발광면을 하우징 반두께(0.09)에서 조금만 띄우면 웹에서 묻혀 깜깜하게 나온다
+                emit.add(plane(0.19, 0.17), bf @ T(sx_ * 0.128, sy_ * 0.118, 0.105), M['blinderLens'], tile=None)
+        pos = f @ V((lx, Y_TOP - 0.30, dzf + 0.30))
+        light(C_LIGHT, f'sideblinder_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], (f @ V((lx, 0.9, 9.0)))[:],
+              energy=2600, color=(1.0, 0.86, 0.66), spot=1.05, blend=0.7, size=0.3)
 
-    if wide:
-        # 011 / 항공 005: 발판 위 프레임 윗단에 4구 블라인더 네 조가 잔디를 향해 늘어선다
-        for k in range(4):
-            lx = (k - 1.5) * (w - 1.2) / 3
-            bf = f @ T(lx, h + 0.05 + RAIL - 0.12, dz1 + 0.16, 0, 0.30)   # +rx 라야 잔디 쪽으로 숙인다
-            boh.add(bevel_box(0.54, 0.50, 0.18, 0.02), bf, M['black'], 1)
-            boh.add(box(0.62, 0.05, 0.22), bf @ T(0, 0.29, 0), M['scaffold'], 1)                   # 요크
-            for sx_ in (-1, 1):
-                for sy_ in (-1, 1):
-                    emit.add(plane(0.19, 0.17), bf @ T(sx_ * 0.128, sy_ * 0.118, 0.105), M['blinderLens'], tile=None)
-            pos = f @ V((lx, h + 0.05 + RAIL - 0.12, dz1 + 0.30))
-            light(C_LIGHT, f'sideblinder_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], (f @ V((lx, 0.9, 9.0)))[:],
-                  energy=2600, color=(1.0, 0.86, 0.66), spot=1.05, blend=0.7, size=0.3)
-        broadcast_camera(f @ V((w / 2 - 0.55, h + 0.05, dz1 - 0.55)))
-        return
+    # 긴 방송 카메라 한 대 — 블라인더 줄 바로 아래 가로대에 물린다 (사진 006: 왼쪽에서 두 번째쯤)
+    cx_ = (1 - 1.5) * (w - 1.3) / 3
+    cf = f @ T(cx_, Y_MID + 0.16, dzf + 0.10, 0, 0.14)
+    boh.add(bevel_box(0.22, 0.26, 0.20, 0.02), cf @ T(0, -0.16, -0.10), M['scaffold'], 1)          # 클램프 + 헤드
+    boh.add(bevel_box(0.30, 0.30, 0.46, 0.04), cf @ T(0, 0, -0.16), M['black'], 1)                 # 몸통
+    boh.add(cyl(0.085, 0.10, 0.52, 14), cf @ T(0, 0, 0.30, 0, PI / 2), M['black'], 1)              # 긴 렌즈
+    boh.add(cyl(0.115, 0.115, 0.10, 14), cf @ T(0, 0, 0.60, 0, PI / 2), M['black'], 1)             # 후드
+    boh.add(bevel_box(0.16, 0.13, 0.14, 0.02), cf @ T(0.15, 0.18, -0.16), M['black'], 1)           # 뷰파인더
 
-    # 폴로스팟 — 스탠드 + 요크 + 긴 경통 (사진 020)
-    sp = f @ V((-w * 0.16, h + 0.05, dz1 - 0.55))
-    yaw = math.atan2(tx_ - sp.x, tz_ - sp.z)
-    sf = T(sp.x, 0, sp.z, yaw)                                                                     # 로컬 +z = 조준 방향
-    boh.add(bevel_box(0.40, 0.06, 0.40, 0.02), sf @ T(0, h + 0.08, 0), M['black'], 1)              # 베이스판
-    boh.add(cyl(0.075, 0.095, 0.48, 10), sf @ T(0, h + 0.35, 0), M['black'], 1)                    # 스탠드
-    boh.add(bevel_box(0.28, 0.20, 0.26, 0.03), sf @ T(0, h + 0.66, 0), M['black'], 1)              # 요크
-    bf = sf @ T(0, h + 0.76, 0, 0, 0.22)
-    boh.add(bevel_box(0.30, 0.34, 0.74, 0.03), bf @ T(0, 0, -0.32), M['black'], 1)                 # 램프 하우징
-    boh.add(bevel_box(0.20, 0.12, 0.26, 0.02), bf @ T(0, 0.22, -0.46), M['black'], 1)              # 위 제어패널
-    boh.add(cyl(0.105, 0.125, 0.64, 14), bf @ T(0, 0, 0.36, 0, PI / 2), M['black'], 1)             # 경통
-    emit.add(cyl(0.105, 0.105, 0.02, 14), bf @ T(0, 0, 0.705, 0, PI / 2), M['washLens'])           # 렌즈 (경통 끝 0.68 보다 앞으로)
-    light(C_LIGHT, f'sidespot_{round(sp.x, 1)}', 'SPOT', (sp.x, h + 0.82, sp.z), (tx_, ty_, tz_),
-          energy=2200, color=(1.0, 0.92, 0.80), spot=0.22, blend=0.4, size=0.08)
-    cf = f @ T(w * 0.26, h + 0.05, dz1 - 1.45)                                                     # 회색 제어함
-    boh.add(bevel_box(0.44, 0.60, 0.34, 0.03), cf @ T(0, 0.30, 0), M['caseAlu'], 1)
-    boh.add(box(0.38, 0.03, 0.22), cf @ T(0, 0.46, 0.175), M['black'], 1)
-    # 발판 밑에 매달린 무빙헤드 (사진 020: 발판 바깥 모서리 아래에 한 대)
-    for k, mx in enumerate((-w * 0.32,)):
-        p = f @ V((mx, h, dz1 - 0.30))
-        gm = T(p.x, 0, p.z, math.atan2(-(tx_ - p.x), -(tz_ - p.z)))
-        boh.add(box(0.30, 0.06, 0.30), gm @ T(0, h - 0.01, 0), M['scaffold'], 1)                   # 클램프 판
-        boh.add(mesh_source(SRC_MOVER), gm @ T(0, h - 0.10, 0, 0, PI, 0, 1.4, 1.4, 1.4), list(SRC_MOVER.data.materials))
-        emit.add(sphere(0.078, 2), gm @ T(0, h - 0.52, -0.15), M['blueLens'])
-        light(C_LIGHT, f'sidemover_{round(p.x, 1)}_{k}', 'SPOT', (p.x, h - 0.55, p.z), (tx_, ty_, tz_),
-              energy=1500, color=(0.45, 0.6, 1.0), spot=0.22, blend=0.4, size=0.06)
-    broadcast_camera(f @ V((w / 2 - 0.50, h + 0.05, dz1 - 0.45)))
 
 
 def cam_riser(f, run=5.0, ret=1.6, d=0.9, h=1.35):
@@ -610,8 +567,8 @@ def cam_riser(f, run=5.0, ret=1.6, d=0.9, h=1.35):
 
 # 잔디 좌우 긴 변, 건물에 붙여 하나씩 — 무대 쪽 면을 비우고 테이블 쪽에 그래픽
 # 잔디 양옆에 마주 보게 한 대씩 (서쪽 중도타워 앞 / 동쪽 연수동 아케이드 앞), z 는 같게
-side_tower(T(-16.6, 0, -1.0, PI / 2), kind='wall')   # 기단 계단 앞 포장 마당을 지나 그 앞쪽 (항공 사진)
-side_tower(T(26.5, 0, 4.0, -PI / 2 - 0.25), kind='tower')   # 잔디 동쪽 (근접 사진의 높은 통 + 무빙헤드 한 대)
+side_tower(T(-16.6, 0, -1.0, PI / 2))        # 중도타워 앞 (항공 08-57-50 005)
+side_tower(T(26.5, 0, 4.0, -PI / 2 - 0.25))  # 연수동 아케이드 앞 (08-59-54 006) — 양쪽 같은 리그다
 # 무대를 정면으로 보는 낮은 중계카메라 단상 — 회랑(z≈19) 열주 앞 잔디
 cam_riser(T(0.6, 0, 15.4, PI), run=4.2)   # 회랑 앞, 잔디로 나가는 포장길(x 3.0~6.2) 바로 서쪽
 # 무대 정면 잔디의 삼각대 카메라는 뺀다 — 만찬 사진에는 객석뿐이다 (리허설 때만 있었다)
