@@ -756,7 +756,8 @@ def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None
         oz = 0.45 if cz == z0 else -0.45
         asm.add(box(0.9, h + parapet, 0.9), T(cx + ox, (h + parapet) / 2, cz + oz), M['granite_clad'], 1.2)
     arc = set(arcade or ())     # 아케이드를 둘 면 ('n' = -z, 'e' = +x, 's' = +z, 'w' = -x)
-    wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet, 'n' in arc)          # -z 면
+    if 'N' not in arc:          # 대문자 N = 그 면은 따로 그린다 (연수동 정면)
+        wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet, 'n' in arc)      # -z 면
     wall(asm, x1, z1, z1 - z0, PI / 2, h, floors, parapet, 'e' in arc)      # +x 면
     wall(asm, x0, z1, x1 - x0, 0.0, h, floors, parapet, 's' in arc)         # +z 면
     wall(asm, x0, z0, z1 - z0, -PI / 2, h, floors, parapet, 'w' in arc)     # -x 면
@@ -772,6 +773,45 @@ def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None
                 asm.add(box(0.04, 0.3, 0.04), T(p.x, h + parapet + 0.1, p.z), M['steelRail'], 1)
 
 
+def yeonsu_front(asm, x0, x1, z, h1, h2, ratio=(0.65, 1, 1, 1, 1, 0.65)):
+    """연수동 잔디 쪽 정면 — 클라이언트 사진 그대로.
+
+    2단 케이크다. 아래단은 아치 열, 윗단은 **창이 없는 민 화강석 띠**,
+    그 위에 흰 돌난간과 기와집이 올라간다. 3단으로 물러나게 만들면 안 된다.
+    아치는 양 끝에 좁은 것 하나씩 + 가운데 넓은 것 넷, 모두 여섯이다.
+    """
+    L = x1 - x0
+    f = T(x1, 0, z, PI)                     # block() 과 같은 규약 (원점 x1, 로컬 +z = 바깥)
+    unit = L / sum(ratio)
+    # 아래단: 아치 열
+    edge = 0.55                             # 양 끝 모서리 벽
+    xs, acc = [], edge
+    for r in ratio:
+        xs.append((acc, acc + (L - 2 * edge) * r / sum(ratio)))
+        acc = xs[-1][1]
+    for (a_, b_) in xs:
+        bw = b_ - a_
+        ow = min(bw * 0.50, h1 - 1.55)      # 사진의 아치는 홀쭉하다 (폭:높이 ≈ 1:1.5)
+        r_ = ow / 2
+        spr = h1 - 0.95 - r_                # 기공선
+        cx_ = (a_ + b_) / 2
+        glow.add(plane(ow, spr - 0.10), f @ T(cx_, (spr + 0.10) / 2, -0.42), random.choice(ROOMS), tile=None)
+        glow.add(ring_segment(0, r_, 0, PI, 0.04), f @ T(cx_, spr, -0.42, 0, -PI / 2), random.choice(ROOMS), tile=None)
+        asm.add(ring_segment(r_, r_ + 0.42, 0, PI, DEPTH), f @ T(cx_, spr, -DEPTH, 0, -PI / 2), M['granite_clad'], 1.2)
+        for sx_ in (-1, 1):                 # 아치 사이 피어
+            asm.add(box((bw - ow) / 2 - 0.01, h1, DEPTH),
+                    f @ T(cx_ + sx_ * (ow + bw) / 4, h1 / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+        asm.add(box(bw, h1 - spr - r_ - 0.42, DEPTH),                    # 아치 위 벽
+                f @ T(cx_, (spr + r_ + 0.42 + h1) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+        asm.add(box(ow, 0.20, 0.50), f @ T(cx_, 0.10, -0.26), M['granite'], 1.5)   # 디딤돌
+    for sx_ in (edge / 2, L - edge / 2):    # 양 끝 마구리
+        asm.add(box(edge, h1, DEPTH), f @ T(sx_, h1 / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+    # 윗단: 창 없는 민 화강석 띠 + 위아래 돌림띠
+    asm.add(box(L, h2 - 0.30, DEPTH + 0.10), f @ T(L / 2, h1 + (h2 - 0.30) / 2, -(DEPTH + 0.10) / 2), M['granite_clad'], 1.2)
+    asm.add(box(L + 0.30, 0.26, DEPTH + 0.28), f @ T(L / 2, h1 + 0.13, -(DEPTH + 0.28) / 2), M['granite_clad'], 1.2)
+    asm.add(box(L + 0.40, 0.34, DEPTH + 0.36), f @ T(L / 2, h1 + h2 - 0.17, -(DEPTH + 0.36) / 2), M['granite_clad'], 1.2)
+
+
 def yeonsu_block():
     """연수동 — 결과물 폴더 09-00-43 013 / 09-00-46 016 / 09-00-49 020 을 보고 다시.
 
@@ -783,22 +823,29 @@ def yeonsu_block():
       · 두 동 사이는 **통유리 연결부**
       · 동쪽 동 앞 잔디 가장자리를 따라 **단층 기와 회랑**이 길게 지난다
     """
-    HN, HE = 9.2, 10.0                 # 북동동 / 북서동 몸체 높이
+    # 클라이언트 정면 사진: **2단 케이크**다 — 아래단 아치 열(4.8) + 윗단 민 화강석 띠(2.8),
+    # 그 위에 흰 돌난간과 기와집 **세 채**. 한 단을 더 만들거나 앞으로 빼면 안 된다.
+    NX0, NX1, NZ0, NZ1 = 23.0, 53.0, 20.0, 48.0
+    H1, H2 = 4.8, 2.8
+    HN = H1 + H2                       # 북동동 몸체 7.6
+    HE = 10.0                          # 북서동 (사진 013/020 은 2층 리본창)
     YN, YE = HN + 0.35, HE + 0.35      # 각 옥상 바닥
 
-    # ── 북동동 (잔디 북쪽) : 1층 아치 아케이드가 잔디(-z)를 본다 ──────────
-    block(ye_ne, 23, 69, 20, 51, HN, 2, parapet=1.15, arcade='n')
-    balustrade(ye_ne, [(24.2, HN + 0.30, 20.6), (67.8, HN + 0.30, 20.6)], h=0.80, post=2.8)
-    balustrade(ye_ne, [(24.2, HN + 0.30, 20.6), (24.2, HN + 0.30, 50.0)], h=0.80, post=2.8)
-    hanok(ye_ne, 51.5, 41.0, 21.5, 8.4, ry=PI, y0=YN, label='A', lamp=500)        # 용마루 x
-    hanok(ye_ne, 44.5, 30.0, 10.4, 7.4, ry=-PI / 2, y0=YN, label='B', lamp=700)   # 용마루 z
-    hanok(ye_ne, 30.5, 36.0, 8.6, 6.8, ry=-PI / 2, y0=YN, label='C', lamp=400)    # 사진 013 왼쪽 작은 누각
-    for k in range(6):                                                            # 옥상 분재 소나무
-        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(28.5 + k * 6.2, YN + 0.3, 24.2), M['granite_clad'], 1)
-        ye_ne.add(sphere(0.62, 2), T(28.5 + k * 6.2, YN + 0.85, 24.2, sy=0.62), M['shrub'], 1)
+    # ── 북동동 (잔디 북쪽) : 정면(-z)은 따로 그린다 ('N') ──────────────
+    block(ye_ne, NX0, NX1, NZ0, NZ1, HN, 2, parapet=1.10, arcade='N')
+    yeonsu_front(ye_ne, NX0, NX1, NZ0, H1, H2)
+    balustrade(ye_ne, [(NX0 + 1.2, HN + 0.28, NZ0 + 0.6), (NX1 - 1.2, HN + 0.28, NZ0 + 0.6)], h=0.78, post=2.7)
+    balustrade(ye_ne, [(NX0 + 1.2, HN + 0.28, NZ0 + 0.6), (NX0 + 1.2, HN + 0.28, NZ1 - 1.2)], h=0.78, post=2.7)
+    for k, (hx, hz, hw, hd) in enumerate(((NX0 + 6.5, 33.0, 9.6, 7.2),          # 기와집 세 채 (사진)
+                                          (NX0 + 15.0, 33.0, 9.0, 7.0),
+                                          (NX0 + 23.5, 33.0, 9.6, 7.2))):
+        hanok(ye_ne, hx, hz, hw, hd, ry=PI, y0=YN, label='ABC'[k], lamp=(500, 700, 400)[k])
+    for k in range(5):                                                            # 옥상 분재 소나무
+        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 3.5 + k * 6.0, YN + 0.3, NZ0 + 2.4), M['granite_clad'], 1)
+        ye_ne.add(sphere(0.62, 2), T(NX0 + 3.5 + k * 6.0, YN + 0.85, NZ0 + 2.4, sy=0.62), M['shrub'], 1)
 
     # ── 두 동 사이 통유리 연결부 (사진 013 가운데 유리 띠) ────────────────
-    LX0, LX1, LZ0, LZ1 = 41.0, 55.0, 13.4, 20.2
+    LX0, LX1, LZ0, LZ1 = 42.0, 53.0, 13.4, 20.2
     ye_ne.add(box(LX1 - LX0 - 1.2, HN, LZ1 - LZ0 - 1.2), T((LX0 + LX1) / 2, HN / 2, (LZ0 + LZ1) / 2), M['stoneWall'], 2)
     for (px, pz) in ((LX0, LZ0), (LX1, LZ0), (LX0, LZ1), (LX1, LZ1)):            # 모서리 멀리언
         ye_ne.add(box(0.26, HN + 0.5, 0.26), T(px, (HN + 0.5) / 2, pz), M['winFrame'], 1)
@@ -812,15 +859,15 @@ def yeonsu_block():
         ye_ne.add(box(w_ + 0.3, 0.30, 0.34), g @ T(0, HN + 0.15, 0), M['granite_clad'], 1.2)   # 상부 돌띠
 
     # ── 옥상 천창 ────────────────────────────────────────────────────
-    ye_ne.add(box(8.0, 0.25, 12.0), T(59, YN + 0.12, 30), M['granite_clad'], 1.2)
-    glass_roof.add(box(7.6, 1.2, 11.6), T(59, YN + 0.85, 30), M['skylight'])
+    ye_ne.add(box(6.5, 0.25, 10.0), T(46, YN + 0.12, 40), M['granite_clad'], 1.2)
+    glass_roof.add(box(6.1, 1.1, 9.6), T(46, YN + 0.80, 40), M['skylight'])
 
     # ── 옥상 테라스 가구 ─────────────────────────────────────────────
     # 두 프롭 모두 원점이 밑바닥이라 옥상 바닥 높이에 그대로 얹는다 (전에 공중에 떴었다)
-    for k, (x, z) in enumerate(((27.5, 27), (27.5, 34), (27.5, 41), (33.0, 47))):
+    for k, (x, z) in enumerate(((27.0, 42), (33.0, 44), (39.0, 42), (45.0, 44.5))):
         ye_ne.add(mesh_source(SRC_TABLESET), T(x, YN, z, k * 0.7), list(SRC_TABLESET.data.materials))
         ye_ne.add(mesh_source(SRC_PARASOL), T(x, YN, z), list(SRC_PARASOL.data.materials))
-    light(C_LIGHT, 'site_terrace', 'POINT', (27.5, YN + 2.6, 34), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
+    light(C_LIGHT, 'site_terrace', 'POINT', (34.0, YN + 2.6, 43), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
 
     # ── 북서동 (잔디 동쪽) : 아케이드가 잔디(-x)를 본다 ──────────────────
     block(ye_nw, 36.4, 66, -35, 13, HE, 2, parapet=1.15, arcade='w')
