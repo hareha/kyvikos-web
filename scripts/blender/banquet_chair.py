@@ -56,76 +56,16 @@ def _bow_mesh(width=0.23):
     return bm
 
 
-def _hull2d(pts):
-    """2D 볼록 껍질 (Andrew monotone chain)"""
-    P = sorted(set((round(p[0], 5), round(p[1], 5)) for p in pts))
-    if len(P) < 3:
-        return P
+def _add_sash(me, sash_mat, at=0.70, band=0.105):
+    """의자 커버 표면을 띠 높이에서 잘라내 그대로 띠로 쓴다 (밀착하는 면).
 
-    def half(seq):
-        h = []
-        for p in seq:
-            while len(h) >= 2 and ((h[-1][0] - h[-2][0]) * (p[1] - h[-2][1])
-                                   - (h[-1][1] - h[-2][1]) * (p[0] - h[-2][0])) <= 0:
-                h.pop()
-            h.append(p)
-        return h
-    return half(P)[:-1] + half(P[::-1])[:-1]
-
-
-def _ray_hull(ox, oy, ang, hull):
-    """(ox,oy) 에서 ang 방향으로 쏜 광선이 껍질과 만나는 거리"""
-    dx, dy = math.cos(ang), math.sin(ang)
-    best, n = 0.0, len(hull)
-    for i in range(n):
-        ax, ay = hull[i]
-        ex, ey = hull[(i + 1) % n][0] - ax, hull[(i + 1) % n][1] - ay
-        den = dx * ey - dy * ex
-        if abs(den) < 1e-12:
-            continue
-        t = ((ax - ox) * ey - (ay - oy) * ex) / den
-        u = ((ax - ox) * dy - (ay - oy) * dx) / den
-        if t > 0 and -1e-9 <= u <= 1 + 1e-9:
-            best = max(best, t)
-    return best
-
-
-def _add_sash(me, sash_mat, at=0.70, band=0.098):
-    """등받이 단면을 실제로 재서 그 둘레에 새틴 띠를 감고, 뒤에 리본과 늘어뜨린 꼬리를 단다.
-       (이 모델에는 리본이 없다. 커버만 씌워져 있다.)"""
-    NSEG = 56
-
-    def outline(z):
-        """그 높이에서 의자 단면의 실제 윤곽을 각도별 반지름으로 잰다.
-
-        각도 칸마다 최대 반지름을 담는 방식은 못 쓴다 — 감축된 메시라 이 높이 단면에
-        정점이 30개뿐이고 56칸 중 52칸이 비어, 빈 칸 채우기가 최대값을 전체에 퍼뜨려
-        반지름 0.2m 짜리 원형 후프가 됐다. 단면의 볼록 껍질을 뜬 뒤 중심에서
-        광선을 쏴 껍질과 만나는 거리를 쓴다 (등받이 단면은 볼록하다)."""
-        sl_ = [v.co for v in me.vertices if abs(v.co.z - z) < 0.014]
-        if len(sl_) < 6:
-            return None
-        ymin_ = min(v.y for v in sl_)
-        bk = [v for v in sl_ if v.y < ymin_ + 0.12] or sl_   # 커버 자락이 섞이면 띠가 부푼다
-        hull = _hull2d([(v.x, v.y) for v in bk])
-        if len(hull) < 3:
-            return None
-        ox = (min(p[0] for p in hull) + max(p[0] for p in hull)) / 2
-        oy = (min(p[1] for p in hull) + max(p[1] for p in hull)) / 2
-        rad = []
-        for i in range(NSEG):
-            r = _ray_hull(ox, oy, 2 * math.pi * i / NSEG, hull)
-            if r <= 0:
-                return None
-            rad.append(r)
-        return ox, oy, rad
-
+    판을 덧대거나(각지고 떠 보임) 단면을 재서 링을 만드는 방식(감축된 메시라 정점이
+    모자라 후프가 되거나, 볼록 껍질이라 오목한 옆면에서 묻혀 끊김) 둘 다 실패했다.
+    표면 자체를 잘라 법선으로 밀어내면 어떤 형상이든 정확히 밀착한다."""
     zs = [v.co.z for v in me.vertices]
     top = max(zs)
     zm = top * at
-    lo, hi = outline(zm - band / 2), outline(zm + band / 2)
-    if lo is None or hi is None:
-        return
+    z0, z1 = zm - band / 2, zm + band / 2
 
     bm = bmesh.new()
 
@@ -138,50 +78,47 @@ def _add_sash(me, sash_mat, at=0.70, band=0.098):
         bm.from_mesh(t)
         bpy.data.meshes.remove(t)
 
-    # 띠: 잰 윤곽을 따라 0.006 만 띄워 두르는 한 장의 면 (의자 표면에 밀착한다)
-    # 볼록 껍질은 감축된 메시라 거칠어서 모서리에서 조금 부푼다. 살짝 안으로 당겨
-    # 표면에 붙게 한다 (밖으로 띄우면 모서리에 삼각 날개가 생긴다)
-    GAP, SHRINK = 0.003, 0.995
-
     def band_build(b_):
-        rings = []
-        for (ox, oy, rad), zz in ((lo, zm - band / 2), (hi, zm + band / 2)):
-            rings.append([b_.verts.new((ox + math.cos(2 * math.pi * i / NSEG) * (rad[i] * SHRINK + GAP),
-                                        oy + math.sin(2 * math.pi * i / NSEG) * (rad[i] * SHRINK + GAP), zz))
-                          for i in range(NSEG)])
-        for i in range(NSEG):
-            j = (i + 1) % NSEG
-            b_.faces.new((rings[0][i], rings[0][j], rings[1][j], rings[1][i]))
-        bmesh.ops.recalc_face_normals(b_, faces=b_.faces[:])
-        bmesh.ops.solidify(b_, geom=b_.faces[:], thickness=0.003)
+        b_.from_mesh(me)
+        for (co, clear) in (((0, 0, z0), 'inner'), ((0, 0, z1), 'outer')):
+            g = b_.verts[:] + b_.edges[:] + b_.faces[:]
+            bmesh.ops.bisect_plane(b_, geom=g, dist=1e-6, plane_co=co, plane_no=(0, 0, 1),
+                                   clear_inner=(clear == 'inner'), clear_outer=(clear == 'outer'))
+        b_.normal_update()
+        for v in b_.verts:                       # 표면에서 살짝 띄운다 (천 두께)
+            v.co += v.normal * 0.005
+        if b_.faces:
+            bmesh.ops.solidify(b_, geom=b_.faces[:], thickness=0.004)
 
     emit(band_build)
 
-    cx = (lo[0] + hi[0]) / 2
-    back_i = int(NSEG * 0.75)                              # 각도 270도 = 블렌더 -y = 웹 +z (등받이 뒤)
-    ry = min(lo[1] - lo[2][back_i], hi[1] - hi[2][back_i]) - GAP
-    bow = _bow_mesh(width=0.21)                            # 나비 고리는 받아온 모델 (deokpal, CC-BY)
+    sl = [v.co for v in me.vertices if z0 - 0.02 < v.co.z < z1 + 0.02]
+    if not sl:
+        return
+    cx = (min(v.x for v in sl) + max(v.x for v in sl)) / 2
+    ry = min(v.y for v in sl) - 0.009          # 등받이 뒷면 (블렌더 -y = 웹 +z)
+
+    bow = _bow_mesh(width=0.155)               # 나비 고리는 받아온 모델 (deokpal, CC-BY)
     if bow is not None:
-        bow.transform(Matrix.Translation((cx, ry - 0.030, zm - 0.008)))
+        bow.transform(Matrix.Translation((cx, ry - 0.022, zm - 0.004)))
         t = bpy.data.meshes.new('t')
         bow.to_mesh(t)
         bow.free()
         bm.from_mesh(t)
         bpy.data.meshes.remove(t)
-    # 꼬리: 한 갈래가 매듭에서 내려와 띠와 T 자를 이룬다. 곧은 각기둥이 아니라
-    #       아래로 갈수록 등에서 떨어졌다 다시 붙고, 옆으로 조금 흔들리며 비틀린다.
+    # 꼬리: 매듭에서 한 갈래로 내려온다. 등에 닿을 듯 말 듯 늘어지고 끝이 뾰족하다.
     tail, tw, tt = [], [], []
-    N, LEN = 16, 0.44
+    N, LEN = 18, 0.40
     for k in range(N):
         t = k / (N - 1)
-        tail.append((cx + 0.020 * math.sin(t * math.pi * 1.7),
-                     ry - 0.012 - 0.032 * math.sin(t * math.pi * 0.95),
-                     zm - 0.034 - LEN * t))
-        tw.append(0.112 * (1 - 0.14 * t) * (1 - 0.80 * max(0.0, t - 0.90) / 0.10))   # 끝을 뾰족하게
-        tt.append(0.62 * math.sin(t * math.pi * 1.15))                               # 비틀림
-    emit(_ribbon_bl(tail, tw, 0.005, twist=tt))
-    emit(lambda b_: bmesh.ops.create_cube(b_, size=1.0, matrix=Matrix.Translation((cx, ry - 0.020, zm))
-         @ Matrix.Diagonal((0.055, 0.030, 0.055, 1))))   # 매듭
+        tail.append((cx + 0.013 * math.sin(t * math.pi * 1.4),
+                     ry - 0.006 - 0.022 * math.sin(t * math.pi * 0.85),
+                     zm - 0.030 - LEN * t))
+        tw.append(0.072 * (1 - 0.10 * t) * (1 - 0.85 * max(0.0, t - 0.88) / 0.12))
+        tt.append(0.40 * math.sin(t * math.pi * 1.05))
+    emit(_ribbon_bl(tail, tw, 0.004, twist=tt))
+    emit(lambda b_: bmesh.ops.create_cube(b_, size=1.0, matrix=Matrix.Translation((cx, ry - 0.016, zm))
+         @ Matrix.Diagonal((0.040, 0.024, 0.040, 1))))   # 매듭
 
     sm = bpy.data.meshes.new('sash')
     bm.to_mesh(sm)
@@ -195,8 +132,6 @@ def _add_sash(me, sash_mat, at=0.70, band=0.098):
     bpy.data.meshes.remove(sm)
     for f in list(me.polygons)[n0:]:
         f.material_index = 1
-    # 면의 중심만 보면 큰 면이 통째로 칠해져 삼각형 얼룩이 된다. 모든 꼭짓점이 띠 안일 때만.
-
 
 
 def build(coll, cover_mat, sash_mat, name='banquet_chair', decimate=0.22):
