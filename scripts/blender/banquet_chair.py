@@ -103,41 +103,41 @@ def _add_sash(me, sash_mat, at=0.70, band=0.105):
     if not sl:
         return
     cx = (min(v.x for v in sl) + max(v.x for v in sl)) / 2
-    ry = min(v.y for v in sl) - 0.009          # 등받이 뒷면 (블렌더 -y = 웹 +z)
+    # 이 높이 전체의 최소 y 를 쓰면 등받이 말고 뒤로 더 나온 것(-0.334)이 잡혀
+    # 나비가 등에서 12cm 뒤 허공에 떴다. 등받이 한가운데의 뒷면만 본다.
+    cen = [v for v in sl if abs(v.x - cx) < 0.10] or sl
+    ry = min(v.y for v in cen) - 0.009          # 등받이 뒷면 (블렌더 -y = 웹 +z)
 
     bow = _bow_mesh(width=0.155)               # 나비 고리는 받아온 모델 (deokpal, CC-BY)
     if bow is not None:
-        bow.transform(Matrix.Translation((cx, ry - 0.022, zm - 0.004)))
+        bow.transform(Matrix.Translation((cx, ry - 0.040, zm - 0.004)))   # 띠 위에 얹힌다 (묻히지 않게)
         t = bpy.data.meshes.new('t')
         bow.to_mesh(t)
         bow.free()
         bm.from_mesh(t)
         bpy.data.meshes.remove(t)
-    emit(lambda b_: bmesh.ops.create_cube(b_, size=1.0, matrix=Matrix.Translation((cx, ry - 0.016, zm))
-         @ Matrix.Diagonal((0.040, 0.024, 0.040, 1))))   # 매듭
+    emit(lambda b_: bmesh.ops.create_cube(b_, size=1.0, matrix=Matrix.Translation((cx, ry - 0.036, zm))
+         @ Matrix.Diagonal((0.040, 0.026, 0.044, 1))))   # 매듭
 
-    # 꼬리: 등받이가 뒤로 기울어 있어서 수직으로 내리면 아래로 갈수록 등에서 떠 보인다.
-    #       높이마다 커버의 뒷면 y 를 재서 거기에 붙여 내린다.
+    # 꼬리: 매듭 밑에서 곧게 떨어진다. 면마다 커버 표면을 따라가게 했더니 굴곡 때문에
+    #       중간이 커버 안으로 파묻혀 토막토막 끊겼다. 위·아래 두 점만 잡고 직선으로 잇는다.
     def back_y(z, prev):
-        cand = [v.co.y for v in me.vertices if abs(v.co.z - z) < 0.028 and abs(v.co.x - cx) < 0.10]
+        cand = [v.co.y for v in me.vertices if abs(v.co.z - z) < 0.030 and abs(v.co.x - cx) < 0.10]
         return min(cand) if cand else prev
 
     bm.faces.ensure_lookup_table()
     n_smooth = len(bm.faces)          # 여기까지(띠·나비·매듭)는 부드럽게, 꼬리는 각지게
+    N, LEN = 40, 0.40
+    z_top = zm + 0.010                # 매듭 안에서 시작해 띠 밑으로 빠져나온다
+    z_bot = z_top - LEN
+    y_top = ry - 0.024                # 매듭 앞면
+    y_bot = back_y(z_bot, ry) - 0.011  # 아래쪽 커버 면에서 11mm
     tail, tw, tt = [], [], []
-    N, LEN = 44, 0.40                 # 단면을 촘촘히 — 성기면 꺾인 선이 그대로 보인다
-    zsq = [zm - 0.030 - LEN * (k / (N - 1)) for k in range(N)]
-    bys, by = [], ry
-    for z in zsq:
-        by = back_y(z, by)
-        bys.append(by)
-    for _ in range(4):        # 등받이~치마 이음매에서 y 가 툭 꺾인다 — 다림질하듯 고른다
-        bys = [(bys[max(i - 1, 0)] + 2 * bys[i] + bys[min(i + 1, N - 1)]) / 4 for i in range(N)]
     for k in range(N):
         t = k / (N - 1)
-        tail.append((cx + 0.012 * math.sin(t * math.pi * 1.4), bys[k] - 0.010, zsq[k]))
-        tw.append(0.075 * (1 - 0.10 * t) * (1 - 0.85 * max(0.0, t - 0.90) / 0.10))
-        tt.append(0.34 * math.sin(t * math.pi * 1.05))
+        tail.append((cx, y_top + (y_bot - y_top) * t, z_top - LEN * t))
+        tw.append(0.075 * (1 - 0.06 * t) * (1 - 0.85 * max(0.0, t - 0.92) / 0.08))
+        tt.append(0.0)
     emit(_ribbon_bl(tail, tw, 0.0015, twist=tt))
 
     sm = bpy.data.meshes.new('sash')
