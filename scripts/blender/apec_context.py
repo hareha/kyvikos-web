@@ -774,52 +774,57 @@ def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None
                 asm.add(box(0.04, 0.3, 0.04), T(p.x, h + parapet + 0.1, p.z), M['steelRail'], 1)
 
 
-def yeonsu_front(asm, f, L, h1, h2, arc0, arc_len, wide=0.63, narrow=0.46):
-    """연수동 잔디 쪽 정면 — 클라이언트 사진(황룡원스테이)을 **픽셀로 실측**해서 만든다.
+def yeonsu_front(asm, f, L, h1, arc0, pitch=4.6, ow_wide=2.54, ow_narrow=1.85, spr=2.46):
+    """연수동 잔디 쪽 아치 정면 — 결과물 09-00-43 013 에서 **사람(1.75m)을 자로 써서** 실측.
 
-    스캔라인으로 아치 개구를 찾아 잰 값 (사진 702x312):
-      아치 중심 x = 126.5 / 245.5 / 363 / 466.5 / 556.5 / 627.5  (여섯 개)
-      개구폭 / 베이피치 = 0.457, 0.669, 0.633, 0.631, 0.658, 0.439
-        -> 양 끝 0.46, 가운데 넷 0.63 (원근 때문에 폭 자체는 오른쪽으로 갈수록 줄어든다)
-      개구 높이 / 폭 = 68px / 70px = 0.97  -> **거의 정사각형**. 반원 머리에 짧은 기둥이다.
-      아치 윗벽 47px, 벽 전체 122px -> 아치가 벽의 56%, 그 위 민 벽이 39%
-
-    아치 안은 반원 부채꼴 광창(방사 살) + 그 아래 유리문이고, 둘레에 흰 돌 아치테가 돈다.
+    아케이드 앞에 선 사람 키 210px = 1.75m -> 120 px/m. 그 자로 잰 값:
+      개구 폭 305px = 2.54m / 기공선 295px = 2.46m / 꼭대기 435px = 3.63m (반지름 1.27)
+      개구 비례 1 : 1.43  (사진 49 만 보고 잰 '정사각형 0.97' 은 원근 때문에 틀린 값이었다)
+      베이 피치 550px = 4.6m -> 개구/피치 0.55, 피어 2.06m. 여섯 베이면 정면 27.6m
+      양 끝 베이는 개구가 좁다 (사진 49 의 폭/피치 0.46 : 0.63 -> 1.85m)
+      아치 꼭대기가 벽의 56% -> 벽 높이 약 6.5m
     """
-    pitch = arc_len / 6.0
     for k in range(6):
         cx_ = arc0 + (k + 0.5) * pitch
-        ow = pitch * (narrow if k in (0, 5) else wide)
+        ow = ow_narrow if k in (0, 5) else ow_wide
         r_ = ow / 2
-        spr = h1 * 0.56 - r_ + 0.25                  # 기공선 (개구 전체 높이 = 벽의 56%)
         top = spr + r_
-        # 개구 안: 아래 유리문 + 위 반원 광창
         glow.add(plane(ow, spr - 0.25), f @ T(cx_, (spr + 0.25) / 2, -0.40), random.choice(ROOMS), tile=None)
         glow.add(ring_segment(0, r_, 0, PI, 0.04), f @ T(cx_, spr, -0.40, 0, -PI / 2), random.choice(ROOMS), tile=None)
         for m in range(1, 3):                        # 유리문 세로 멀리언
             asm.add(box(0.07, spr - 0.25, 0.10), f @ T(cx_ - ow / 2 + m * ow / 3, (spr + 0.25) / 2, -0.30), M['winFrame'], 1)
-        for m in range(1, 4):                        # 광창 방사 살
+        for m in range(1, 4):                        # 반원 광창 방사 살
             a_ = PI * m / 4
-            asm.add(box(0.06, r_, 0.10), f @ T(cx_ + math.cos(a_) * r_ / 2, spr + math.sin(a_) * r_ / 2, -0.30, 0, 0, a_ - PI / 2), M['winFrame'], 1)
-        asm.add(box(ow, 0.08, 0.10), f @ T(cx_, spr, -0.30), M['winFrame'], 1)          # 기공선 창틀
+            asm.add(box(0.06, r_, 0.10), f @ T(cx_ + math.cos(a_) * r_ / 2, spr + math.sin(a_) * r_ / 2,
+                                               -0.30, 0, 0, a_ - PI / 2), M['winFrame'], 1)
+        asm.add(box(ow, 0.08, 0.10), f @ T(cx_, spr, -0.30), M['winFrame'], 1)
         # 흰 돌 아치테 + 문설주
-        asm.add(ring_segment(r_, r_ + 0.30, 0, PI, DEPTH), f @ T(cx_, spr, -DEPTH, 0, -PI / 2), M['granite_clad'], 1.2)
+        asm.add(ring_segment(r_, r_ + 0.34, 0, PI, DEPTH), f @ T(cx_, spr, -DEPTH, 0, -PI / 2), M['granite_clad'], 1.2)
         for sx_ in (-1, 1):
-            asm.add(box(0.30, spr, DEPTH), f @ T(cx_ + sx_ * (ow + 0.30) / 2, spr / 2, -DEPTH / 2), M['granite_clad'], 1.2)
-            asm.add(box((pitch - ow - 0.60) / 2, h1, DEPTH),                             # 아치 사이 피어
-                    f @ T(cx_ + sx_ * (pitch + ow + 0.60) / 4, h1 / 2, -DEPTH / 2), M['granite_clad'], 1.2)
-        asm.add(box(ow + 0.60, h1 - top - 0.30, DEPTH),                                  # 아치 위 민 벽
-                f @ T(cx_, (top + 0.30 + h1) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
-        asm.add(box(ow + 0.5, 0.22, 0.45), f @ T(cx_, 0.11, -0.24), M['granite'], 1.5)   # 디딤돌
-    for (a_, b_) in ((0.0, arc0), (arc0 + arc_len, L)):                                  # 아치 열 밖은 민 벽
+            asm.add(box(0.34, spr, DEPTH), f @ T(cx_ + sx_ * (ow + 0.34) / 2, spr / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+            asm.add(box((pitch - ow - 0.68) / 2, h1, DEPTH),                              # 아치 사이 피어
+                    f @ T(cx_ + sx_ * (pitch + ow + 0.68) / 4, h1 / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+        asm.add(box(ow + 0.68, h1 - top - 0.34, DEPTH),                                   # 아치 위 민 벽
+                f @ T(cx_, (top + 0.34 + h1) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+        asm.add(box(ow + 0.5, 0.22, 0.45), f @ T(cx_, 0.11, -0.24), M['granite'], 1.5)    # 디딤돌
+    for (a_, b_) in ((0.0, arc0), (arc0 + 6 * pitch, L)):                                 # 아치 열 밖은 민 벽
         if b_ - a_ > 0.05:
             asm.add(box(b_ - a_, h1, DEPTH), f @ T((a_ + b_) / 2, h1 / 2, -DEPTH / 2), M['granite_clad'], 1.2)
-    # 벽 윗면 돌림띠 + 그 위 물러앉은 유리 띠 (사진: 난간 밑으로 어두운 창 띠가 보인다)
     asm.add(box(L + 0.40, 0.34, DEPTH + 0.36), f @ T(L / 2, h1 - 0.17, -(DEPTH + 0.36) / 2), M['granite_clad'], 1.2)
-    glow.add(plane(L - 1.2, h2 * 0.62), f @ T(L / 2, h1 + h2 * 0.40, 1.15), random.choice(ROOMS), tile=None)
-    asm.add(box(L - 1.2, h2 * 0.62, 0.10), f @ T(L / 2, h1 + h2 * 0.40, 1.25), M['winGlass'], 1)
-    for m in range(1, int((L - 1.2) / 2.6)):
-        asm.add(box(0.09, h2 * 0.62, 0.14), f @ T(0.6 + m * (L - 1.2) / int((L - 1.2) / 2.6), h1 + h2 * 0.40, 1.26), M['winFrame'], 1)
+
+
+def roof_hanok_row(asm, x0, z0, z1, ry, y0, n=3):
+    """옥상 한옥 마을 — 황룡원스테이 사진: 팔작 기와지붕 + 툇마루·계자난간,
+       낮은 화강석 기단, 사이사이 자갈밭과 판석 포장, 분재 소나무 화분."""
+    span = (z1 - z0) / n
+    for k in range(n):
+        cz = z0 + (k + 0.5) * span
+        asm.add(bevel_box(6.6, 0.30, min(span - 2.6, 6.8), 0.04), T(x0 + 1.0, y0 + 0.15, cz), M['granite'], 1.5)  # 기단
+        hanok(asm, x0 + 1.0, cz, 3.4, 3.8, ry=ry, y0=y0 + 0.30, label=f'R{k+1}', lamp=(500, 0, 420)[k % 3])
+        for j in range(3):                                   # 기단 앞 자갈밭·판석
+            asm.add(box(1.1, 0.06, span - 2.4), T(x0 - 2.2 + j * 1.2, y0 + 0.06, cz), M['terrace'], 1.6)
+        asm.add(cyl(0.55, 0.45, 0.6, 16), T(x0 - 3.1, y0 + 0.3, cz - span * 0.28), M['granite_clad'], 1)
+        asm.add(sphere(0.62, 2), T(x0 - 3.1, y0 + 0.85, cz - span * 0.28, sy=0.62), M['shrub'], 1)
 
 
 def yeonsu_block():
@@ -836,9 +841,9 @@ def yeonsu_block():
     # 귀빈동(북동동, 잔디 북쪽 / data.js 의 '귀빈동 테라스' 카메라가 이 옥상이다) 과
     # 연수동(북서동, 잔디 동쪽)은 서로 다른 동이다. 아치 정면은 **연수동** 것이다.
     NX0, NX1, NZ0, NZ1 = 23.0, 53.0, 20.0, 48.0
-    H1, H2 = 5.3, 2.2                  # 아래단(아치 벽) / 윗단(물러앉은 유리 띠) — 사진 실측
+    H1, H2 = 5.3, 3.2                  # 아래단(아치 벽) / 물러앉은 윗단(유리층) — 사진 실측
     HG = 9.6                           # 귀빈동 몸체 (사진 013/020: 2층 리본창)
-    HE = H1 + H2                       # 연수동 몸체 7.6
+    HE = H1 + H2                       # 연수동 = 아래단 + 물러앉은 윗단
     YG, YE = HG + 0.35, HE + 0.35      # 각 옥상 바닥
 
     # ── 귀빈동 (잔디 북쪽) : 리본 창 2층 ────────────────────────────
@@ -877,20 +882,19 @@ def yeonsu_block():
     light(C_LIGHT, 'site_terrace', 'POINT', (34.0, YG + 2.6, 43), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
 
     # ── 북서동 (잔디 동쪽) : 아케이드가 잔디(-x)를 본다 ──────────────────
-    # 연수동 — 잔디 쪽(-x) 면이 사진의 그 정면이다. 정면 30m **전체**가 아치 여섯이다.
-    # (전에는 48m 면의 30m 구간만 아치라 나머지가 민 벽으로 남고, 아치도 바닥에 붙은
-    #  작은 슬롯이었다. 사진은 아치가 벽 높이의 대부분을 차지한다.)
-    EX0, EX1, EZ0, EZ1 = 36.4, 66.0, -17.0, 13.0
-    block(ye_nw, EX0, EX1, EZ0, EZ1, HE, 2, parapet=1.10, arcade='W')
-    yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, H1, H2, arc0=0.8, arc_len=28.4)
-    balustrade(ye_nw, [(EX0 + 1.2, HE + 0.28, EZ0 + 1.2), (EX0 + 1.2, HE + 0.28, EZ1 - 1.2)], h=0.78, post=2.7)
-    for k, hz in enumerate((-11.0, -2.0, 7.0)):                                   # 기와집 셋 — 겹치지 않게
-        hanok(ye_nw, 44.0, hz, 4.6, 4.2, ry=-PI / 2, y0=YE, label=f'B{k+1}', lamp=(500, 0, 400)[k])
-    for k in range(5):                                                            # 옥상 분재 소나무
-        ye_nw.add(cyl(0.55, 0.45, 0.6, 16), T(38.6, YE + 0.3, -13 + k * 6.4), M['granite_clad'], 1)
-        ye_nw.add(sphere(0.62, 2), T(38.6, YE + 0.85, -13 + k * 6.4, sy=0.62), M['shrub'], 1)
-    ye_nw.add(box(5, 4.5, 10), T(62.5, HE + 2.25, -10), M['granite_clad'], 1.5)    # 계단실
-
+    # 연수동 — 실측(사람 1.75m 기준): 베이 4.6 x 6 = 정면 27.6, 벽 6.5,
+    #   물러앉은 윗단(객실 2~4층, 33실/113명)은 3.4 더, 단마다 흰 돌난간, 옥상은 한옥 마을.
+    EX0, EX1, EZ0, EZ1 = 36.4, 66.0, -15.6, 12.0
+    SET = 2.6
+    HL, HU = 6.5, 3.4                                # 아래 몸체 / 물러앉은 윗단
+    block(ye_nw, EX0, EX1, EZ0, EZ1, HL, 1, parapet=0.55, arcade='W')
+    yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, HL, arc0=0.0)
+    balustrade(ye_nw, [(EX0 + 0.5, HL + 0.55, EZ0 + 0.8), (EX0 + 0.5, HL + 0.55, EZ1 - 0.8)], h=0.82, post=2.4)
+    block(ye_nw, EX0 + SET, EX1, EZ0 + SET, EZ1, HL + HU, 3, parapet=0.90)
+    balustrade(ye_nw, [(EX0 + SET + 0.5, HL + HU + 0.90, EZ0 + SET + 0.8),
+                       (EX0 + SET + 0.5, HL + HU + 0.90, EZ1 - 0.8)], h=0.82, post=2.4)
+    roof_hanok_row(ye_nw, EX0 + SET + 4.6, EZ0 + SET + 1.0, EZ1 - 1.0, -PI / 2, HL + HU + 0.30)
+    ye_nw.add(box(5, 4.5, 10), T(62.5, HL + HU + 2.25, -6), M['granite_clad'], 1.5)   # 계단실
     # ── 잔디와 연수동 사이 광장 + 계단 ────────────────────────────────
     ye_nw.add(box(5.8, 0.45, 52), T(39.1, 0.22, -8), M['terrace'], 1.6)
     for k in range(3):
