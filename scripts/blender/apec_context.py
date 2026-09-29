@@ -773,47 +773,103 @@ def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None
 
 
 def yeonsu_block():
-    Y = ROOF_Y + 0.3
-    # 북동동 (옥상 서쪽 x 23~38 = 귀빈동 테라스)
-    # 클라이언트 사진: 잔디를 보는 면이 1층 아치 아케이드이고, 위로 갈수록 뒤로 물러나며
-    # 층마다 난간 두른 테라스가 생기는 계단식 매스다. 전에는 3층 한 덩어리 상자였다.
-    block(ye_ne, 23, 69, 20, 51, 4.6, 1, parapet=1.05, arcade='w')            # 아케이드 저층부
-    block(ye_ne, 30, 69, 20, 51, 9.4, 2, parapet=1.05)                        # 한 단 물러난 중층
-    block(ye_ne, 38, 69, 20, 51, ROOF_Y, 3, parapet=1.2)                      # 두 단 물러난 고층
-    hanok(ye_ne, 51.5, 41.0, 21.5, 8.4, ry=PI, y0=Y, label='A', lamp=500)             # 한옥 A: 용마루 x
-    hanok(ye_ne, 44.5, 28.6, 10.4, 7.4, ry=-PI / 2, y0=Y, label='B', lamp=700)        # 한옥 B: 용마루 z, 테라스 쪽 정면
-    # 연결동 + 천창 (유리)
-    block(ye_ne, 40, 55, 13.2, 20, 8.0, 2)
-    # 천창: 옥상 바닥 위에 올린 유리 상자 (난간·바닥과 같은 높이의 면이 없게)
-    ye_ne.add(box(8.0, 0.25, 12.0), T(59, ROOF_Y + 0.42, 27), M['granite_clad'], 1.2)          # 창틀 받침
-    glass_roof.add(box(7.6, 1.2, 11.6), T(59, ROOF_Y + 1.15, 27), M['skylight'])
-    # 귀빈동 테라스 가구 (파라솔 테이블)
-    # 파라솔이 공중에 떠 있던 이유: Y(=ROOF_Y+0.3=12.3) 는 **맨 위 3층 옥상** 높이인데
-    # 가구는 x 23~30 (저층 옥상, 슬래브 윗면 4.6+0.3=4.9) 과 x 30~38 (중층, 9.4+0.3=9.7)
-    # 테라스에 놓인다. 두 프롭 모두 원점이 밑바닥(bound_box z=0)이라 그 높이에 그대로 얹으면 된다.
-    for k, (x, z, ty) in enumerate(((27, 26, 4.9), (27, 34, 4.9), (27, 42, 4.9), (32.5, 47, 9.7))):
-        ye_ne.add(mesh_source(SRC_TABLESET), T(x, ty, z, k * 0.7), list(SRC_TABLESET.data.materials))
-        ye_ne.add(mesh_source(SRC_PARASOL), T(x, ty, z), list(SRC_PARASOL.data.materials))
-    light(C_LIGHT, 'site_terrace', 'POINT', (27, 4.9 + 2.6, 30), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
+    """연수동 — 결과물 폴더 09-00-43 013 / 09-00-46 016 / 09-00-49 020 을 보고 다시.
 
-    # 북서동 + 잔디 쪽 저층부(화분 줄)
-    block(ye_nw, 46, 66, -35, 13, ROOF_Y, 3)
-    block(ye_nw, 40, 46.2, -35, 13, 9.0, 2, parapet=1.05)                     # 한 단 물러난 중층
-    block(ye_nw, 36.4, 40.3, -30, 2, 4.6, 1, parapet=0.95, arcade='w')        # 잔디 쪽 아케이드 저층부
-    for z in range(-28, 1, 4):
-        ye_nw.add(cyl(0.55, 0.45, 0.6, 16), T(44, 5.1, z), M['granite_clad'], 1)
-        ye_nw.add(sphere(0.6, 2), T(44, 5.6, z, sy=0.7), M['shrub'], 1)
-    hanok(ye_nw, 55.5, 9.0, 11.8, 6.4, ry=PI, y0=Y, label='B1', lamp=0)              # 용마루 x
-    hanok(ye_nw, 57.5, -12.0, 14.8, 6.2, ry=-PI / 2, y0=Y, label='B2', lamp=500)     # 용마루 z, 잔디 쪽 정면
-    hanok(ye_nw, 53.0, -29.0, 8.0, 6.4, ry=PI, y0=Y, label='B3', lamp=0)             # 용마루 x
-    ye_nw.add(box(5, 4.5, 14), T(62.5, ROOF_Y + 2.25, -27), M['granite_clad'], 1.5)  # 계단실
-    # 잔디와 연수동 사이 광장 + 계단
-    ye_nw.add(box(5.8, 0.45, 52), T(39.1, 0.22, -8), M['terrace'], 1.6)   # 잔디(z -33~17)보다 길게
-    for k in range(3):   # 잔디 가장자리(x 35)에서 광장(36.2)으로 오르는 세 단
+    전에는 3단으로 물러나는 계단식 매스에, 앞쪽으로 임의의 연결동까지 달아 놨었다.
+    사진의 실제 모습:
+      · 두 동 모두 **2층** 화강석 몸체. 사람 키로 재니 한 층 약 4.6m (북동 9.2 / 북서 10.0)
+      · 옥상 파라펫에 **흰 돌난간**, 그 뒤로 **물러앉은 한옥 누각**들과 분재 소나무
+      · 1층 잔디 쪽은 **둥근 아치 열**, 위층은 **긴 리본 창** (안이 따뜻하게 밝다)
+      · 두 동 사이는 **통유리 연결부**
+      · 동쪽 동 앞 잔디 가장자리를 따라 **단층 기와 회랑**이 길게 지난다
+    """
+    HN, HE = 9.2, 10.0                 # 북동동 / 북서동 몸체 높이
+    YN, YE = HN + 0.35, HE + 0.35      # 각 옥상 바닥
+
+    # ── 북동동 (잔디 북쪽) : 1층 아치 아케이드가 잔디(-z)를 본다 ──────────
+    block(ye_ne, 23, 69, 20, 51, HN, 2, parapet=1.15, arcade='n')
+    balustrade(ye_ne, [(24.2, HN + 0.30, 20.6), (67.8, HN + 0.30, 20.6)], h=0.80, post=2.8)
+    balustrade(ye_ne, [(24.2, HN + 0.30, 20.6), (24.2, HN + 0.30, 50.0)], h=0.80, post=2.8)
+    hanok(ye_ne, 51.5, 41.0, 21.5, 8.4, ry=PI, y0=YN, label='A', lamp=500)        # 용마루 x
+    hanok(ye_ne, 44.5, 30.0, 10.4, 7.4, ry=-PI / 2, y0=YN, label='B', lamp=700)   # 용마루 z
+    hanok(ye_ne, 30.5, 36.0, 8.6, 6.8, ry=-PI / 2, y0=YN, label='C', lamp=400)    # 사진 013 왼쪽 작은 누각
+    for k in range(6):                                                            # 옥상 분재 소나무
+        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(28.5 + k * 6.2, YN + 0.3, 24.2), M['granite_clad'], 1)
+        ye_ne.add(sphere(0.62, 2), T(28.5 + k * 6.2, YN + 0.85, 24.2, sy=0.62), M['shrub'], 1)
+
+    # ── 두 동 사이 통유리 연결부 (사진 013 가운데 유리 띠) ────────────────
+    LX0, LX1, LZ0, LZ1 = 41.0, 55.0, 13.4, 20.2
+    ye_ne.add(box(LX1 - LX0 - 1.2, HN, LZ1 - LZ0 - 1.2), T((LX0 + LX1) / 2, HN / 2, (LZ0 + LZ1) / 2), M['stoneWall'], 2)
+    for (px, pz) in ((LX0, LZ0), (LX1, LZ0), (LX0, LZ1), (LX1, LZ1)):            # 모서리 멀리언
+        ye_ne.add(box(0.26, HN + 0.5, 0.26), T(px, (HN + 0.5) / 2, pz), M['winFrame'], 1)
+    for (cx_, cz_, w_, ry_) in ((LX0 + (LX1 - LX0) / 2, LZ0, LX1 - LX0, 0.0),
+                                (LX0, LZ0 + (LZ1 - LZ0) / 2, LZ1 - LZ0, PI / 2)):
+        g = T(cx_, 0, cz_, ry_)
+        glass_roof.add(box(w_, HN - 0.2, 0.06), g @ T(0, (HN - 0.2) / 2 + 0.1, 0), M['skylight'])
+        for j in range(1, max(2, round(w_ / 2.4))):                               # 세로 멀리언
+            ye_ne.add(box(0.11, HN, 0.16), g @ T(-w_ / 2 + j * w_ / max(2, round(w_ / 2.4)), HN / 2, 0), M['winFrame'], 1)
+        ye_ne.add(box(w_, 0.14, 0.18), g @ T(0, HN * 0.5, 0), M['winFrame'], 1)   # 중간 가로틀
+        ye_ne.add(box(w_ + 0.3, 0.30, 0.34), g @ T(0, HN + 0.15, 0), M['granite_clad'], 1.2)   # 상부 돌띠
+
+    # ── 옥상 천창 ────────────────────────────────────────────────────
+    ye_ne.add(box(8.0, 0.25, 12.0), T(59, YN + 0.12, 30), M['granite_clad'], 1.2)
+    glass_roof.add(box(7.6, 1.2, 11.6), T(59, YN + 0.85, 30), M['skylight'])
+
+    # ── 옥상 테라스 가구 ─────────────────────────────────────────────
+    # 두 프롭 모두 원점이 밑바닥이라 옥상 바닥 높이에 그대로 얹는다 (전에 공중에 떴었다)
+    for k, (x, z) in enumerate(((27.5, 27), (27.5, 34), (27.5, 41), (33.0, 47))):
+        ye_ne.add(mesh_source(SRC_TABLESET), T(x, YN, z, k * 0.7), list(SRC_TABLESET.data.materials))
+        ye_ne.add(mesh_source(SRC_PARASOL), T(x, YN, z), list(SRC_PARASOL.data.materials))
+    light(C_LIGHT, 'site_terrace', 'POINT', (27.5, YN + 2.6, 34), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
+
+    # ── 북서동 (잔디 동쪽) : 아케이드가 잔디(-x)를 본다 ──────────────────
+    block(ye_nw, 36.4, 66, -35, 13, HE, 2, parapet=1.15, arcade='w')
+    balustrade(ye_nw, [(37.6, HE + 0.30, -33.8), (37.6, HE + 0.30, 11.8)], h=0.80, post=2.8)
+    hanok(ye_nw, 55.5, 9.0, 11.8, 6.4, ry=PI, y0=YE, label='B1', lamp=0)
+    hanok(ye_nw, 57.5, -12.0, 14.8, 6.2, ry=-PI / 2, y0=YE, label='B2', lamp=500)
+    hanok(ye_nw, 53.0, -29.0, 8.0, 6.4, ry=PI, y0=YE, label='B3', lamp=0)
+    for k in range(7):                                                            # 옥상 분재 소나무
+        ye_nw.add(cyl(0.55, 0.45, 0.6, 16), T(41.4, YE + 0.3, -31 + k * 6.4), M['granite_clad'], 1)
+        ye_nw.add(sphere(0.62, 2), T(41.4, YE + 0.85, -31 + k * 6.4, sy=0.62), M['shrub'], 1)
+    ye_nw.add(box(5, 4.5, 14), T(62.5, HE + 2.25, -27), M['granite_clad'], 1.5)    # 계단실
+
+    # ── 잔디와 연수동 사이 광장 + 계단 ────────────────────────────────
+    ye_nw.add(box(5.8, 0.45, 52), T(39.1, 0.22, -8), M['terrace'], 1.6)
+    for k in range(3):
         ye_nw.add(box(0.4, 0.15 * (k + 1), 51.6), T(35.2 + k * 0.4, 0.075 * (k + 1), -8), M['terrace'], 1.6)
     for z in range(-30, 12, 10):
         light(C_LIGHT, f'site_wash_w{z}', 'SPOT', (39.5, 0.6, z), (42.5, 6, z), energy=900,
               color=(1.0, 0.8, 0.55), spot=0.6, blend=0.8, size=0.3)
+
+    # ── 잔디 가장자리를 따라가는 단층 기와 회랑 (사진 013/020 오른쪽) ─────
+    lodge_corridor(ye_nw, 35.6, -31.0, 12.0, -PI / 2)
+
+
+def lodge_corridor(asm, cx, z0, z1, ry, w=3.4):
+    """연수동 앞 단층 기와 회랑 — 돌기단 + 둥근 석주 + 주칠 도리 + 회색 기와 맞배지붕.
+       사진 013/020: 잔디 가장자리를 따라 길게 지나며 처마 밑에 등이 줄지어 있다."""
+    L = z1 - z0
+    f = T(cx, 0, (z0 + z1) / 2, ry)          # 로컬 x = 길이 방향
+    asm.add(bevel_box(L, 0.42, w + 1.0, 0.04), f @ T(0, 0.21, 0), M['granite'], 1.5)
+    n = max(1, round(L / 3.2))
+    for k in range(n + 1):
+        x = -L / 2 + k * L / n
+        for zz in (-w / 2, w / 2):
+            asm.add(box(0.62, 0.30, 0.62), f @ T(x, 0.42 + 0.15, zz), M['granite'], 1)
+            asm.add(cyl(0.22, 0.25, 2.85, 14), f @ T(x, 0.57 + 1.425, zz), M['pillarStone'], 1)
+        asm.add(box(0.24, 0.36, w + 0.4), f @ T(x, 3.18, 0), M['rafter'], 1)          # 대들보
+    for zz in (-w / 2, w / 2):
+        asm.add(box(L + 0.3, 0.44, 0.28), f @ T(0, 3.22, zz), M['rafter'], 1)         # 도리
+    gb = 3.44
+    half = (w + 2.6) / 2
+    slope = lambda r: gb + 1.55 * (1 - r / half) - 0.14 * math.sin(PI * r / half)
+    rafters(asm, f, L, w / 2, half - 0.28, slope, step=0.55)
+    asm.add(gable_roof(L, w + 2.6, 1.55, sag=0.14), f @ T(0, gb, 0), M['tileGrey'], 1.4)
+    ridge(asm, f, L - 0.2, gb + 1.55)
+    for k in range(0, n, 2):
+        x = -L / 2 + (k + 0.5) * L / n
+        light(C_LIGHT, f'site_lodge_{round(cx)}_{k}', 'POINT', tuple(f @ V((x, 2.9, 0))),
+              energy=110, color=(1.0, 0.76, 0.46), size=0.3)
 
 
 # ── 무대 뒤: 물탱크 · 대기 천막 · 신평루 콘솔 부스 ────────────────────
