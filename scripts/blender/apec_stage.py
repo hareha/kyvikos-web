@@ -535,20 +535,19 @@ def side_tower(f, aim=None):
         light(C_LIGHT, f'sideblinder_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], (f @ V((lx, 0.9, 9.0)))[:],
               energy=2600, color=(1.0, 0.86, 0.66), spot=1.05, blend=0.7, size=0.3)
 
-    # 긴 방송 카메라 한 대 (사진 006 확대에서 다시 잼)
-    #   높이: 블라인더(0.50m)를 자로 쓰면 카메라 몸통 중심이 블라인더 중심보다 230px/m 기준 0.65m 아래.
-    #   위치: 2번과 3번 블라인더 사이, 2번에서 0.21칸 오른쪽.
-    #   전에는 Y_MID+0.16(=4.39)에 둬서 블라인더 뒤에 가려 후드만 삐져나왔다.
+    # 긴 방송 카메라 한 대 — 사진 08-58-26 024 확대: 블라인더 줄 **위**에 서서 무대를 본다.
+    # (아래에 두면 블라인더 뒤에 묻혀 렌즈 후드만 삐져나온다)
     cx_ = (1 - 1.5) * (w - 1.3) / 3 + 0.21 * (w - 1.3) / 3
-    cy_ = (Y_TOP - 0.30) - 0.65
-    cf = f @ T(cx_, cy_, dzf + 0.14, 0, 0.14)
-    for yy in (cy_ + 0.30, cy_ + 0.52):                                                            # 가로대까지 올라가는 클램프 기둥
-        boh.add(cyl(0.022, 0.022, 0.24, 8), f @ T(cx_, yy, dzf + 0.04), M['scaffold'], 1)
-    boh.add(bevel_box(0.22, 0.12, 0.20, 0.02), cf @ T(0, 0.22, -0.10), M['scaffold'], 1)           # 팬틸트 헤드
-    boh.add(bevel_box(0.30, 0.30, 0.46, 0.04), cf @ T(0, 0, -0.16), M['black'], 1)                 # 몸통
-    boh.add(cyl(0.085, 0.10, 0.52, 14), cf @ T(0, 0, 0.30, 0, PI / 2), M['black'], 1)              # 긴 렌즈
-    boh.add(cyl(0.115, 0.115, 0.10, 14), cf @ T(0, 0, 0.60, 0, PI / 2), M['black'], 1)             # 후드
-    boh.add(bevel_box(0.16, 0.13, 0.14, 0.02), cf @ T(0.15, 0.18, -0.16), M['black'], 1)           # 뷰파인더
+    cp = f @ V((cx_, Y_TOP + 0.52, dzf - 0.06))
+    pitch = math.atan2(cp.y - ty_, math.hypot(tx_ - cp.x, tz_ - cp.z))        # 무대를 내려다보는 각
+    cf = T(cp.x, 0, cp.z, math.atan2(tx_ - cp.x, tz_ - cp.z)) @ T(0, cp.y, 0, 0, pitch)
+    boh.add(cyl(0.030, 0.034, 0.52, 10), f @ T(cx_, Y_TOP + 0.26, dzf - 0.06), M['scaffold'], 1)   # 가로대에서 올라오는 기둥
+    boh.add(bevel_box(0.26, 0.10, 0.26, 0.02), f @ T(cx_, Y_TOP + 0.50, dzf - 0.06), M['black'], 1)  # 팬틸트 헤드
+    boh.add(bevel_box(0.34, 0.32, 0.50, 0.06), cf @ T(0, 0.14, -0.14), M['black'], 1)              # 레인커버 씌운 몸통
+    boh.add(bevel_box(0.28, 0.20, 0.26, 0.08), cf @ T(0.03, 0.34, -0.26), M['black'], 1)           # 커버 주름
+    boh.add(cyl(0.085, 0.10, 0.54, 14), cf @ T(0, 0.10, 0.30, 0, PI / 2), M['black'], 1)           # 긴 렌즈
+    boh.add(cyl(0.115, 0.115, 0.10, 14), cf @ T(0, 0.10, 0.60, 0, PI / 2), M['black'], 1)          # 후드
+    boh.add(bevel_box(0.15, 0.12, 0.13, 0.02), cf @ T(0.17, 0.26, -0.16), M['black'], 1)           # 뷰파인더
 
 
 
