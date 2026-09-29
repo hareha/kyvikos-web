@@ -548,12 +548,12 @@ def side_tower(f, kind='tower', aim=None):
         # 011 / 항공 005: 발판 위 프레임 윗단에 4구 블라인더 네 조가 잔디를 향해 늘어선다
         for k in range(4):
             lx = (k - 1.5) * (w - 1.2) / 3
-            bf = f @ T(lx, h + 0.05 + RAIL - 0.12, dz1 + 0.16, 0, -0.34)
+            bf = f @ T(lx, h + 0.05 + RAIL - 0.12, dz1 + 0.16, 0, 0.30)   # +rx 라야 잔디 쪽으로 숙인다
             boh.add(bevel_box(0.54, 0.50, 0.18, 0.02), bf, M['black'], 1)
             boh.add(box(0.62, 0.05, 0.22), bf @ T(0, 0.29, 0), M['scaffold'], 1)                   # 요크
             for sx_ in (-1, 1):
                 for sy_ in (-1, 1):
-                    emit.add(plane(0.19, 0.17), bf @ T(sx_ * 0.128, sy_ * 0.118, 0.095), M['blinderLens'], tile=None)
+                    emit.add(plane(0.19, 0.17), bf @ T(sx_ * 0.128, sy_ * 0.118, 0.105), M['blinderLens'], tile=None)
             pos = f @ V((lx, h + 0.05 + RAIL - 0.12, dz1 + 0.30))
             light(C_LIGHT, f'sideblinder_{round(pos.x, 1)}_{k}', 'SPOT', pos[:], (f @ V((lx, 0.9, 9.0)))[:],
                   energy=2600, color=(1.0, 0.86, 0.66), spot=1.05, blend=0.7, size=0.3)
@@ -571,7 +571,7 @@ def side_tower(f, kind='tower', aim=None):
     boh.add(bevel_box(0.30, 0.34, 0.74, 0.03), bf @ T(0, 0, -0.32), M['black'], 1)                 # 램프 하우징
     boh.add(bevel_box(0.20, 0.12, 0.26, 0.02), bf @ T(0, 0.22, -0.46), M['black'], 1)              # 위 제어패널
     boh.add(cyl(0.105, 0.125, 0.64, 14), bf @ T(0, 0, 0.36, 0, PI / 2), M['black'], 1)             # 경통
-    emit.add(cyl(0.105, 0.105, 0.02, 14), bf @ T(0, 0, 0.685, 0, PI / 2), M['washLens'])           # 렌즈
+    emit.add(cyl(0.105, 0.105, 0.02, 14), bf @ T(0, 0, 0.705, 0, PI / 2), M['washLens'])           # 렌즈 (경통 끝 0.68 보다 앞으로)
     light(C_LIGHT, f'sidespot_{round(sp.x, 1)}', 'SPOT', (sp.x, h + 0.82, sp.z), (tx_, ty_, tz_),
           energy=2200, color=(1.0, 0.92, 0.80), spot=0.22, blend=0.4, size=0.08)
     cf = f @ T(w * 0.26, h + 0.05, dz1 - 1.45)                                                     # 회색 제어함
