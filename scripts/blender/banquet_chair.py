@@ -84,11 +84,18 @@ def _add_sash(me, sash_mat, at=0.70, band=0.105):
             g = b_.verts[:] + b_.edges[:] + b_.faces[:]
             bmesh.ops.bisect_plane(b_, geom=g, dist=1e-6, plane_co=co, plane_no=(0, 0, 1),
                                    clear_inner=(clear == 'inner'), clear_outer=(clear == 'outer'))
+        # 자른 자리가 저폴리라 너덜거린다 — 겹친 점을 붙이고 찌그러진 면을 없앤다
+        bmesh.ops.remove_doubles(b_, verts=b_.verts[:], dist=1e-4)
+        bmesh.ops.dissolve_degenerate(b_, dist=1e-5, edges=b_.edges[:])
+        loose = [v for v in b_.verts if not v.link_faces]
+        if loose:
+            bmesh.ops.delete(b_, geom=loose, context='VERTS')
+        bmesh.ops.recalc_face_normals(b_, faces=b_.faces[:])
         b_.normal_update()
         for v in b_.verts:                       # 표면에서 살짝 띄운다 (천 두께)
             v.co += v.normal * 0.005
         if b_.faces:
-            bmesh.ops.solidify(b_, geom=b_.faces[:], thickness=0.004)
+            bmesh.ops.solidify(b_, geom=b_.faces[:], thickness=0.0035)
 
     emit(band_build)
 
@@ -106,19 +113,32 @@ def _add_sash(me, sash_mat, at=0.70, band=0.105):
         bow.free()
         bm.from_mesh(t)
         bpy.data.meshes.remove(t)
-    # 꼬리: 매듭에서 한 갈래로 내려온다. 등에 닿을 듯 말 듯 늘어지고 끝이 뾰족하다.
-    tail, tw, tt = [], [], []
-    N, LEN = 18, 0.40
-    for k in range(N):
-        t = k / (N - 1)
-        tail.append((cx + 0.013 * math.sin(t * math.pi * 1.4),
-                     ry - 0.006 - 0.022 * math.sin(t * math.pi * 0.85),
-                     zm - 0.030 - LEN * t))
-        tw.append(0.072 * (1 - 0.10 * t) * (1 - 0.85 * max(0.0, t - 0.88) / 0.12))
-        tt.append(0.40 * math.sin(t * math.pi * 1.05))
-    emit(_ribbon_bl(tail, tw, 0.004, twist=tt))
     emit(lambda b_: bmesh.ops.create_cube(b_, size=1.0, matrix=Matrix.Translation((cx, ry - 0.016, zm))
          @ Matrix.Diagonal((0.040, 0.024, 0.040, 1))))   # 매듭
+
+    # 꼬리: 등받이가 뒤로 기울어 있어서 수직으로 내리면 아래로 갈수록 등에서 떠 보인다.
+    #       높이마다 커버의 뒷면 y 를 재서 거기에 붙여 내린다.
+    def back_y(z, prev):
+        cand = [v.co.y for v in me.vertices if abs(v.co.z - z) < 0.028 and abs(v.co.x - cx) < 0.10]
+        return min(cand) if cand else prev
+
+    bm.faces.ensure_lookup_table()
+    n_smooth = len(bm.faces)          # 여기까지(띠·나비·매듭)는 부드럽게, 꼬리는 각지게
+    tail, tw, tt = [], [], []
+    N, LEN = 44, 0.40                 # 단면을 촘촘히 — 성기면 꺾인 선이 그대로 보인다
+    zsq = [zm - 0.030 - LEN * (k / (N - 1)) for k in range(N)]
+    bys, by = [], ry
+    for z in zsq:
+        by = back_y(z, by)
+        bys.append(by)
+    for _ in range(4):        # 등받이~치마 이음매에서 y 가 툭 꺾인다 — 다림질하듯 고른다
+        bys = [(bys[max(i - 1, 0)] + 2 * bys[i] + bys[min(i + 1, N - 1)]) / 4 for i in range(N)]
+    for k in range(N):
+        t = k / (N - 1)
+        tail.append((cx + 0.012 * math.sin(t * math.pi * 1.4), bys[k] - 0.010, zsq[k]))
+        tw.append(0.075 * (1 - 0.10 * t) * (1 - 0.85 * max(0.0, t - 0.90) / 0.10))
+        tt.append(0.34 * math.sin(t * math.pi * 1.05))
+    emit(_ribbon_bl(tail, tw, 0.0015, twist=tt))
 
     sm = bpy.data.meshes.new('sash')
     bm.to_mesh(sm)
@@ -130,8 +150,11 @@ def _add_sash(me, sash_mat, at=0.70, band=0.105):
     j.to_mesh(me)
     j.free()
     bpy.data.meshes.remove(sm)
-    for f in list(me.polygons)[n0:]:
+    # build() 의 use_smooth 는 이 앞에서 끝나 있다. 빠뜨리면 면 경계선이 다 보인다.
+    # 다만 꼬리는 각져야 한다 — 납작한 띠를 부드럽게 칠하면 둥근 밧줄로 보인다.
+    for k, f in enumerate(list(me.polygons)[n0:]):
         f.material_index = 1
+        f.use_smooth = k < n_smooth
 
 
 def build(coll, cover_mat, sash_mat, name='banquet_chair', decimate=0.22):
