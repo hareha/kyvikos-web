@@ -1359,22 +1359,23 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
         return r * 0.99 * math.cos(t * PI / 2) ** 1.25, rise * math.sin(t * PI / 2) ** 0.62
 
     def dome_shell(bm):
+        # 이 파일의 도형 함수는 전부 '웹 Y축이 높이' 규약이다 (lib.ring_segment 참고: (cos*r, h, sin*r)).
+        # 여기만 높이를 z 에 넣어서 돔이 옆으로 누워 있었다 — 정면에서만 돔처럼 보이고
+        # 뒤에서 보면 밑면 원판이 보였다. 그게 "돔 뒤편이 안 그려진다"의 정체다.
         NU, NV = 48, 16
         rows = []
         for j in range(NV + 1):
             rr, hh = prof(TCUT * j / NV)
-            rows.append([bm.verts.new((rr * math.sin(2 * PI * i / NU), rr * math.cos(2 * PI * i / NU), hh))
+            rows.append([bm.verts.new((rr * math.sin(2 * PI * i / NU), hh, rr * math.cos(2 * PI * i / NU)))
                          for i in range(NU)])
         for a_, b_ in zip(rows[:-1], rows[1:]):
             for i in range(NU):
                 bm.faces.new((a_[i], a_[(i + 1) % NU], b_[(i + 1) % NU], b_[i]))
         bm.faces.new(rows[-1])
-        bm.faces.new(rows[0])   # 밑면도 막는다. 열린 껍질이면 스치는 각도에서 속이 뚫려 보인다
+        bm.faces.new(rows[0])   # 밑면도 막아 닫힌 덩어리로 (열린 껍질은 스치는 각도에서 속이 뚫려 보인다)
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-        # 열린 껍질이라 recalc 가 안쪽을 고를 수 있다. 웹은 뒷면을 잘라내므로
-        # 그 상태로 내보내면 돔이 반만 보인다 -> 윗면 법선이 위를 향하는지 보고 뒤집는다
-        top = max(bm.faces, key=lambda fc: fc.calc_center_median().z)
-        if top.normal.z < 0:
+        top = max(bm.faces, key=lambda fc: fc.calc_center_median().y)
+        if top.normal.y < 0:
             bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
 
     stones.add(dome_shell, f @ T(0, dy, 0), S, 2.6)
@@ -1441,9 +1442,15 @@ def stone_dome(x, z, r=5.5, drum=5.4, rise=3.5, ry=0.0):
     stones.add(bevel_box(0.24, 0.94, 0.24, 0.03), f @ T(pts[-1][0], 0.77, pts[-1][2]), M['balustrade'], 1)
     light(C_LIGHT, f'seokbul_{round(x)}', 'SPOT', (x, 0.8, z + r + 6.5), (x, drum + 2.5, z),
           energy=2400, color=(1.0, 0.94, 0.82), spot=0.7, blend=0.5, size=0.3)
+    # 뒷면은 빛이 하나도 없어 까만 덩어리였다. 바닥에 두면 뒤를 메운 석채(윗면 5.44)에 가려서
+    # 그 위 높이에서 쏜다 (베이크 때 반영된다 — 웹은 아직 베이크 전이라 실시간 조명으로 보인다)
+    light(C_LIGHT, f'seokbul_back_{round(x)}', 'SPOT', (x, 8.0, z - r - 8.5), (x, drum + 2.4, z),
+          energy=1400, color=(1.0, 0.92, 0.80), spot=0.9, blend=0.6, size=0.4)
 
 
-stone_dome(-17.0, -42.0, r=4.6, ry=0.0)    # 무대 뒤편 원형 광장(중심 -17,-42 / 반경 5.5) 위,
+# rise 2.5: 누워 있던 껍질을 세우고 나니 사진보다 훨씬 높았다. w_big 사진에서 드럼 지름 9.2m 를
+# 자로 써서(72px/m) 처마돌림띠~천개석 밑을 다시 재니 약 2.4m 였다.
+stone_dome(-17.0, -42.0, r=4.6, rise=2.5, ry=0.0)    # 무대 뒤편 원형 광장(중심 -17,-42 / 반경 5.5) 위,
                                            # 신평루 콘솔 부스(11,-41)와 같은 선
 
 # 회랑에서 잔디로 나오는 포장길 (클라이언트 사진). 입구 석수는 생략 — 형태가 복잡해 뺀다.
