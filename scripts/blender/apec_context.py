@@ -970,15 +970,22 @@ def yeonsu_block():
     yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, HL, arc0=(EZ1 - EZ0 - 27.6) / 2)
     balustrade(ye_nw, [(EX0 + 0.6, HL + 0.95, EZ0 + 0.8), (EX0 + 0.6, HL + 0.95, EZ1 - 0.8)], h=0.82, post=2.4)
     YBACK = EX1 - 1.4                                   # 채들이 붙는 뒤쪽 선
-    # 양옆 두 채는 **얇고 길게**(깊이 작고 길이 큼), 가운데 한 채는 **정사각형**.
-    # wlen = 깊이(용마루 방향, x) / dep = 길이 방향(z)
+    # 클라이언트 도식(images/62)을 픽셀로 재서 비율 그대로.
+    #   데크 180 x 288 / 양옆 138 x 60 (깊이 77%, 길이 21%) / 가운데 108 x 110 (정사각)
+    #   셋 다 뒤쪽 변에 flush, 가운데가 좁아 잔디 쪽에 홈이 생긴다.
+    #   우리 옥상(깊이 17 / 길이 44) 환산 -> 양옆 13.0 x 9.2, 가운데 10.2 x 10.2
+    # 용마루는 각 채의 **긴 쪽**으로 간다: 양옆은 깊이 방향(x, ry=0/PI) 이라 열린
+    # 대청은 가운데 채를 향하고, 가운데 채는 용마루가 z 라 대청이 잔디(-x)를 본다.
     ZMID = (EZ0 + EZ1) / 2
-    for (cz, wlen, dep, label, lamp) in ((ZMID - 14.0, 5.5, 12.0, '평안재2', 520),
-                                         (ZMID, 9.0, 9.0, '대청', 720),
-                                         (ZMID + 14.0, 5.5, 12.0, '평안재1', 460)):
-        cx = YBACK - wlen / 2
-        ye_nw.add(bevel_box(wlen + 1.8, 0.34, dep + 1.8, 0.04), T(cx, HL + HU + 0.47, cz), M['granite'], 1.5)
-        hanok(ye_nw, cx, cz, wlen, dep, ry=0.0, y0=HL + HU + 0.64, label=label, lamp=lamp, eave=1.2, open_front=True)
+    SPEC = ((ZMID - 15.5, 13.0, 9.2, 0.0, '평안재2', 520),
+            (ZMID, 10.2, 10.2, -PI / 2, '대청', 720),
+            (ZMID + 15.5, 13.0, 9.2, PI, '평안재1', 460))
+    for (cz, deep, along, rk, label, lamp) in SPEC:
+        ridge_len, dep = (deep, along) if abs(rk) != PI / 2 else (along, deep)
+        cx = YBACK - deep / 2
+        ye_nw.add(bevel_box(deep + 1.8, 0.34, along + 1.8, 0.04), T(cx, HL + HU + 0.47, cz), M['granite'], 1.5)
+        hanok(ye_nw, cx, cz, ridge_len, dep, ry=rk, y0=HL + HU + 0.64, label=label,
+              lamp=lamp, eave=1.2, open_front=True)
     # 세 채 앞(잔디 쪽) 빈 데크에 자갈밭 + 분재 소나무
     for k in range(5):
         ye_nw.add(cyl(0.55, 0.45, 0.6, 16), T(EX0 + SET + 1.8, HL + HU + 0.6, EZ0 + 5.0 + k * 8.5), M['granite_clad'], 1)
