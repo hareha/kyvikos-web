@@ -899,7 +899,7 @@ def yeonsu_block():
         block(ye_ne, wx0, wx1, NZ0, SPZ0 + 1.0, HG, 2, parapet=1.10)
         balustrade(ye_ne, [(wx0 + 1.0, HG + 0.28, NZ0 + 0.6), (wx1 - 1.0, HG + 0.28, NZ0 + 0.6)], h=0.78, post=2.7)
         # 날개 옥상: 평면도의 평안재3·4호 — 한 채씩, 안마당을 본다
-        hanok(ye_ne, (wx0 + wx1) / 2, NZ0 + 8.5, 4.4, 4.2, ry=PI, y0=YG,
+        hanok(ye_ne, (wx0 + wx1) / 2, NZ0 + 11.5, 4.4, 4.2, ry=PI, y0=YG,
               label=f'평안재{3 if wx0 < 30 else 4}', lamp=480, eave=1.2)
     # 두 날개 사이 안마당 — 낮은 기단 위에 수영장 (위성의 청록색 물)
     CX0, CX1 = NX0 + 8.5, NX0 + 16.5
@@ -909,7 +909,7 @@ def yeonsu_block():
     balustrade(ye_ne, [(NX0 + 1.0, HG + 0.28, NZ1 - 1.0), (NX1 - 1.0, HG + 0.28, NZ1 - 1.0)], h=0.78, post=2.7)
     # 몸채 옥상: 평면도의 큰 방 '황룡헌' 하나 + 양쪽에 행복재 (뒤쪽 복도로 이어진다)
     GSU = ((0.14, 4.4, 4.2, '행복재1'), (0.50, 8.2, 5.4, '황룡헌'), (0.86, 4.4, 4.2, '행복재2'))
-    roof_hanok(ye_ne, GSU, YG, 'x', SPZ0 + 1.2, NZ1 - 3.4, NX0 + 1.6, (NX1 - NX0) - 3.2, lamp0=620)
+    roof_hanok(ye_ne, GSU, YG, 'x', SPZ0 + 3.6, NZ1 - 2.6, NX0 + 1.6, (NX1 - NX0) - 3.2, lamp0=620)
     for k in range(5):                                                     # 옥상 분재 소나무
         ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 3.5 + k * 6.0, YG + 0.3, SPZ0 + 1.6), M['granite_clad'], 1)
         ye_ne.add(sphere(0.62, 2), T(NX0 + 3.5 + k * 6.0, YG + 0.85, SPZ0 + 1.6, sy=0.62), M['shrub'], 1)
@@ -953,7 +953,9 @@ def yeonsu_block():
                        (EX0 + SET + 0.5, HL + HU + 0.90, EZ1 - 0.8)], h=0.82, post=2.4)
     # 옥상 한옥 — 평면도 비례 그대로 (평안재2호 / 대청(가장 큼) / 평안재1호 + 뒤쪽 복도)
     YSU = ((0.106, 4.7, 6.1, '평안재2'), (0.511, 8.8, 5.7, '대청'), (0.905, 4.9, 4.0, '평안재1'))
-    roof_hanok(ye_nw, YSU, HL + HU + 0.30, 'z', EX0 + SET + 1.2, EX1 - 4.0, EZ0 + 1.4, (EZ1 - EZ0) - 2.8)
+    # 항공사진: 채들이 잔디 쪽 난간에서 **약 7.8m 물러나** 있고 그 앞은 훤한 데크다.
+    # (앞선에 바짝 붙이면 안 된다)
+    roof_hanok(ye_nw, YSU, HL + HU + 0.30, 'z', EX0 + SET + 8.0, EX1 - 3.0, EZ0 + 1.4, (EZ1 - EZ0) - 2.8)
     ye_nw.add(box(5, 4.5, 10), T(62.5, HL + HU + 2.25, -6), M['granite_clad'], 1.5)   # 계단실
     # ── 잔디와 연수동 사이 광장 + 계단 ────────────────────────────────
     ye_nw.add(box(5.8, 0.45, 52), T(39.1, 0.22, -8), M['terrace'], 1.6)
