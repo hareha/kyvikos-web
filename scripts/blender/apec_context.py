@@ -400,13 +400,18 @@ def rafters(asm, frame, length, r0, r1, under, step=0.55, radius=0.07):
             asm.add(g, m, M['rafter'], 1)
 
 
-def hanok(asm, cx, cz, w, d, ry=0.0, y0=0.0, wall_h=3.4, veranda=True, base_h=0.6, label='', lamp=600, eave=2.6):
+def hanok(asm, cx, cz, w, d, ry=0.0, y0=0.0, wall_h=3.4, veranda=True, base_h=0.6, label='', lamp=600, eave=2.6, open_front=False):
     """한옥 한 채. 로컬 x = 용마루 방향(길이 w), 로컬 +z = 정면(툇마루·계자 난간)
     주칠 기둥 · 흰 회벽 · 불 켜진 띠살문(앞뒤) · 팔작지붕(우진각 + 용마루)"""
     f = T(cx, 0, cz, ry)
     asm.add(bevel_box(w + 2.4, base_h, d + 2.4, 0.04), f @ T(0, y0 + base_h / 2, 0), M['granite'], 1.5)
     yb = y0 + base_h
-    asm.add(box(w, wall_h, d), f @ T(0, yb + wall_h / 2, 0), M['stoneWall'], 2)
+    # open_front: 잔디 쪽 면이 막힌 벽이 아니라 **기둥만 선 열린 대청마루**다 (실사 사진).
+    # 몸체를 뒤쪽으로 물려 앞을 비우고, 앞 칸에는 창호 대신 마룻바닥과 난간만 둔다.
+    bd = d * 0.52 if open_front else d
+    asm.add(box(w, wall_h, bd), f @ T(0, yb + wall_h / 2, -(d - bd) / 2), M['stoneWall'], 2)
+    if open_front:
+        asm.add(box(w, 0.22, d - bd), f @ T(0, yb + 0.11, bd / 2), M['deck'], 1.2)        # 대청 마룻바닥
     bays = max(3, round(w / 3))
     for k in range(bays + 1):
         x = -w / 2 + k * w / bays
@@ -414,8 +419,12 @@ def hanok(asm, cx, cz, w, d, ry=0.0, y0=0.0, wall_h=3.4, veranda=True, base_h=0.
             asm.add(cyl(0.2, 0.22, wall_h + 0.2, 12), f @ T(x, yb + (wall_h + 0.2) / 2, z), M['vermilion'], 1)
         if k < bays:
             xm = x + w / bays / 2
-            for sz, rot in ((1, 0), (-1, PI)):
-                glow.add(plane(w / bays - 0.5, wall_h * 0.76), f @ T(xm, yb + wall_h * 0.44, sz * (d / 2 + 0.07), rot), M['hanji'], tile=None)
+            faces = ((-1, PI),) if open_front else ((1, 0), (-1, PI))
+            for sz, rot in faces:
+                zz = -(d - bd) / 2 + sz * (bd / 2 + 0.07) if open_front else sz * (d / 2 + 0.07)
+                glow.add(plane(w / bays - 0.5, wall_h * 0.76), f @ T(xm, yb + wall_h * 0.44, zz, rot), M['hanji'], tile=None)
+            if open_front:     # 열린 앞칸 안쪽에서 새어 나오는 빛
+                glow.add(plane(w / bays - 0.5, wall_h * 0.70), f @ T(xm, yb + wall_h * 0.42, -(d - bd) / 2 + bd / 2 + 0.07), M['hanji'], tile=None)
     if veranda:
         asm.add(box(w + 1.2, 0.25, 1.8), f @ T(0, yb + 0.125, d / 2 + 1.3), M['deck'], 1.2)            # 툇마루 (기단 위)
         asm.add(box(w + 1.0, base_h, 0.9), f @ T(0, y0 + base_h / 2, d / 2 + 1.75), M['granite'], 1.5)   # 기단 밖 마루 받침 (기단과 5cm 띄움)
@@ -961,17 +970,15 @@ def yeonsu_block():
     yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, HL, arc0=(EZ1 - EZ0 - 27.6) / 2)
     balustrade(ye_nw, [(EX0 + 0.6, HL + 0.95, EZ0 + 0.8), (EX0 + 0.6, HL + 0.95, EZ1 - 0.8)], h=0.82, post=2.4)
     YBACK = EX1 - 1.4                                   # 채들이 붙는 뒤쪽 선
-    # 가운데 채는 **정사각형**, 양옆 두 채는 **깊이 방향으로 길쭉한 직사각형**.
-    # 배치는 옥상 길이의 **가운데(z = (EZ0+EZ1)/2)** 에 맞춘다 — 전에는 z=0 기준으로
-    # 놓아서 한쪽으로 4m 쏠려 있었다.
+    # 양옆 두 채는 **얇고 길게**(깊이 작고 길이 큼), 가운데 한 채는 **정사각형**.
     # wlen = 깊이(용마루 방향, x) / dep = 길이 방향(z)
     ZMID = (EZ0 + EZ1) / 2
-    for (cz, wlen, dep, label, lamp) in ((ZMID - 13.0, 10.0, 5.5, '평안재2', 520),
-                                         (ZMID, 8.0, 8.0, '대청', 720),
-                                         (ZMID + 13.0, 10.0, 5.5, '평안재1', 460)):
+    for (cz, wlen, dep, label, lamp) in ((ZMID - 14.0, 5.5, 12.0, '평안재2', 520),
+                                         (ZMID, 9.0, 9.0, '대청', 720),
+                                         (ZMID + 14.0, 5.5, 12.0, '평안재1', 460)):
         cx = YBACK - wlen / 2
         ye_nw.add(bevel_box(wlen + 1.8, 0.34, dep + 1.8, 0.04), T(cx, HL + HU + 0.47, cz), M['granite'], 1.5)
-        hanok(ye_nw, cx, cz, wlen, dep, ry=0.0, y0=HL + HU + 0.64, label=label, lamp=lamp, eave=1.2)
+        hanok(ye_nw, cx, cz, wlen, dep, ry=0.0, y0=HL + HU + 0.64, label=label, lamp=lamp, eave=1.2, open_front=True)
     # 세 채 앞(잔디 쪽) 빈 데크에 자갈밭 + 분재 소나무
     for k in range(5):
         ye_nw.add(cyl(0.55, 0.45, 0.6, 16), T(EX0 + SET + 1.8, HL + HU + 0.6, EZ0 + 5.0 + k * 8.5), M['granite_clad'], 1)
