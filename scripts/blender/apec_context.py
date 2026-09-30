@@ -823,27 +823,50 @@ def yeonsu_front(asm, f, L, h1, arc0, pitch=4.6, ow_wide=2.54, ow_narrow=1.85, s
     asm.add(box(L + 0.40, 0.34, DEPTH + 0.36), f @ T(L / 2, h1 - 0.17, -(DEPTH + 0.36) / 2), M['granite_clad'], 1.2)
 
 
-def roof_hanok_row(asm, x0, z0, z1, ry, y0, n=3):
-    """옥상 한옥 마을 — 황룡원스테이 사진: 팔작 기와지붕 + 툇마루·계자난간,
-       낮은 화강석 기단, 사이사이 자갈밭과 판석 포장, 분재 소나무 화분."""
-    # v44(황룡원스테이 옥상 사진): 세 채가 한 줄로 같은 방향이 아니라 가운데 마당을
-    # 둘러싸고 선다 — 바깥 두 채는 마당을 보고, 가운데 한 채가 잔디 쪽을 본다.
-    # 사진 49 실측: 세 채는 크기가 다르다. 지붕 폭을 현지 베이피치로 정규화하면
-    #   왼쪽 1.30 / 가운데 1.77 / 오른쪽 1.29 (베이 4.6m) -> 지붕 6.0 / 8.1 / 6.0
-    # 처마를 2.6 으로 두면 몸통이 0.8 밖에 안 남는다 -> 옥상 누각은 처마 1.3 으로.
-    SPEC = ((3.4, 3.2, 1.3, 0.0), (5.5, 4.4, 1.3, ry), (3.4, 3.2, 1.3, PI))
-    span = (z1 - z0) / n
-    for k in range(n):
-        cz = z0 + (k + 0.5) * span
-        w_, d_, ev, rk = SPEC[k % 3]
-        asm.add(bevel_box(w_ + 2.8, 0.30, min(span - 3.0, d_ + 3.0), 0.04),
-                T(x0 + 1.0, y0 + 0.15, cz), M['granite'], 1.5)
-        hanok(asm, x0 + 1.0, cz, w_, d_, ry=rk, y0=y0 + 0.30, label=f'R{k+1}',
-              lamp=(500, 0, 420)[k % 3], eave=ev)
-        for j in range(3):                            # 기단 앞 자갈밭·판석
-            asm.add(box(1.1, 0.06, span - 2.8), T(x0 - 2.4 + j * 1.2, y0 + 0.06, cz), M['terrace'], 1.6)
-        asm.add(cyl(0.55, 0.45, 0.6, 16), T(x0 - 3.3, y0 + 0.3, cz - span * 0.30), M['granite_clad'], 1)
-        asm.add(sphere(0.62, 2), T(x0 - 3.3, y0 + 0.85, cz - span * 0.30, sy=0.62), M['shrub'], 1)
+def roof_hanok(asm, units, y0, axis, front, back, span0, span, eave=1.15, lamp0=520):
+    """옥상 한옥 — 황룡원스테이가 공개한 **한옥층 평면도**(assets-src/refs/apec/plan_hanok_floor.png)
+    에서 잰 배치 그대로.
+
+    같은 도면의 객실층(plan_room_floor.png)에 있는 4인 침실 폭(약 5.5m)으로 축척을 잡으면
+    15.5 px/m 이고, 그 자로 잰 값:
+      평안재2호 7.7 x 10.0 / 대청 14.5 x 9.4 (가운데가 가장 크다) / 평안재1호 8.1 x 6.5
+      세 채 뒤로 길이 35m · 폭 3.5m 짜리 **복도**가 지나 서로를 잇는다
+    실제 옥상은 48m 인데 우리 씬의 옥상은 그보다 짧아, 도면의 **비례**를 유지한 채 줄여 앉힌다.
+
+    axis='z' 면 배치축이 월드 z (정면은 -x), 'x' 면 배치축이 월드 x (정면은 -z).
+    front/back 은 그 축과 직각인 방향의 앞선/뒤선.
+    """
+    ry = -PI / 2 if axis == 'z' else PI
+    # 뒤를 잇는 복도 (기단 + 둥근 기둥 + 맞배 기와)
+    cw = 3.0
+    cc = back - cw / 2
+    cf = T(cc, 0, span0 + span / 2, PI / 2) if axis == 'z' else T(span0 + span / 2, 0, cc, 0.0)
+    asm.add(bevel_box(span - 1.0, 0.34, cw, 0.04), cf @ T(0, y0 + 0.17, 0), M['granite'], 1.5)
+    n = max(2, round((span - 1.0) / 3.0))
+    for k in range(n + 1):
+        px = -(span - 1.0) / 2 + k * (span - 1.0) / n
+        for pz in (-cw / 2 + 0.45, cw / 2 - 0.45):
+            asm.add(cyl(0.16, 0.18, 2.5, 12), cf @ T(px, y0 + 0.34 + 1.25, pz), M['pillarStone'], 1)
+    for pz in (-cw / 2 + 0.45, cw / 2 - 0.45):
+        asm.add(box(span - 0.8, 0.34, 0.24), cf @ T(0, y0 + 2.96, pz), M['rafter'], 1)
+    gb = y0 + 3.13
+    half = (cw + 1.9) / 2
+    rafters(asm, cf, span - 1.0, cw / 2, half - 0.25, lambda r: gb + 1.25 * (1 - r / half) - 0.1 * math.sin(PI * r / half), step=0.5)
+    asm.add(gable_roof(span - 1.0, cw + 1.9, 1.25, sag=0.1), cf @ T(0, gb, 0), M['tileGrey'], 1.4)
+    ridge(asm, cf, span - 1.4, gb + 1.25)
+    # 채
+    for k, (t, w, d, label) in enumerate(units):
+        c = span0 + t * span
+        a = front + d / 2 + 0.9                       # 채 중심 (앞선에서 조금 물러나 기단 자리를 둔다)
+        cx, cz = (a, c) if axis == 'z' else (c, a)
+        asm.add(bevel_box(w + 2.2 if axis == 'z' else d + 2.2, 0.34,
+                          d + 2.2 if axis == 'z' else w + 2.2, 0.04),
+                T(cx, y0 + 0.17, cz), M['granite'], 1.5)
+        hanok(asm, cx, cz, w, d, ry=ry, y0=y0 + 0.34, label=label, lamp=lamp0 if k % 2 == 0 else 0, eave=eave)
+        # 채 앞 자갈밭
+        gx, gz = (front - 0.8, c) if axis == 'z' else (c, front - 0.8)
+        asm.add(box(1.6 if axis == 'z' else w + 2.0, 0.06, w + 2.0 if axis == 'z' else 1.6),
+                T(gx, y0 + 0.06, gz), M['terrace'], 1.6)
 
 
 def yeonsu_block():
@@ -875,17 +898,18 @@ def yeonsu_block():
     for (wx0, wx1) in WINGS:                                               # 잔디 쪽 날개 둘
         block(ye_ne, wx0, wx1, NZ0, SPZ0 + 1.0, HG, 2, parapet=1.10)
         balustrade(ye_ne, [(wx0 + 1.0, HG + 0.28, NZ0 + 0.6), (wx1 - 1.0, HG + 0.28, NZ0 + 0.6)], h=0.78, post=2.7)
-        # 항공사진: 옥상은 대부분 훤한 데크이고 누각은 드문드문이다. 날개마다 한 채만.
-        hanok(ye_ne, (wx0 + wx1) / 2, NZ0 + 9.0, 3.2, 3.6, ry=PI, y0=YG, label=f'G{wx0:.0f}', lamp=480, eave=1.3)
+        # 날개 옥상: 평면도의 평안재3·4호 — 한 채씩, 안마당을 본다
+        hanok(ye_ne, (wx0 + wx1) / 2, NZ0 + 8.5, 4.4, 4.2, ry=PI, y0=YG,
+              label=f'평안재{3 if wx0 < 30 else 4}', lamp=480, eave=1.2)
     # 두 날개 사이 안마당 — 낮은 기단 위에 수영장 (위성의 청록색 물)
     CX0, CX1 = NX0 + 8.5, NX0 + 16.5
     block(ye_ne, CX0, CX1, NZ0, SPZ0 + 1.0, 4.6, 1, parapet=0.75)          # 안마당 밑 저층부
     ye_ne.add(box(CX1 - CX0 - 3.0, 0.5, 9.0), T((CX0 + CX1) / 2, 5.05, NZ0 + 7.5), M['water'], None)   # 수영장
     ye_ne.add(box(CX1 - CX0 - 2.0, 0.3, 10.4), T((CX0 + CX1) / 2, 4.85, NZ0 + 7.5), M['terrace'], 1.6)  # 풀 데크
     balustrade(ye_ne, [(NX0 + 1.0, HG + 0.28, NZ1 - 1.0), (NX1 - 1.0, HG + 0.28, NZ1 - 1.0)], h=0.78, post=2.7)
-    for k, hx in enumerate((NX0 + 5.0, NX0 + 15.0, NX0 + 25.0)):           # 몸채 옥상 기와집 (간격 10m)
-        hanok(ye_ne, hx, 42.5, (3.2, 4.6, 3.2)[k], (3.0, 3.8, 3.0)[k], ry=PI, y0=YG,
-              label='ABC'[k], lamp=(500, 700, 400)[k], eave=1.2)
+    # 몸채 옥상: 평면도의 큰 방 '황룡헌' 하나 + 양쪽에 행복재 (뒤쪽 복도로 이어진다)
+    GSU = ((0.14, 4.4, 4.2, '행복재1'), (0.50, 8.2, 5.4, '황룡헌'), (0.86, 4.4, 4.2, '행복재2'))
+    roof_hanok(ye_ne, GSU, YG, 'x', SPZ0 + 1.2, NZ1 - 3.4, NX0 + 1.6, (NX1 - NX0) - 3.2, lamp0=620)
     for k in range(5):                                                     # 옥상 분재 소나무
         ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 3.5 + k * 6.0, YG + 0.3, SPZ0 + 1.6), M['granite_clad'], 1)
         ye_ne.add(sphere(0.62, 2), T(NX0 + 3.5 + k * 6.0, YG + 0.85, SPZ0 + 1.6, sy=0.62), M['shrub'], 1)
@@ -927,7 +951,9 @@ def yeonsu_block():
     block(ye_nw, EX0 + SET, EX1, EZ0 + SET, EZ1, HL + HU, 3, parapet=0.90)
     balustrade(ye_nw, [(EX0 + SET + 0.5, HL + HU + 0.90, EZ0 + SET + 0.8),
                        (EX0 + SET + 0.5, HL + HU + 0.90, EZ1 - 0.8)], h=0.82, post=2.4)
-    roof_hanok_row(ye_nw, EX0 + SET + 4.6, EZ0 + SET + 1.0, EZ1 - 1.0, -PI / 2, HL + HU + 0.30)
+    # 옥상 한옥 — 평면도 비례 그대로 (평안재2호 / 대청(가장 큼) / 평안재1호 + 뒤쪽 복도)
+    YSU = ((0.106, 4.7, 6.1, '평안재2'), (0.511, 8.8, 5.7, '대청'), (0.905, 4.9, 4.0, '평안재1'))
+    roof_hanok(ye_nw, YSU, HL + HU + 0.30, 'z', EX0 + SET + 1.2, EX1 - 4.0, EZ0 + 1.4, (EZ1 - EZ0) - 2.8)
     ye_nw.add(box(5, 4.5, 10), T(62.5, HL + HU + 2.25, -6), M['granite_clad'], 1.5)   # 계단실
     # ── 잔디와 연수동 사이 광장 + 계단 ────────────────────────────────
     ye_nw.add(box(5.8, 0.45, 52), T(39.1, 0.22, -8), M['terrace'], 1.6)
