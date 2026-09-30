@@ -147,7 +147,9 @@ def paver(px, pz):
     if not on_lawn(px, pz, 0.3):
         return
     # 덩어리로 튀지 않게 얇게, 잔디에 거의 묻히는 높이로 (윗면 0.135)
-    ground.add(bevel_box(0.52, 0.05, 0.52, 0.01), T(px, 0.11, pz, random.uniform(-0.05, 0.05)), M['paver'], 0.55)
+    # 항공사진(카카오 스카이뷰): 정사각형이 아니라 **긴 직사각형**이고, 긴 쪽이 길
+    # 진행 방향(x)에 직각으로 눕는다. 잰 값 1.3 x 0.5, 길 따라 0.73 간격.
+    ground.add(bevel_box(0.50, 0.05, 1.30, 0.01), T(px, 0.11, pz, random.uniform(-0.03, 0.03)), M['paver'], 0.55)
 
 
 # 원래 배치 그대로. 지우는 것은 '중앙으로 뻗어나가는' 두 줄과 가운데 원판뿐이다.
@@ -155,20 +157,20 @@ def paver(px, pz):
 # 무대 앞을 가로지르는 흰 디딤돌 두 줄
 x = -24.0
 while x <= 34:
-    if abs(x - MED[0]) > 2.7:
-        paver(x, MED[1] - 0.35)
-        paver(x + 0.35, MED[1] + 0.35)
-    x += 0.7
+    if abs(x - MED[0]) > 3.2:
+        paver(x, MED[1] - 0.68)
+        paver(x + 0.365, MED[1] + 0.68)
+    x += 0.73
 # 앞쪽으로 뻗는 동선 두 줄 — 중앙에서 뻗어나가는 부분이라 뺀다
-# 동심원 패턴: 끊어진 고리 세 겹 (가운데 원판은 실제에 없어 뺀다)
-# 무대 앞선(-11.5)과 첫 줄 테이블(z -3, 반경 1.6 -> 가장자리 -4.6) 사이 6.9m 띠 안에
-# 들어가야 한다. 지름 6.9 는 그 띠를 꽉 채워 양쪽에 걸쳤고, 16.7 로 키운 건 더 틀렸다.
-# 지름 5.6 (반지름 2.8) 로 줄여 무대·테이블 어느 쪽에도 닿지 않게 한다.
-for r0, r1, count in ((0.95, 1.25, 12), (1.55, 1.80, 18), (2.05, 2.25, 24)):
-    span = 2 * PI / count
-    for i in range(count):
-        a = i * span
-        ground.add(ring_segment(r0, r1, a + span * 0.1, a + span * 0.9, 0.12), T(MED[0], 0.075, MED[1]), M['paver'], 1.2)
+# 무대 앞 원 — 항공사진(카카오 스카이뷰)에서 잰 대로.
+# 동심원 세 겹이 아니다. **한 겹의 고리를 방사형 쐐기로 나눈 것**이고 가운데는 비어 있다.
+# 연석 두 줄 폭(2.7m)을 자로 쓰면 고리 바깥지름 6.0, 안쪽 빈 원 2.3.
+RING_R0, RING_R1, RING_N = 1.15, 3.00, 24
+for i in range(RING_N):
+    span = 2 * PI / RING_N
+    a = i * span
+    ground.add(ring_segment(RING_R0, RING_R1, a + span * 0.09, a + span * 0.91, 0.12),
+               T(MED[0], 0.075, MED[1]), M['paver'], 1.2)
 ground.build()
 
 outer = Assembly('outer', C_RENDER_ONLY)
