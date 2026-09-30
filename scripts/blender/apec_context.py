@@ -400,7 +400,7 @@ def rafters(asm, frame, length, r0, r1, under, step=0.55, radius=0.07):
             asm.add(g, m, M['rafter'], 1)
 
 
-def hanok(asm, cx, cz, w, d, ry=0.0, y0=0.0, wall_h=3.4, veranda=True, base_h=0.6, label='', lamp=600):
+def hanok(asm, cx, cz, w, d, ry=0.0, y0=0.0, wall_h=3.4, veranda=True, base_h=0.6, label='', lamp=600, eave=2.6):
     """한옥 한 채. 로컬 x = 용마루 방향(길이 w), 로컬 +z = 정면(툇마루·계자 난간)
     주칠 기둥 · 흰 회벽 · 불 켜진 띠살문(앞뒤) · 팔작지붕(우진각 + 용마루)"""
     f = T(cx, 0, cz, ry)
@@ -427,9 +427,10 @@ def hanok(asm, cx, cz, w, d, ry=0.0, y0=0.0, wall_h=3.4, veranda=True, base_h=0.
     top = yb + wall_h
     asm.add(box(w + 0.6, 0.5, d + 0.6), f @ T(0, top + 0.1, 0), M['vermilion'], 1)
     rh = min(3.4, 1.4 + d * 0.3)
-    base = seat(top + 0.35, d / 2 + 2.8, 0.8, rh, overhang=2.5)          # 창방(폭 d+0.6) 위에 얹힘
-    rafters(asm, f, w + 0.4, d / 2 + 0.3, d / 2 + 2.45, hip_under(base, d / 2 + 2.8, 0.8, rh))
-    asm.add(hip_roof(w / 2 + 2.6, d / 2 + 2.8, rh, ridge=0.8, lift=1.1), f @ T(0, base, 0), M['tileGrey'], 1.4)
+    ed = eave + 0.2
+    base = seat(top + 0.35, d / 2 + ed, 0.8, rh, overhang=eave - 0.1)   # 창방(폭 d+0.6) 위에 얹힘
+    rafters(asm, f, w + 0.4, d / 2 + 0.3, d / 2 + ed - 0.35, hip_under(base, d / 2 + ed, 0.8, rh))
+    asm.add(hip_roof(w / 2 + eave, d / 2 + ed, rh, ridge=0.8, lift=1.1), f @ T(0, base, 0), M['tileGrey'], 1.4)
     ridge(asm, f, max(w - d * 0.8, 2), base + rh)
     if lamp:
         p = f @ V((0, top - 0.2, d / 2 + 2.0))
@@ -631,34 +632,24 @@ def garden_block():
         x, z = pond_c.x + math.cos(a) * pond_r[0] * dd, pond_c.z + math.sin(a) * pond_r[1] * dd
         if 23.5 < z and x < 22:
             shrub(x, z, random.uniform(0.7, 1.4))
-    # 육각정 (연못 북쪽 가)
+    # 사모정 (연못 가). 위성사진: 지붕이 육각이 아니라 **사각 모임지붕**이고,
+    # 물 위 기둥이 아니라 못 가장자리 땅 위에 앉아 있다.
     hx, hz = 14.0, 41.0
-    garden.add(cyl(3.6, 3.9, 1.2, 6), T(hx, 0.6, hz), M['granite'], 1.5)
-    garden.add(cyl(3.3, 3.3, 0.25, 6), T(hx, 1.32, hz), M['deck'], 1.2)
-    for k in range(6):
-        a = k / 6 * 2 * PI
-        garden.add(cyl(0.2, 0.22, 3.0, 12), T(hx + math.cos(a) * 3.0, 1.45 + 1.5, hz + math.sin(a) * 3.0), M['vermilion'], 1)
-        a2 = a + PI / 6
-        g = T(hx + math.cos(a2) * 2.6, 1.9, hz + math.sin(a2) * 2.6, PI / 2 - a2)
-        garden.add(plane(2.9, 0.7), g, M['fret'], tile=None)
-        garden.add(plane(2.9, 0.7), g @ T(0, 0, -0.03, PI), M['fret'], tile=None)
-    garden.add(cyl(3.1, 3.1, 0.5, 6), T(hx, 4.7, hz), M['bracket'], 1)
-    rb = 4.95 - 2.8 * (5.2 - 3.1) / (5.2 - 0.3) - 0.04          # 원뿔 면이 도리(반지름 3.1, 윗면 4.95)에 얹힘
-    garden.add(cyl(0.3, 5.2, 2.8, 6), T(hx, rb + 1.4, hz), M['tileGrey'], 1.4)
-    garden.add(cyl(0.12, 0.3, 1.4, 8), T(hx, rb + 2.8 + 0.6, hz), M['tileGrey'], 1)
-    light(C_LIGHT, 'site_pavilion', 'POINT', (hx, 4.2, hz), energy=380, color=(1.0, 0.75, 0.45), size=0.4)
-    # 돌다리 (회랑 누각 앞에서 연못 서쪽을 건너 산책로로)
-    bx, z0, z1 = -3.5, 23.6, 42.5
-    n = 14
-    for k in range(n):
-        t0, t1 = k / n, (k + 1) / n
-        za, zb = z0 + (z1 - z0) * t0, z0 + (z1 - z0) * t1
-        ya, yb = 0.5 + 0.9 * math.sin(PI * t0), 0.5 + 0.9 * math.sin(PI * t1)
-        garden.add(box(2.0, 0.3, abs(zb - za) + 0.05), T(bx, (ya + yb) / 2, (za + zb) / 2, 0, -math.atan2(yb - ya, zb - za)), M['granite'], 1.2)
-    for s in (-1, 1):
-        deck = lambda z: 0.5 + 0.9 * math.sin(PI * (z - z0) / (z1 - z0)) + 0.13      # 다리 윗면
-        zs_ = [z0 + 0.8 + (z1 - z0 - 1.6) * k / 8 for k in range(9)]
-        balustrade(garden, [(bx + s * 0.95, deck(z), z) for z in zs_], h=0.5, post=1.2)
+    PW = 3.6                                                   # 한 변의 절반
+    garden.add(bevel_box(PW * 2 + 0.8, 0.55, PW * 2 + 0.8, 0.05), T(hx, 0.275, hz), M['granite'], 1.5)   # 기단
+    garden.add(box(PW * 2 - 0.4, 0.22, PW * 2 - 0.4), T(hx, 0.66, hz), M['deck'], 1.2)                   # 마루
+    for (sx_, sz_) in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+        garden.add(cyl(0.2, 0.22, 2.9, 12), T(hx + sx_ * (PW - 0.35), 0.77 + 1.45, hz + sz_ * (PW - 0.35)), M['vermilion'], 1)
+    for (dx_, dz_, ry_) in ((0, PW - 0.35, 0.0), (0, -(PW - 0.35), PI), (PW - 0.35, 0, PI / 2), (-(PW - 0.35), 0, -PI / 2)):
+        g = T(hx + dx_, 1.32, hz + dz_, ry_)
+        garden.add(plane(PW * 2 - 0.9, 0.85), g, M['fret'], tile=None)
+        garden.add(plane(PW * 2 - 0.9, 0.85), g @ T(0, 0, -0.03, PI), M['fret'], tile=None)
+    garden.add(box(PW * 2 + 0.3, 0.45, PW * 2 + 0.3), T(hx, 3.89, hz), M['bracket'], 1)                  # 창방·평방
+    pb = seat(4.12, PW + 1.6, 0.98, 2.5, overhang=1.5)
+    garden.add(hip_roof(PW + 1.6, PW + 1.6, 2.5, ridge=0.98, lift=0.9), T(hx, pb, hz), M['tileGrey'], 1.4)   # 사모지붕
+    garden.add(cyl(0.12, 0.34, 0.9, 8), T(hx, pb + 2.5 + 0.35, hz), M['tileGrey'], 1)                    # 절병통
+    light(C_LIGHT, 'site_pavilion', 'POINT', (hx, 3.4, hz), energy=380, color=(1.0, 0.75, 0.45), size=0.4)
+    # 돌다리는 내가 임의로 넣은 것이다 — 위성사진에 연못을 건너는 다리는 없다. 뺀다.
     # 곡선 산책로 (위성사진의 흰 길)
     pts = [(-31, 26), (-28, 33), (-20, 38), (-10, 40), (-3.5, 43), (4, 46), (14, 48.5), (24, 50)]
     garden.add(strip(pts, 1.6, 0.1), T(), M['path'], 1.2)   # 이음부가 겹치지 않는 한 장의 띠
@@ -837,12 +828,18 @@ def roof_hanok_row(asm, x0, z0, z1, ry, y0, n=3):
        낮은 화강석 기단, 사이사이 자갈밭과 판석 포장, 분재 소나무 화분."""
     # v44(황룡원스테이 옥상 사진): 세 채가 한 줄로 같은 방향이 아니라 가운데 마당을
     # 둘러싸고 선다 — 바깥 두 채는 마당을 보고, 가운데 한 채가 잔디 쪽을 본다.
+    # 사진 49 실측: 세 채는 크기가 다르다. 지붕 폭을 현지 베이피치로 정규화하면
+    #   왼쪽 1.30 / 가운데 1.77 / 오른쪽 1.29 (베이 4.6m) -> 지붕 6.0 / 8.1 / 6.0
+    # 처마를 2.6 으로 두면 몸통이 0.8 밖에 안 남는다 -> 옥상 누각은 처마 1.3 으로.
+    SPEC = ((3.4, 3.2, 1.3, 0.0), (5.5, 4.4, 1.3, ry), (3.4, 3.2, 1.3, PI))
     span = (z1 - z0) / n
     for k in range(n):
         cz = z0 + (k + 0.5) * span
-        rk = (PI / 2, ry, -PI / 2)[k % 3]             # 안쪽 / 잔디 쪽 / 안쪽
-        asm.add(bevel_box(6.2, 0.30, min(span - 3.0, 6.4), 0.04), T(x0 + 1.0, y0 + 0.15, cz), M['granite'], 1.5)
-        hanok(asm, x0 + 1.0, cz, 3.2, 3.6, ry=rk, y0=y0 + 0.30, label=f'R{k+1}', lamp=(500, 0, 420)[k % 3])
+        w_, d_, ev, rk = SPEC[k % 3]
+        asm.add(bevel_box(w_ + 2.8, 0.30, min(span - 3.0, d_ + 3.0), 0.04),
+                T(x0 + 1.0, y0 + 0.15, cz), M['granite'], 1.5)
+        hanok(asm, x0 + 1.0, cz, w_, d_, ry=rk, y0=y0 + 0.30, label=f'R{k+1}',
+              lamp=(500, 0, 420)[k % 3], eave=ev)
         for j in range(3):                            # 기단 앞 자갈밭·판석
             asm.add(box(1.1, 0.06, span - 2.8), T(x0 - 2.4 + j * 1.2, y0 + 0.06, cz), M['terrace'], 1.6)
         asm.add(cyl(0.55, 0.45, 0.6, 16), T(x0 - 3.3, y0 + 0.3, cz - span * 0.30), M['granite_clad'], 1)
