@@ -124,7 +124,7 @@ LAWN = (-25, 35, -33, 17)                       # x0, x1, z0, z1 (위성 실측)
 TOWER_C, TOWER_R = (-43, -11), 27.5             # 중도타워 원형 동선
 ground.add(box(LAWN[1] - LAWN[0], 0.12, LAWN[3] - LAWN[2]),
            T((LAWN[0] + LAWN[1]) / 2, 0.06, (LAWN[2] + LAWN[3]) / 2), M['lawn'], tile=2.5)
-MED = (6, -7.9)  # 무대 앞 동심원 중심 — 무대 앞선(-11.5)과 첫 줄 테이블 사이 한가운데
+MED = (6, -7.4)  # 무대 앞 원 중심 — 테이블 쪽으로 당겨서 무대(앞선 -11.5)에 안 깔리게
 
 
 LAWN_PINES = ((22, 8, 4.6), (14.5, 14.5, 2.6))  # 잔디 위 소나무 (x, z, 비울 반지름) — apec_context.py 와 같은 값
@@ -157,7 +157,7 @@ def paver(px, pz):
 # 무대 앞을 가로지르는 흰 디딤돌 두 줄
 x = -24.0
 while x <= 34:
-    if abs(x - MED[0]) > 3.2:
+    if abs(x - MED[0]) > 2.8:
         paver(x, MED[1] - 0.68)
         paver(x + 0.365, MED[1] + 0.68)
     x += 0.73
@@ -165,16 +165,16 @@ while x <= 34:
 # 무대 앞 원 — 실사 야간사진(images 52/54)을 확대해 읽은 구조 그대로.
 # 한 겹 고리를 잘게 쪼갠 게 아니다. **가운데에 세 갈래로 끊어진 도넛**이 있고,
 # 그 둘레를 **긴 직사각형 판이 방사형으로 둘러선다**.
-# 크기는 무대 LED(16.0m) 를 자로 써서 52.webp 에서 잼: 도넛 바깥 지름 3.6,
-# 둘러선 판까지 포함한 전체 지름 7.3.
+# 무대 앞선(-11.5)과 첫 줄 테이블 가장자리(-4.6) 사이가 6.9m 뿐이라, 실사 비례(전체 7.3)를
+# 그대로 쓰면 무대에 깔린다. 비례는 유지한 채 전체 지름 5.1 로 줄이고 중심을 테이블 쪽으로 당겼다.
 for i in range(3):                                     # 세 갈래 도넛
     a0 = i * 2 * PI / 3 + 0.09
     a1 = (i + 1) * 2 * PI / 3 - 0.09
-    ground.add(ring_segment(1.12, 1.80, a0, a1, 0.12), T(MED[0], 0.075, MED[1]), M['paver'], 1.2)
+    ground.add(ring_segment(0.80, 1.28, a0, a1, 0.12), T(MED[0], 0.075, MED[1]), M['paver'], 1.2)
 for i in range(20):                                    # 둘레의 방사형 직사각형 판
     a = 2 * PI * i / 20 + PI / 20
-    ground.add(bevel_box(1.25, 0.05, 0.48, 0.01),
-               T(MED[0] + math.cos(a) * 2.95, 0.11, MED[1] + math.sin(a) * 2.95, -a), M['paver'], 0.55)
+    ground.add(bevel_box(0.90, 0.05, 0.34, 0.01),
+               T(MED[0] + math.cos(a) * 2.05, 0.11, MED[1] + math.sin(a) * 2.05, -a), M['paver'], 0.55)
 ground.build()
 
 outer = Assembly('outer', C_RENDER_ONLY)
