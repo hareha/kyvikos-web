@@ -961,12 +961,14 @@ def yeonsu_block():
     yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, HL, arc0=(EZ1 - EZ0 - 27.6) / 2)
     balustrade(ye_nw, [(EX0 + 0.6, HL + 0.95, EZ0 + 0.8), (EX0 + 0.6, HL + 0.95, EZ1 - 0.8)], h=0.82, post=2.4)
     YBACK = EX1 - 1.4                                   # 채들이 붙는 뒤쪽 선
-    # 도식의 비율대로 키운다: 길이 방향으로 18% / 36% / 21%, 깊이 방향으로 78% / 62%.
-    # 44m 옥상에 5~6m 짜리를 띄엄띄엄 놓으니 흩뿌린 것처럼 보였다.
-    # wlen = 깊이(용마루 방향, x) / dep = 길이 방향(z) 치수
-    for (cz, wlen, dep, label, lamp) in ((-12.5, 9.5, 8.0, '평안재2', 520),
-                                         (0.0, 7.5, 12.0, '대청', 720),
-                                         (12.5, 9.5, 8.0, '평안재1', 460)):
+    # 가운데 채는 **정사각형**, 양옆 두 채는 **깊이 방향으로 길쭉한 직사각형**.
+    # 배치는 옥상 길이의 **가운데(z = (EZ0+EZ1)/2)** 에 맞춘다 — 전에는 z=0 기준으로
+    # 놓아서 한쪽으로 4m 쏠려 있었다.
+    # wlen = 깊이(용마루 방향, x) / dep = 길이 방향(z)
+    ZMID = (EZ0 + EZ1) / 2
+    for (cz, wlen, dep, label, lamp) in ((ZMID - 13.0, 10.0, 5.5, '평안재2', 520),
+                                         (ZMID, 8.0, 8.0, '대청', 720),
+                                         (ZMID + 13.0, 10.0, 5.5, '평안재1', 460)):
         cx = YBACK - wlen / 2
         ye_nw.add(bevel_box(wlen + 1.8, 0.34, dep + 1.8, 0.04), T(cx, HL + HU + 0.47, cz), M['granite'], 1.5)
         hanok(ye_nw, cx, cz, wlen, dep, ry=0.0, y0=HL + HU + 0.64, label=label, lamp=lamp, eave=1.2)
