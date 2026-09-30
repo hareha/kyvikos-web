@@ -905,26 +905,21 @@ def yeonsu_block():
     ye_ne.add(box(CX1 - CX0 - 2.0, 0.3, 10.4), T((CX0 + CX1) / 2, 4.85, NZ0 + 7.5), M['terrace'], 1.6)  # 풀 데크
     balustrade(ye_ne, [(NX0 + 1.0, HG + 0.28, NZ1 - 1.0), (NX1 - 1.0, HG + 0.28, NZ1 - 1.0)], h=0.78, post=2.7)
     # ── 귀빈동 옥상 한옥 ──────────────────────────────────────────
-    # 항공사진(클라이언트 제공 라벨 항공 / 카카오 스카이뷰)을 확대해 보면 낱개 정자가
-    # 흩어진 게 아니라 **긴 채들이 이어져 안마당을 둘러싸는 ㄷ자 마을**이다.
-    # 평면도(plan_hanok_floor)의 이름과 맞추면: 뒤 채 = 행복재1~3호가 한 줄,
-    # 동쪽 채 = 황룡헌(큰 방), 서쪽 채 = 평안재3·4호.
+    # 클라이언트 도식(images/56) 아래 그림: 낱개 정자가 아니라 **한 덩어리로 이어진
+    # ㄱ(4)자** — 깊이 방향 줄기 하나 + 아래쪽으로 뻗는 긴 가로 팔.
     GY = YG
-    hanok(ye_ne, (NX0 + 3.0 + NX1 - 3.0) / 2, NZ1 - 4.0, NX1 - NX0 - 6.0, 6.0,
-          ry=PI, y0=GY, label='행복재', lamp=640, eave=1.35)                 # 뒤 채 (행복재1~3호)
-    hanok(ye_ne, NX1 - 6.6, (NZ0 + 8.0 + SPZ0 + 2.0) / 2, SPZ0 + 2.0 - (NZ0 + 8.0), 7.0,
-          ry=-PI / 2, y0=GY, label='황룡헌', lamp=760, eave=1.35)            # 동쪽 채 (황룡헌)
-    hanok(ye_ne, NX0 + 5.4, (NZ0 + 8.0 + SPZ0 + 2.0) / 2, SPZ0 + 2.0 - (NZ0 + 8.0), 6.0,
-          ry=PI / 2, y0=GY, label='평안재34', lamp=520, eave=1.35)           # 서쪽 채 (평안재3·4호)
-    # 세 채가 둘러싼 안마당 (판석 + 자갈)
-    ye_ne.add(box(NX1 - NX0 - 22.0, 0.08, SPZ0 + 2.0 - (NZ0 + 8.0) - 2.0),
-              T((NX0 + NX1) / 2, GY + 0.08, (NZ0 + 8.0 + SPZ0 + 2.0) / 2), M['terrace'], 1.6)
-    for k in range(4):
-        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 12.0 + k * 3.4, GY + 0.3, SPZ0 - 1.0), M['granite_clad'], 1)
-        ye_ne.add(sphere(0.62, 2), T(NX0 + 12.0 + k * 3.4, GY + 0.85, SPZ0 - 1.0, sy=0.62), M['shrub'], 1)
-    for k in range(5):                                                     # 옥상 분재 소나무
-        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 3.5 + k * 6.0, YG + 0.3, SPZ0 + 1.6), M['granite_clad'], 1)
-        ye_ne.add(sphere(0.62, 2), T(NX0 + 3.5 + k * 6.0, YG + 0.85, SPZ0 + 1.6, sy=0.62), M['shrub'], 1)
+    ARM_Z = NZ1 - 4.2
+    hanok(ye_ne, (NX0 + 3.0 + NX1 - 3.0) / 2, ARM_Z, NX1 - NX0 - 6.0, 5.6,
+          ry=PI, y0=GY + 0.34, label='행복재', lamp=660, eave=1.3)          # 긴 가로 팔
+    ye_ne.add(bevel_box(NX1 - NX0 - 3.8, 0.34, 7.8, 0.04),
+              T((NX0 + NX1) / 2, GY + 0.17, ARM_Z), M['granite'], 1.5)
+    STEM_X = NX0 + 8.0
+    hanok(ye_ne, STEM_X, ARM_Z - 9.6, 12.0, 5.6, ry=-PI / 2, y0=GY + 0.34,
+          label='황룡헌', lamp=760, eave=1.3)                                # 깊이 방향 줄기
+    ye_ne.add(bevel_box(7.8, 0.34, 14.2, 0.04), T(STEM_X, GY + 0.17, ARM_Z - 9.6), M['granite'], 1.5)
+    for k in range(4):                                                       # 마당 쪽 분재 소나무
+        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 16.0 + k * 4.0, GY + 0.3, ARM_Z - 8.0), M['granite_clad'], 1)
+        ye_ne.add(sphere(0.62, 2), T(NX0 + 16.0 + k * 4.0, GY + 0.85, ARM_Z - 8.0, sy=0.62), M['shrub'], 1)
 
     # ── 두 동 사이 통유리 연결부 (사진 013 가운데 유리 띠) ────────────────
     LX0, LX1, LZ0, LZ1 = 44.0, 50.0, 13.6, 20.0
@@ -964,13 +959,21 @@ def yeonsu_block():
     balustrade(ye_nw, [(EX0 + SET + 0.5, HL + HU + 0.90, EZ0 + SET + 0.8),
                        (EX0 + SET + 0.5, HL + HU + 0.90, EZ1 - 0.8)], h=0.82, post=2.4)
     # 옥상 한옥 — 평면도 비례 그대로 (평안재2호 / 대청(가장 큼) / 평안재1호 + 뒤쪽 복도)
-    # 항공사진: **가운데 채가 정사각형**이고 **양옆 두 채가 길쭉하다** (내가 반대로 잡았었다).
-    # w = 건물 길이 방향, d = 깊이.
-    YSU = ((0.135, 8.6, 4.6, '평안재2'), (0.50, 6.8, 6.8, '대청'), (0.865, 8.6, 4.6, '평안재1'))
-    # 항공사진: 채들이 잔디 쪽 난간에서 **약 7.8m 물러나** 있고 그 앞은 훤한 데크다.
-    # (앞선에 바짝 붙이면 안 된다)
-    roof_hanok(ye_nw, YSU, HL + HU + 0.30, 'z', EX0 + SET + 8.0, EX1 - 3.0, EZ0 + 1.4, (EZ1 - EZ0) - 2.8)
-    ye_nw.add(box(5, 4.5, 10), T(62.5, HL + HU + 2.25, -6), M['granite_clad'], 1.5)   # 계단실
+    # 클라이언트 도식(images/56)대로: 세로로 긴 옥상에 **길쭉 - 정사각 - 길쭉** 세 채가
+    # 세로로 놓이고, 셋 다 **뒤쪽 변에 붙어** 있어 잔디 쪽에 빈 데크가 남는다.
+    # 길쭉한 채는 건물 **깊이 방향(용마루가 x)** 으로 길다.
+    YBACK = EX1 - 1.4                                   # 채들이 붙는 뒤쪽 선
+    for (cz, wlen, dep, label, lamp) in ((-10.8, 14.0, 5.0, '평안재2', 520),
+                                         (-1.0, 11.0, 8.4, '대청', 720),
+                                         (8.2, 14.0, 5.0, '평안재1', 460)):
+        cx = YBACK - wlen / 2
+        ye_nw.add(bevel_box(wlen + 2.2, 0.34, dep + 2.2, 0.04), T(cx, HL + HU + 0.47, cz), M['granite'], 1.5)
+        hanok(ye_nw, cx, cz, wlen, dep, ry=0.0, y0=HL + HU + 0.64, label=label, lamp=lamp, eave=1.2)
+    # 세 채 앞(잔디 쪽) 빈 데크에 자갈밭 + 분재 소나무
+    for k in range(5):
+        ye_nw.add(cyl(0.55, 0.45, 0.6, 16), T(EX0 + SET + 2.2, HL + HU + 0.6, EZ0 + 3.0 + k * 5.2), M['granite_clad'], 1)
+        ye_nw.add(sphere(0.62, 2), T(EX0 + SET + 2.2, HL + HU + 1.15, EZ0 + 3.0 + k * 5.2, sy=0.62), M['shrub'], 1)
+    # 여기 있던 '계단실' 상자는 근거 없이 내가 넣은 것이다 — 뺀다
     # ── 잔디와 연수동 사이 광장 + 계단 ────────────────────────────────
     ye_nw.add(box(5.8, 0.45, 52), T(39.1, 0.22, -8), M['terrace'], 1.6)
     for k in range(3):
