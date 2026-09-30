@@ -865,15 +865,30 @@ def yeonsu_block():
     HE = H1 + H2                       # 연수동 = 아래단 + 물러앉은 윗단
     YG, YE = HG + 0.35, HE + 0.35      # 각 옥상 바닥
 
-    # ── 귀빈동 (잔디 북쪽) : 리본 창 2층 ────────────────────────────
-    block(ye_ne, NX0, NX1, NZ0, NZ1, HG, 2, parapet=1.10)
-    balustrade(ye_ne, [(NX0 + 1.2, HG + 0.28, NZ0 + 0.6), (NX1 - 1.2, HG + 0.28, NZ0 + 0.6)], h=0.78, post=2.7)
-    balustrade(ye_ne, [(NX0 + 1.2, HG + 0.28, NZ0 + 0.6), (NX0 + 1.2, HG + 0.28, NZ1 - 1.2)], h=0.78, post=2.7)
-    for k, hx in enumerate((NX0 + 7.0, NX0 + 15.0, NX0 + 23.0)):   # 지붕 처마가 +5.2 라 폭 4.6 이어야 안 겹친다
-        hanok(ye_ne, hx, 36.0, 4.6, 4.2, ry=PI, y0=YG, label='ABC'[k], lamp=(500, 700, 400)[k])
-    for k in range(5):                                                            # 옥상 분재 소나무
-        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 3.5 + k * 6.0, YG + 0.3, NZ0 + 2.4), M['granite_clad'], 1)
-        ye_ne.add(sphere(0.62, 2), T(NX0 + 3.5 + k * 6.0, YG + 0.85, NZ0 + 2.4, sy=0.62), M['shrub'], 1)
+    # ── 귀빈동 (잔디 북쪽) ────────────────────────────────────────
+    # 카카오 스카이뷰(assets-src/refs/apec/site_skyview_kakao.jpg)에서 읽은 평면:
+    # 한 덩어리 상자가 아니라, 잔디와 나란한 **긴 몸채**에서 잔디 쪽으로 **날개 둘**이
+    # 뻗어 나오고 그 사이가 안마당(수영장)인 h 자 형이다.
+    SPZ0 = 36.0                                        # 몸채 앞선
+    block(ye_ne, NX0, NX1, SPZ0, NZ1, HG, 2, parapet=1.10)                 # 몸채
+    WINGS = ((NX0, NX0 + 8.5), (NX0 + 16.5, NX0 + 25.0))
+    for (wx0, wx1) in WINGS:                                               # 잔디 쪽 날개 둘
+        block(ye_ne, wx0, wx1, NZ0, SPZ0 + 1.0, HG, 2, parapet=1.10)
+        balustrade(ye_ne, [(wx0 + 1.0, HG + 0.28, NZ0 + 0.6), (wx1 - 1.0, HG + 0.28, NZ0 + 0.6)], h=0.78, post=2.7)
+        for k, hx in enumerate((wx0 + 2.6, wx0 + 6.0)):                    # 날개 옥상 기와집
+            hanok(ye_ne, hx, NZ0 + 8.0, 3.2, 3.6, ry=PI, y0=YG, label=f'G{k}', lamp=(480, 0)[k % 2], eave=1.3)
+    # 두 날개 사이 안마당 — 낮은 기단 위에 수영장 (위성의 청록색 물)
+    CX0, CX1 = NX0 + 8.5, NX0 + 16.5
+    block(ye_ne, CX0, CX1, NZ0, SPZ0 + 1.0, 4.6, 1, parapet=0.75)          # 안마당 밑 저층부
+    ye_ne.add(box(CX1 - CX0 - 3.0, 0.5, 9.0), T((CX0 + CX1) / 2, 5.05, NZ0 + 7.5), M['water'], None)   # 수영장
+    ye_ne.add(box(CX1 - CX0 - 2.0, 0.3, 10.4), T((CX0 + CX1) / 2, 4.85, NZ0 + 7.5), M['terrace'], 1.6)  # 풀 데크
+    balustrade(ye_ne, [(NX0 + 1.0, HG + 0.28, NZ1 - 1.0), (NX1 - 1.0, HG + 0.28, NZ1 - 1.0)], h=0.78, post=2.7)
+    for k, hx in enumerate((NX0 + 7.0, NX0 + 15.0, NX0 + 23.0)):           # 몸채 옥상 기와집
+        hanok(ye_ne, hx, 42.0, (3.4, 5.5, 3.4)[k], (3.2, 4.4, 3.2)[k], ry=PI, y0=YG,
+              label='ABC'[k], lamp=(500, 700, 400)[k], eave=1.3)
+    for k in range(5):                                                     # 옥상 분재 소나무
+        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 3.5 + k * 6.0, YG + 0.3, SPZ0 + 1.6), M['granite_clad'], 1)
+        ye_ne.add(sphere(0.62, 2), T(NX0 + 3.5 + k * 6.0, YG + 0.85, SPZ0 + 1.6, sy=0.62), M['shrub'], 1)
 
     # ── 두 동 사이 통유리 연결부 (사진 013 가운데 유리 띠) ────────────────
     LX0, LX1, LZ0, LZ1 = 44.0, 50.0, 13.6, 20.0
