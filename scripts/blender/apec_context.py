@@ -949,30 +949,33 @@ def yeonsu_block():
     # ── 북서동 (잔디 동쪽) : 아케이드가 잔디(-x)를 본다 ──────────────────
     # 연수동 — 실측(사람 1.75m 기준): 베이 4.6 x 6 = 정면 27.6, 벽 6.5,
     #   물러앉은 윗단(객실 2~4층, 33실/113명)은 3.4 더, 단마다 흰 돌난간, 옥상은 한옥 마을.
-    EX0, EX1, EZ0, EZ1 = 36.4, 66.0, -15.6, 12.0
+    # 평면도 실측대로 **위아래로 긴** 건물 (48 x 17). 전에는 29.6 x 27.6 으로 거의
+    # 정사각형이라 옥상이 좁고 한옥이 넘쳤다.
+    EX0, EX1, EZ0, EZ1 = 36.4, 53.4, -26.0, 18.0     # 깊이 17 / 길이 44
     SET = 2.6
     HL, HU = 6.5, 3.4                                # 아래 몸체 / 물러앉은 윗단
     block(ye_nw, EX0, EX1, EZ0, EZ1, HL, 1, parapet=0.55, arcade='W')
-    yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, HL, arc0=0.0)
+    yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, HL, arc0=(EZ1 - EZ0 - 27.6) / 2)
     balustrade(ye_nw, [(EX0 + 0.5, HL + 0.55, EZ0 + 0.8), (EX0 + 0.5, HL + 0.55, EZ1 - 0.8)], h=0.82, post=2.4)
-    block(ye_nw, EX0 + SET, EX1, EZ0 + SET, EZ1, HL + HU, 3, parapet=0.90)
-    balustrade(ye_nw, [(EX0 + SET + 0.5, HL + HU + 0.90, EZ0 + SET + 0.8),
+    # 단차는 **잔디 쪽(-x)에만**. 뒤쪽(z)까지 물리면 안 된다.
+    block(ye_nw, EX0 + SET, EX1, EZ0, EZ1, HL + HU, 3, parapet=0.90)
+    balustrade(ye_nw, [(EX0 + SET + 0.5, HL + HU + 0.90, EZ0 + 0.8),
                        (EX0 + SET + 0.5, HL + HU + 0.90, EZ1 - 0.8)], h=0.82, post=2.4)
     # 옥상 한옥 — 평면도 비례 그대로 (평안재2호 / 대청(가장 큼) / 평안재1호 + 뒤쪽 복도)
     # 클라이언트 도식(images/56)대로: 세로로 긴 옥상에 **길쭉 - 정사각 - 길쭉** 세 채가
     # 세로로 놓이고, 셋 다 **뒤쪽 변에 붙어** 있어 잔디 쪽에 빈 데크가 남는다.
     # 길쭉한 채는 건물 **깊이 방향(용마루가 x)** 으로 길다.
     YBACK = EX1 - 1.4                                   # 채들이 붙는 뒤쪽 선
-    for (cz, wlen, dep, label, lamp) in ((-10.8, 14.0, 5.0, '평안재2', 520),
-                                         (-1.0, 11.0, 8.4, '대청', 720),
-                                         (8.2, 14.0, 5.0, '평안재1', 460)):
+    for (cz, wlen, dep, label, lamp) in ((-13.0, 7.5, 5.0, '평안재2', 520),
+                                         (0.0, 6.5, 6.5, '대청', 720),
+                                         (13.0, 7.5, 5.0, '평안재1', 460)):
         cx = YBACK - wlen / 2
-        ye_nw.add(bevel_box(wlen + 2.2, 0.34, dep + 2.2, 0.04), T(cx, HL + HU + 0.47, cz), M['granite'], 1.5)
+        ye_nw.add(bevel_box(wlen + 1.8, 0.34, dep + 1.8, 0.04), T(cx, HL + HU + 0.47, cz), M['granite'], 1.5)
         hanok(ye_nw, cx, cz, wlen, dep, ry=0.0, y0=HL + HU + 0.64, label=label, lamp=lamp, eave=1.2)
     # 세 채 앞(잔디 쪽) 빈 데크에 자갈밭 + 분재 소나무
     for k in range(5):
-        ye_nw.add(cyl(0.55, 0.45, 0.6, 16), T(EX0 + SET + 2.2, HL + HU + 0.6, EZ0 + 3.0 + k * 5.2), M['granite_clad'], 1)
-        ye_nw.add(sphere(0.62, 2), T(EX0 + SET + 2.2, HL + HU + 1.15, EZ0 + 3.0 + k * 5.2, sy=0.62), M['shrub'], 1)
+        ye_nw.add(cyl(0.55, 0.45, 0.6, 16), T(EX0 + SET + 1.8, HL + HU + 0.6, EZ0 + 5.0 + k * 8.5), M['granite_clad'], 1)
+        ye_nw.add(sphere(0.62, 2), T(EX0 + SET + 1.8, HL + HU + 1.15, EZ0 + 5.0 + k * 8.5, sy=0.62), M['shrub'], 1)
     # 여기 있던 '계단실' 상자는 근거 없이 내가 넣은 것이다 — 뺀다
     # ── 잔디와 연수동 사이 광장 + 계단 ────────────────────────────────
     ye_nw.add(box(5.8, 0.45, 52), T(39.1, 0.22, -8), M['terrace'], 1.6)
