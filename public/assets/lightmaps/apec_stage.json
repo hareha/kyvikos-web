@@ -1,39 +1,39 @@
 {
   "groups": {
     "ground": {
-      "scale": 3.5670498143071714,
+      "scale": 3.5670900603999485,
       "size": 4096,
-      "mean": 0.21499402821063995,
+      "mean": 0.21494998037815094,
       "file": "apec_stage_ground.webp"
     },
     "objects": {
-      "scale": 1.5697126317283463,
+      "scale": 1.6850218014872818,
       "size": 4096,
-      "mean": 0.026746680960059166,
+      "mean": 0.026458797976374626,
       "file": "apec_stage_objects.webp"
     },
     "pagoda": {
-      "scale": 0.7895343426777064,
+      "scale": 0.7880855610837125,
       "size": 4096,
-      "mean": 0.06315741688013077,
+      "mean": 0.06308852881193161,
       "file": "apec_stage_pagoda.webp"
     },
     "halls": {
-      "scale": 0.8035877120235708,
+      "scale": 0.8038280450779458,
       "size": 4096,
-      "mean": 0.016732055693864822,
+      "mean": 0.016658712178468704,
       "file": "apec_stage_halls.webp"
     },
     "yeonsu_ne": {
-      "scale": 0.6212506232702224,
+      "scale": 0.6930354674873156,
       "size": 4096,
-      "mean": 0.007983486168086529,
+      "mean": 0.011884686537086964,
       "file": "apec_stage_yeonsu_ne.webp"
     },
     "yeonsu_nw": {
-      "scale": 1.1534997205371462,
+      "scale": 1.1332549996998083,
       "size": 4096,
-      "mean": 0.023098357021808624,
+      "mean": 0.022862328216433525,
       "file": "apec_stage_yeonsu_nw.webp"
     }
   },
@@ -107,7 +107,7 @@
     "pillarStone": "halls",
     "fretRail": "yeonsu_nw",
     "pathStone": "halls",
-    "pond": "yeonsu_ne",
+    "pond": "halls",
     "gardenRock": "halls",
     "shrub": "yeonsu_nw",
     "pineBark": "halls",
@@ -117,10 +117,10 @@
     "graniteClad": "yeonsu_nw",
     "winGlass": "yeonsu_nw",
     "winFrame": "yeonsu_nw",
-    "steelRail": "yeonsu_nw",
     "outdoor_table_chair_set_01_chair": "yeonsu_ne",
     "outdoor_table_chair_set_01_table": "yeonsu_ne",
-    "parasol": "yeonsu_ne"
+    "parasol": "yeonsu_ne",
+    "steelRail": "yeonsu_nw"
   },
   "objects": {
     "ground": "ground",
