@@ -719,20 +719,21 @@ ROOMS = [mat(f'roomGlass_{t}', emit_image=f'{SHOTS}/apec_room_{t}.png', emit_str
 
 
 def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=None,
-         ribbon=False, recess=0.0):
+         ribbon=False, recess=0.0, base=0.8):
     """한 면: 로컬 x = 벽 방향(0~L), 로컬 +z = 바깥. 바깥면이 z=0
 
     y0     : 바닥 높이 (아래 단 위에 올려놓은 윗단을 그릴 때)
     win    : {층: (아래, 위)} — 그 층 창의 실제 높이. 남는 데는 돌벽으로 메운다.
     ribbon : 맨 윗층을 돌기둥 없이 **한 줄로 쭉 이어지는 통창**으로 (귀빈동 2층)
-    recess : 그 통창을 벽면에서 안으로 물린 깊이 — 그 앞이 발코니가 된다"""
+    recess : 그 통창을 벽면에서 안으로 물린 깊이 — 그 앞이 발코니가 된다
+    base   : 맨 아래 돌띠 높이. 단 위에 얹혀 유리가 바닥부터 서는 면은 얇게 준다"""
     f = T(sx, y0, sz, ry)
     fh = h / floors
     n = max(1, round((L - 1.8) / 7.6))
     w = (L - 1.8) / n
     xs = [0.9 + k * w for k in range(n + 1)]
     # 층 띠 (바닥 띠 + 층 사이 띠 + 난간벽)
-    bands = [(0.0, 0.8)] + [(k * fh - 0.45, k * fh + 0.85) for k in range(1, floors)] + [(h - 0.45, h + parapet)]
+    bands = [(0.0, base)] + [(k * fh - 0.45, k * fh + 0.85) for k in range(1, floors)] + [(h - 0.45, h + parapet)]
     for y0, y1 in bands:
         asm.add(box(L - 1.8, y1 - y0, DEPTH), f @ T(L / 2, (y0 + y1) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
     # 1층은 창이 아니라 둥근 아치 열이다 (클라이언트 사진: 연수동 잔디 쪽 1층이 아케이드).
@@ -764,7 +765,7 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=N
             asm.add(box(0.8, hb, DEPTH), f @ T(sx_ - 0.4 if sx_ > L / 2 else sx_ - 0.4, hb / 2, -DEPTH / 2), M['granite_clad'], 1.2)
     # 창: 기둥·띠 사이 구멍마다 안쪽 유리(방 불빛) + 창살
     for fl in range(1 if arcade else 0, floors):
-        ya = 0.8 if fl == 0 else fl * fh + 0.85
+        ya = base if fl == 0 else fl * fh + 0.85
         yb = (fl + 1) * fh - 0.45 if fl < floors - 1 else h - 0.45
         if win and fl in win:        # 창을 실측 높이로 줄이고 남는 데는 돌벽으로
             wa_, wb_ = win[fl]
@@ -818,7 +819,7 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=N
 
 
 def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None, y0=0.0, win=None, rail=True,
-          ribbon=False, body_w=0.0):
+          ribbon=False, body_w=0.0, base=0.8):
     """모서리 기둥 4개 + 네 벽 + 안쪽 몸체 + 옥상
 
     y0     : 바닥 높이 (아래 단 위에 얹는 윗단)
@@ -832,11 +833,11 @@ def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None
         asm.add(box(0.9, h + parapet, 0.9), T(cx + ox, y0 + (h + parapet) / 2, cz + oz), M['granite_clad'], 1.2)
     arc = set(arcade or ())     # 아케이드를 둘 면 ('n' = -z, 'e' = +x, 's' = +z, 'w' = -x)
     if 'N' not in arc:          # 대문자 N = 그 면은 따로 그린다 (연수동 정면)
-        wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet, 'n' in arc, y0, win, ribbon)      # -z 면
-    wall(asm, x1, z1, z1 - z0, PI / 2, h, floors, parapet, 'e' in arc, y0, win, ribbon)      # +x 면
-    wall(asm, x0, z1, x1 - x0, 0.0, h, floors, parapet, 's' in arc, y0, win, ribbon)         # +z 면
+        wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet, 'n' in arc, y0, win, ribbon, 0.0, base)      # -z 면
+    wall(asm, x1, z1, z1 - z0, PI / 2, h, floors, parapet, 'e' in arc, y0, win, ribbon, 0.0, base)      # +x 면
+    wall(asm, x0, z1, x1 - x0, 0.0, h, floors, parapet, 's' in arc, y0, win, ribbon, 0.0, base)         # +z 면
     if 'W' not in arc:          # 대문자 W = 그 면은 따로 그린다 (연수동 정면)
-        wall(asm, x0, z0, z1 - z0, -PI / 2, h, floors, parapet, 'w' in arc, y0, win, ribbon)  # -x 면
+        wall(asm, x0, z0, z1 - z0, -PI / 2, h, floors, parapet, 'w' in arc, y0, win, ribbon, 0.0, base)  # -x 면
     if terrace:
         asm.add(box(x1 - x0 - 0.9, 0.3, z1 - z0 - 0.9), T((x0 + x1) / 2, y0 + h + 0.15, (z0 + z1) / 2), M['terrace'], 1.6)
         for (ax, az, bx, bz) in () if not rail else ((x0, z0, x1, z0), (x0, z1, x1, z1), (x0, z0, x0, z1), (x1, z0, x1, z1)):
@@ -1016,24 +1017,24 @@ def yeonsu_block():
     #   돌난간 80px 0.95 / 난간 밑 돌띠 155px 1.84 / 2층 창 175px 2.08
     #   사진 66 에서 1층 창은 2층 창의 0.54 배
     # 발코니 **깊이**만은 어느 사진에서도 잴 수 없어 2.0m 로 가정했다.
-    PRP = 0.77                                                             # 솔리드 파라펫 윗면 = HG + PRP
-    BRC = 2.0                                                              # 발코니 깊이 (가정)
-    W2 = (6.44, 8.52)                                                      # 2층 통창
+    # **2단 케이크** — 사진(007 모서리 확대, scratchpad e1)을 보면 중도타워(-x) 쪽은
+    # 2층 유리가 통째로 물러나 있고, 1단 벽 윗면의 **돌 코핑 위에** 흰 돌난간이 선다.
+    # 난간이 그냥 벽면에 붙어 있는 게 아니라 **단**이 있다. 잔디(-z) 쪽 긴 면은
+    # 단 없이 유리가 그대로 나와 있고 난간도 없다.
+    PRP = 0.77                                                             # 2단 파라펫 윗면 = HG + PRP
+    BRC = 2.0                                                              # 단의 깊이 (사진에서 못 재서 가정)
     W1 = (2.92, 4.04)                                                      # 1층 창 (회랑 지붕 바로 위)
-    BF = W2[0]                                                             # 창대 = 발코니 바닥
-    block(ye_ne, NX0, NX1, NZ0, NZ1, HG, 2, parapet=PRP, arcade='W',
-          win={0: W1, 1: W2}, rail=False, ribbon=True, body_w=BRC + 0.5)
-    wall(ye_ne, NX0, NZ0, NZ1 - NZ0, -PI / 2, HG, 2, PRP, False, 0.0, {0: W1, 1: W2}, True, BRC)  # -x 면
-    ye_ne.add(box(BRC + 0.5, BF - 0.3, NZ1 - NZ0 - 1.4),                   # 발코니 밑(1층)은 꽉 찬 몸체
-              T(NX0 + 0.7 + (BRC + 0.5) / 2, (BF - 0.3) / 2, (NZ0 + NZ1) / 2), M['stoneWall'], 2)
-    # 발코니 바닥 — 윗면을 창대(BF)와 같은 높이로 두면 벽 면과 한 평면이 되어 z-fighting.
-    # 2cm 낮춰 깔고 마구리도 벽면보다 5cm 앞으로 뺀다.
-    ye_ne.add(box(BRC, 0.30, NZ1 - NZ0 - 1.8),
-              T(NX0 - 0.05 + BRC / 2, BF - 0.17, (NZ0 + NZ1) / 2), M['terrace'], 1.6)
-    balustrade(ye_ne, [(NX0 + 0.26, BF - 0.02, NZ0 + 1.0), (NX0 + 0.26, BF - 0.02, NZ1 - 1.0)], h=0.95, post=2.3)
+    STEP = 6.44                                                            # 단(테라스) 바닥 = 2층 창대
+    # 1단 — 전체 바닥면적. 난간벽 0.32 를 더해 윗면이 STEP 에 오게.
+    block(ye_ne, NX0, NX1, NZ0, NZ1, STEP - 0.32, 1, parapet=0.32, win={0: W1}, rail=False)
+    # 2단 — 중도타워 쪽으로만 BRC 물러난다. 통창이 단 바닥에서 바로 서므로 밑 돌띠는 얇게.
+    block(ye_ne, NX0 + BRC, NX1, NZ0, NZ1, HG - STEP, 1, parapet=PRP, y0=STEP,
+          win={0: (0.10, 2.18)}, rail=False, ribbon=True, base=0.10)
+    # 단 위 흰 돌난간 — 물러난 -x 쪽 가장자리에만 (사진에서 다른 면엔 난간이 없다)
+    balustrade(ye_ne, [(NX0 + 0.5, STEP, NZ0 + 0.6), (NX0 + 0.5, STEP, NZ1 - 0.6)], h=0.95, post=2.3)
     # 옥상 돌난간은 파라펫 **위에** 올라탄다. 한 줄로 이어서 돌린다 — 변마다 따로
     # 부르면 모서리 동자기둥이 두 번 겹쳐 박혀 그 자리가 깜빡인다.
-    balustrade(ye_ne, [(NX0 + 0.5, HG + PRP, NZ1 - 0.5), (NX0 + 0.5, HG + PRP, NZ0 + 0.5),
+    balustrade(ye_ne, [(NX0 + BRC + 0.5, HG + PRP, NZ1 - 0.5), (NX0 + BRC + 0.5, HG + PRP, NZ0 + 0.5),
                        (NX1 - 0.5, HG + PRP, NZ0 + 0.5), (NX1 - 0.5, HG + PRP, NZ1 - 0.5)],
                 h=0.95, post=2.5)
     # ── 귀빈동 옥상 한옥 ──────────────────────────────────────────
