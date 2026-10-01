@@ -703,11 +703,12 @@ ye_nw = Assembly('yeonsu_nw', C_STATIC)
 FLOOR = 4.0
 ROOF_Y = FLOOR * 3
 DEPTH = 0.45        # 기둥·띠가 몸체에서 나온 깊이
-# 외벽 화강석 — 사진(016)에서 잰 벽면 색은 R:G:B = 1.00 : 0.967 : 0.976 으로 **중성 회색**이다.
-# granite_tile_03 텍스처 자체가 평균 (0.390, 0.353, 0.319) 로 갈색이라, 곱하는 색으로
-# 그 갈색기를 빼 준다 (전에는 (0.86,0.86,0.84) 라 더 누렇게 나왔다).
+# 외벽 화강석 — 사진(016)의 벽면은 R:G:B = 1.00 : 0.967 : 0.976 인 **중성 회색**이다.
+# 폴리헤이븐 granite_tile_03 은 평균 (0.390, 0.353, 0.319) 짜리 갈색이라 곱색으로는
+# 갈색기가 안 빠졌다. 그 텍스처의 휘도만 남기고 사진에서 잰 색조로 다시 입힌
+# granite_grey (평균 0.615/0.595/0.600) 를 따로 만들어 쓴다.
 # 타일 1.2m = 가로 3 x 세로 2 블록 -> 켜 높이 0.60m. 사진 실측 0.55~0.60m 과 맞는다.
-M['granite_clad'] = mat('graniteClad', 'granite_tile_03', (0.84, 0.90, 1.00), 0.7)
+M['granite_clad'] = mat('graniteClad', 'granite_grey', (1.0, 1.0, 1.0), 0.7)
 M['winFrame'] = mat('winFrame', None, (0.030, 0.031, 0.034), 0.35, 0.75)      # 짙은 아노다이즈 알루미늄 창틀
 M['winGlass'] = mat('winGlass', None, (0.021, 0.026, 0.033), 0.08, 0.15)      # 짙은 복층유리
 # 연수동 아케이드 전용 — 사진에서 창틀은 짙은 색이 아니라 **밝은 회색 금속**이고,
@@ -717,9 +718,12 @@ M['arcGlass'] = mat('arcGlass', None, (0.055, 0.042, 0.032), 0.10, 0.10)
 ROOMS = [mat(f'roomGlass_{t}', emit_image=f'{SHOTS}/apec_room_{t}.png', emit_strength=1.1, rough=0.1) for t in 'abc']
 
 
-def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False):
-    """한 면: 로컬 x = 벽 방향(0~L), 로컬 +z = 바깥. 바깥면이 z=0"""
-    f = T(sx, 0, sz, ry)
+def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=None):
+    """한 면: 로컬 x = 벽 방향(0~L), 로컬 +z = 바깥. 바깥면이 z=0
+
+    y0  : 바닥 높이 (아래 단 위에 올려놓은 윗단을 그릴 때)
+    win : {층: (아래, 위)} — 그 층 창의 실제 높이. 남는 데는 돌벽으로 메운다."""
+    f = T(sx, y0, sz, ry)
     fh = h / floors
     n = max(1, round((L - 1.8) / 7.6))
     w = (L - 1.8) / n
@@ -759,6 +763,12 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False):
     for fl in range(1 if arcade else 0, floors):
         ya = 0.8 if fl == 0 else fl * fh + 0.85
         yb = (fl + 1) * fh - 0.45 if fl < floors - 1 else h - 0.45
+        if win and fl in win:        # 창을 실측 높이로 줄이고 남는 데는 돌벽으로
+            wa_, wb_ = win[fl]
+            for (fa, fb) in ((ya, wa_), (wb_, yb)):
+                if fb - fa > 0.02:
+                    asm.add(box(L - 1.8, fb - fa, DEPTH), f @ T(L / 2, (fa + fb) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+            ya, yb = wa_, wb_
         # 칸 기둥은 띠와 띠 사이 구간에만 (띠와 같은 바깥면에서 겹치지 않게 → z-fighting 없음)
         for x in xs[1:-1]:
             asm.add(box(0.8, yb - ya, DEPTH), f @ T(x, (ya + yb) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
@@ -781,30 +791,33 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False):
             asm.add(box(ow + 0.2, 0.09, 0.34), f @ T(cx_, ya - 0.10, -0.17), M['granite_clad'], 1.2)   # 석재 창대
 
 
-def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None):
-    """모서리 기둥 4개 + 네 벽 + 안쪽 몸체 + 옥상"""
-    asm.add(box(x1 - x0 - 1.4, h, z1 - z0 - 1.4), T((x0 + x1) / 2, h / 2, (z0 + z1) / 2), M['stoneWall'], 2)   # 몸체는 유리(0.3) 보다 안쪽
+def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None, y0=0.0, win=None, rail=True):
+    """모서리 기둥 4개 + 네 벽 + 안쪽 몸체 + 옥상
+
+    y0   : 바닥 높이 (아래 단 위에 얹는 윗단)
+    rail : 옥상 쇠난간 (흰 돌난간을 따로 두는 단은 끈다)"""
+    asm.add(box(x1 - x0 - 1.4, h, z1 - z0 - 1.4), T((x0 + x1) / 2, y0 + h / 2, (z0 + z1) / 2), M['stoneWall'], 2)   # 몸체는 유리(0.3) 보다 안쪽
     for (cx, cz) in ((x0, z0), (x1, z0), (x1, z1), (x0, z1)):
         ox = 0.45 if cx == x0 else -0.45
         oz = 0.45 if cz == z0 else -0.45
-        asm.add(box(0.9, h + parapet, 0.9), T(cx + ox, (h + parapet) / 2, cz + oz), M['granite_clad'], 1.2)
+        asm.add(box(0.9, h + parapet, 0.9), T(cx + ox, y0 + (h + parapet) / 2, cz + oz), M['granite_clad'], 1.2)
     arc = set(arcade or ())     # 아케이드를 둘 면 ('n' = -z, 'e' = +x, 's' = +z, 'w' = -x)
     if 'N' not in arc:          # 대문자 N = 그 면은 따로 그린다 (연수동 정면)
-        wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet, 'n' in arc)      # -z 면
-    wall(asm, x1, z1, z1 - z0, PI / 2, h, floors, parapet, 'e' in arc)      # +x 면
-    wall(asm, x0, z1, x1 - x0, 0.0, h, floors, parapet, 's' in arc)         # +z 면
+        wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet, 'n' in arc, y0, win)      # -z 면
+    wall(asm, x1, z1, z1 - z0, PI / 2, h, floors, parapet, 'e' in arc, y0, win)      # +x 면
+    wall(asm, x0, z1, x1 - x0, 0.0, h, floors, parapet, 's' in arc, y0, win)         # +z 면
     if 'W' not in arc:          # 대문자 W = 그 면은 따로 그린다 (연수동 정면)
-        wall(asm, x0, z0, z1 - z0, -PI / 2, h, floors, parapet, 'w' in arc)  # -x 면
+        wall(asm, x0, z0, z1 - z0, -PI / 2, h, floors, parapet, 'w' in arc, y0, win)  # -x 면
     if terrace:
-        asm.add(box(x1 - x0 - 0.9, 0.3, z1 - z0 - 0.9), T((x0 + x1) / 2, h + 0.15, (z0 + z1) / 2), M['terrace'], 1.6)
-        for (ax, az, bx, bz) in ((x0, z0, x1, z0), (x0, z1, x1, z1), (x0, z0, x0, z1), (x1, z0, x1, z1)):
-            a, b = V((ax, h + parapet + 0.25, az)), V((bx, h + parapet + 0.25, bz))
+        asm.add(box(x1 - x0 - 0.9, 0.3, z1 - z0 - 0.9), T((x0 + x1) / 2, y0 + h + 0.15, (z0 + z1) / 2), M['terrace'], 1.6)
+        for (ax, az, bx, bz) in () if not rail else ((x0, z0, x1, z0), (x0, z1, x1, z1), (x0, z0, x0, z1), (x1, z0, x1, z1)):
+            a, b = V((ax, y0 + h + parapet + 0.25, az)), V((bx, y0 + h + parapet + 0.25, bz))
             g, m = tube(a, b, 0.035, 8)
             asm.add(g, m, M['steelRail'])
             n = max(1, round((b - a).length / 1.6))
             for k in range(n + 1):   # 난간 기둥 (난간벽 위에 박힘)
                 p = a + (b - a) * (k / n)
-                asm.add(box(0.04, 0.3, 0.04), T(p.x, h + parapet + 0.1, p.z), M['steelRail'], 1)
+                asm.add(box(0.04, 0.3, 0.04), T(p.x, y0 + h + parapet + 0.1, p.z), M['steelRail'], 1)
 
 
 def _spandrel(cx, spr, rr, h1, half_w, depth, n=40):
@@ -1026,15 +1039,28 @@ def yeonsu_block():
     # 정사각형이라 옥상이 좁고 한옥이 넘쳤다.
     EX0, EX1, EZ0, EZ1 = 36.4, 53.4, -26.0, 18.0     # 깊이 17 / 길이 44
     SET = 2.6
-    # 실사 사진: 아치부터 처마 돌림띠까지 **한 면으로 쭉** 올라가고, 흰 돌난간은
-    # 맨 위 한 줄뿐이다. 물러앉은 2단을 따로 얹었더니 중간에 단차가 생기고
-    # 그 면에 큰 창이 줄지어 붙어 난간도 두 줄이 됐다 -> 한 덩어리로 되돌린다.
-    HL, HU = 8.0, 0.0
-    block(ye_nw, EX0, EX1, EZ0, EZ1, HL, 1, parapet=0.95, arcade='W')
+    # **2단 케이크** — 019 의 단면을 픽셀로 끊어 읽었다 (아치 벽 축척 85 px/m):
+    #   문턱 2715 / 1단 꼭대기(발코니 바닥) 2085 -> 1단 630px = 7.4m
+    #   발코니 돌난간 2085~2030
+    #   2층 띠창 머리 1965 (창대는 난간에 가림, 2070 쯤) -> 창 높이 1.3m
+    #   2단 꼭대기(옥상 난간 밑) 1795 -> 2단 290px = 3.6m
+    #   옥상 돌난간 1795~1740, 그 뒤가 한옥 마을
+    # 한 덩어리로 되돌렸던 것을 다시 2단으로. 단차는 **잔디(-x) 쪽에만** 준다.
+    HL, HU = 7.4, 3.6
+    block(ye_nw, EX0, EX1, EZ0, EZ1, HL, 1, parapet=0.30, arcade='W', rail=False)      # 1단 (아케이드)
     yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, HL)
-    # 옥상 돌난간: 019 에서 난간 높이 40px / 그 깊이의 축척 44px/m = 0.90m,
-    # 동자기둥 사이 100px = 2.3m
-    balustrade(ye_nw, [(EX0 + 0.6, HL + 0.95, EZ0 + 0.8), (EX0 + 0.6, HL + 0.95, EZ1 - 0.8)], h=0.90, post=2.3)
+    # 1단 지붕 = 2층 앞 발코니. 그 가장자리에 흰 돌난간
+    # (019: 난간 55px / 그 깊이 축척 ~61 px/m = 0.90m, 동자기둥 사이 2.3m)
+    balustrade(ye_nw, [(EX0 + 0.55, HL + 0.30, EZ0 + 0.8), (EX0 + 0.55, HL + 0.30, EZ1 - 0.8)], h=0.90, post=2.3)
+    # 2단 — 잔디 쪽으로 SET 물러나고, 잔디를 보는 면에 띠창 (사진의 2층 유리창)
+    # 띠창 머리는 발코니 바닥에서 150px = 1.9m. 창대는 돌난간에 가려 사진에서 안 보여
+    # 0.85m 로 두었다 (벽 밑단 띠 바로 위).
+    # 2단 바닥은 1단 난간벽(0.30) 위에서 시작한다 — 같은 높이에서 시작하면 두 단의
+    # 모서리 기둥이 0.3m 겹쳐 그 면에서 z-fighting 이 난다.
+    block(ye_nw, EX0 + SET, EX1, EZ0, EZ1, HU - 0.30, 1, parapet=0.35, y0=HL + 0.30,
+          win={0: (0.55, 1.75)}, rail=False)
+    balustrade(ye_nw, [(EX0 + SET + 0.6, HL + HU + 0.35, EZ0 + 0.8),
+                       (EX0 + SET + 0.6, HL + HU + 0.35, EZ1 - 0.8)], h=0.90, post=2.3)
     YBACK = EX1 - 1.4                                   # 채들이 붙는 뒤쪽 선
     # 클라이언트 도식(images/62)을 픽셀로 재서 비율 그대로.
     #   데크 180 x 288 / 양옆 138 x 60 (깊이 77%, 길이 21%) / 가운데 108 x 110 (정사각)
