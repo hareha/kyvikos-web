@@ -709,12 +709,8 @@ M['winGlass'] = mat('winGlass', None, (0.021, 0.026, 0.033), 0.08, 0.15)      # 
 ROOMS = [mat(f'roomGlass_{t}', emit_image=f'{SHOTS}/apec_room_{t}.png', emit_strength=1.1, rough=0.1) for t in 'abc']
 
 
-def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, ribbon=False, recess=0.0, win=None):
-    """한 면: 로컬 x = 벽 방향(0~L), 로컬 +z = 바깥. 바깥면이 z=0
-
-    ribbon : 맨 윗층을 돌기둥 없이 **한 줄로 쭉 이어지는 통창**으로 (귀빈동 2층).
-    recess : 그 통창을 벽면에서 안으로 물린 깊이 — 그 앞이 발코니가 된다.
-    win    : {층: (아래, 위)} — 그 층 창의 실제 높이. 나머지는 돌벽으로 메운다."""
+def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False):
+    """한 면: 로컬 x = 벽 방향(0~L), 로컬 +z = 바깥. 바깥면이 z=0"""
     f = T(sx, 0, sz, ry)
     fh = h / floors
     n = max(1, round((L - 1.8) / 7.6))
@@ -755,36 +751,6 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, ribbon=False,
     for fl in range(1 if arcade else 0, floors):
         ya = 0.8 if fl == 0 else fl * fh + 0.85
         yb = (fl + 1) * fh - 0.45 if fl < floors - 1 else h - 0.45
-        if win and fl in win:        # 창을 실측 높이로 줄이고 남는 데는 돌벽
-            wa_, wb_ = win[fl]
-            for (fa, fb) in ((ya, wa_), (wb_, yb)):
-                if fb - fa > 0.02:
-                    asm.add(box(L - 1.8, fb - fa, DEPTH), f @ T(L / 2, (fa + fb) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
-            ya, yb = wa_, wb_
-        if ribbon and fl == floors - 1:
-            # 귀빈동 2층: 돌기둥이 중간에 하나도 없고 가는 멀리언만 선 통창이다
-            # (실사 008-59-55 007 — 천장 다운라이트가 유리 뒤로 줄줄이 보인다).
-            xa, xb = 0.9, L - 0.9
-            ow, oh = xb - xa, yb - ya
-            cx_, cy_, zz = (xa + xb) / 2, (ya + yb) / 2, -recess
-            glow.add(plane(ow, oh), f @ T(cx_, cy_, zz - 0.34), random.choice(ROOMS), tile=None)
-            asm.add(box(ow, oh, 0.012), f @ T(cx_, cy_, zz - 0.20), M['winGlass'], 1)
-            for by_ in (ya - 0.03, yb + 0.03):
-                asm.add(box(ow + 0.12, 0.11, 0.11), f @ T(cx_, by_, zz - 0.15), M['winFrame'], 1)
-            nm = max(2, round(ow / 2.3))
-            for j in range(1, nm):
-                asm.add(box(0.08, oh, 0.12), f @ T(xa + j * ow / nm, cy_, zz - 0.155), M['winFrame'], 1)
-            if recess:
-                # 패인 자리 양옆·윗면의 속벽. **벽면(z=0)까지 끌고 나오면 안 된다** —
-                # 거기엔 이미 띠·모서리 기둥의 면이 있어서 그대로 z-fighting 이 난다.
-                # 옆은 모서리 기둥 뒤(0.9)부터, 윗면은 벽 두께(DEPTH) 뒤부터 시작한다.
-                d1 = recess + 0.30
-                for sx_ in (xa - 0.45, xb + 0.45):
-                    asm.add(box(0.9, oh + 0.9, d1 - 0.9), f @ T(sx_, cy_ + 0.45, -(0.9 + d1) / 2), M['granite_clad'], 1.2)
-                asm.add(box(ow + 0.9, 0.45, d1 - DEPTH), f @ T(cx_, yb + 0.22, -(DEPTH + d1) / 2), M['granite_clad'], 1.2)
-            else:   # 창대는 벽면보다 2cm 나오게 (벽면과 같은 평면이면 z-fighting)
-                asm.add(box(ow + 0.2, 0.09, 0.38), f @ T(cx_, ya - 0.10, -0.17), M['granite_clad'], 1.2)
-            continue
         # 칸 기둥은 띠와 띠 사이 구간에만 (띠와 같은 바깥면에서 겹치지 않게 → z-fighting 없음)
         for x in xs[1:-1]:
             asm.add(box(0.8, yb - ya, DEPTH), f @ T(x, (ya + yb) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
@@ -807,28 +773,23 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, ribbon=False,
             asm.add(box(ow + 0.2, 0.09, 0.34), f @ T(cx_, ya - 0.10, -0.17), M['granite_clad'], 1.2)   # 석재 창대
 
 
-def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None, ribbon=False, body_w=0.0,
-          win=None, rail=True):
-    """모서리 기둥 4개 + 네 벽 + 안쪽 몸체 + 옥상
-
-    body_w : 안쪽 몸체의 -x 쪽을 이만큼 더 물린다 (그 면 유리를 안으로 넣을 때)
-    rail   : 옥상 가장자리 쇠난간 (흰 돌난간을 따로 두는 동은 끈다)"""
-    bx0 = x0 + 0.7 + body_w
-    asm.add(box(x1 - 0.7 - bx0, h, z1 - z0 - 1.4), T((bx0 + x1 - 0.7) / 2, h / 2, (z0 + z1) / 2), M['stoneWall'], 2)   # 몸체는 유리(0.3) 보다 안쪽
+def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None):
+    """모서리 기둥 4개 + 네 벽 + 안쪽 몸체 + 옥상"""
+    asm.add(box(x1 - x0 - 1.4, h, z1 - z0 - 1.4), T((x0 + x1) / 2, h / 2, (z0 + z1) / 2), M['stoneWall'], 2)   # 몸체는 유리(0.3) 보다 안쪽
     for (cx, cz) in ((x0, z0), (x1, z0), (x1, z1), (x0, z1)):
         ox = 0.45 if cx == x0 else -0.45
         oz = 0.45 if cz == z0 else -0.45
         asm.add(box(0.9, h + parapet, 0.9), T(cx + ox, (h + parapet) / 2, cz + oz), M['granite_clad'], 1.2)
     arc = set(arcade or ())     # 아케이드를 둘 면 ('n' = -z, 'e' = +x, 's' = +z, 'w' = -x)
     if 'N' not in arc:          # 대문자 N = 그 면은 따로 그린다 (연수동 정면)
-        wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet, 'n' in arc, ribbon, 0.0, win)      # -z 면
-    wall(asm, x1, z1, z1 - z0, PI / 2, h, floors, parapet, 'e' in arc, ribbon, 0.0, win)      # +x 면
-    wall(asm, x0, z1, x1 - x0, 0.0, h, floors, parapet, 's' in arc, ribbon, 0.0, win)         # +z 면
+        wall(asm, x1, z0, x1 - x0, PI, h, floors, parapet, 'n' in arc)      # -z 면
+    wall(asm, x1, z1, z1 - z0, PI / 2, h, floors, parapet, 'e' in arc)      # +x 면
+    wall(asm, x0, z1, x1 - x0, 0.0, h, floors, parapet, 's' in arc)         # +z 면
     if 'W' not in arc:          # 대문자 W = 그 면은 따로 그린다 (연수동 정면)
-        wall(asm, x0, z0, z1 - z0, -PI / 2, h, floors, parapet, 'w' in arc, ribbon, 0.0, win)  # -x 면
+        wall(asm, x0, z0, z1 - z0, -PI / 2, h, floors, parapet, 'w' in arc)  # -x 면
     if terrace:
         asm.add(box(x1 - x0 - 0.9, 0.3, z1 - z0 - 0.9), T((x0 + x1) / 2, h + 0.15, (z0 + z1) / 2), M['terrace'], 1.6)
-        for (ax, az, bx, bz) in () if not rail else ((x0, z0, x1, z0), (x0, z1, x1, z1), (x0, z0, x0, z1), (x1, z0, x1, z1)):
+        for (ax, az, bx, bz) in ((x0, z0, x1, z0), (x0, z1, x1, z1), (x0, z0, x0, z1), (x1, z0, x1, z1)):
             a, b = V((ax, h + parapet + 0.25, az)), V((bx, h + parapet + 0.25, bz))
             g, m = tube(a, b, 0.035, 8)
             asm.add(g, m, M['steelRail'])
@@ -962,38 +923,21 @@ def yeonsu_block():
     YG, YE = HG + 0.35, HE + 0.35      # 각 옥상 바닥
 
     # ── 귀빈동 (잔디 북쪽) ────────────────────────────────────────
-    # 실사 사진 결과물/KakaoTalk_Photo_2025-11-03-08-59-55 007.jpeg 를 확대해서 읽은 모습.
-    # 날개 둘에 안마당(수영장)이 낀 h 자가 아니라 **거의 육면체인 한 덩어리**다.
-    #   · 화강석 2층 몸체. 2층은 돌기둥이 하나도 없이 가는 멀리언만 선 **통창**이고,
-    #     천장 다운라이트가 유리 뒤로 줄줄이 비친다.
-    #   · 중도타워(-x) 쪽 2층은 유리가 안으로 물러나 그 앞이 **발코니**다. 흰 돌난간이
-    #     둘러 있고 사람이 서 있다. 난간 아래 벽은 끊김 없이 그대로 내려가므로
-    #     내민 발코니가 아니라 **들어간** 발코니다.
-    #   · 옥상 파라펫에 흰 돌난간, 그 뒤로 한옥 (한옥 모양은 다음 단계)
-    # 높이는 008-59-55 007 의 **돌난간(0.95m)을 자로** 삼아 잰 값이다 (84 px/m):
-    #   돌난간 80px 0.95 / 난간 밑 돌띠 155px 1.84 / 2층 창 175px 2.08 /
-    #   창 아래 민 돌벽 285px 3.4+ ... 그리고 사진 66 에서 1층 창은 2층 창의 0.54 배.
-    # 발코니 **깊이**만은 어느 사진에서도 잴 수 없어 2.0m 로 가정했다.
-    PRP = 0.77                                                             # 솔리드 파라펫 윗면 = HG + PRP
-    BRC = 2.0                                                              # 발코니 깊이 (가정)
-    W2 = (6.44, 8.52)                                                      # 2층 통창
-    W1 = (2.92, 4.04)                                                      # 1층 창 (회랑 지붕 바로 위)
-    BF = W2[0]                                                             # 창대 = 발코니 바닥
-    block(ye_ne, NX0, NX1, NZ0, NZ1, HG, 2, parapet=PRP, ribbon=True, arcade='W',
-          body_w=BRC + 0.5, win={0: W1, 1: W2}, rail=False)
-    wall(ye_ne, NX0, NZ0, NZ1 - NZ0, -PI / 2, HG, 2, PRP, False, True, BRC, {0: W1, 1: W2})  # -x 면: 유리를 물려 발코니
-    ye_ne.add(box(BRC + 0.5, BF - 0.3, NZ1 - NZ0 - 1.4),                       # 발코니 밑(1층)은 꽉 찬 몸체
-              T(NX0 + 0.7 + (BRC + 0.5) / 2, (BF - 0.3) / 2, (NZ0 + NZ1) / 2), M['stoneWall'], 2)
-    # 발코니 바닥 — 윗면을 창대(BF)와 **같은 높이로 두면 벽 면과 한 평면이 되어 z-fighting**.
-    # 2cm 낮춰 깔고, 벽 쪽 창대 띠가 그 위로 조금 드러나게 둔다.
-    ye_ne.add(box(BRC, 0.30, NZ1 - NZ0 - 1.8),                       # 마구리도 벽면보다 5cm 나오게
-              T(NX0 - 0.05 + BRC / 2, BF - 0.17, (NZ0 + NZ1) / 2), M['terrace'], 1.6)
-    balustrade(ye_ne, [(NX0 + 0.26, BF - 0.02, NZ0 + 1.0), (NX0 + 0.26, BF - 0.02, NZ1 - 1.0)], h=0.95, post=2.3)
-    # 옥상 난간 — 파라펫 **위에** 올라탄다 (전에는 파라펫 속에 반쯤 묻혀 있었다).
-    # 한 줄로 이어서 돌린다. 변마다 따로 부르면 모서리 동자기둥이 두 번 겹쳐 박힌다.
-    balustrade(ye_ne, [(NX0 + 0.5, HG + PRP, NZ1 - 0.5), (NX0 + 0.5, HG + PRP, NZ0 + 0.5),
-                       (NX1 - 0.5, HG + PRP, NZ0 + 0.5), (NX1 - 0.5, HG + PRP, NZ1 - 0.5)],
-                h=0.95, post=2.5)
+    # 카카오 스카이뷰(assets-src/refs/apec/site_skyview_kakao.jpg)에서 읽은 평면:
+    # 한 덩어리 상자가 아니라, 잔디와 나란한 **긴 몸채**에서 잔디 쪽으로 **날개 둘**이
+    # 뻗어 나오고 그 사이가 안마당(수영장)인 h 자 형이다.
+    SPZ0 = 36.0                                        # 몸채 앞선
+    block(ye_ne, NX0, NX1, SPZ0, NZ1, HG, 2, parapet=1.10)                 # 몸채
+    WINGS = ((NX0, NX0 + 8.5), (NX0 + 16.5, NX0 + 25.0))
+    for (wx0, wx1) in WINGS:                                               # 잔디 쪽 날개 둘
+        block(ye_ne, wx0, wx1, NZ0, SPZ0 + 1.0, HG, 2, parapet=1.10)
+        balustrade(ye_ne, [(wx0 + 1.0, HG + 0.28, NZ0 + 0.6), (wx1 - 1.0, HG + 0.28, NZ0 + 0.6)], h=0.78, post=2.7)
+    # 두 날개 사이 안마당 — 낮은 기단 위에 수영장 (위성의 청록색 물)
+    CX0, CX1 = NX0 + 8.5, NX0 + 16.5
+    block(ye_ne, CX0, CX1, NZ0, SPZ0 + 1.0, 4.6, 1, parapet=0.75)          # 안마당 밑 저층부
+    ye_ne.add(box(CX1 - CX0 - 3.0, 0.5, 9.0), T((CX0 + CX1) / 2, 5.05, NZ0 + 7.5), M['water'], None)   # 수영장
+    ye_ne.add(box(CX1 - CX0 - 2.0, 0.3, 10.4), T((CX0 + CX1) / 2, 4.85, NZ0 + 7.5), M['terrace'], 1.6)  # 풀 데크
+    balustrade(ye_ne, [(NX0 + 1.0, HG + 0.28, NZ1 - 1.0), (NX1 - 1.0, HG + 0.28, NZ1 - 1.0)], h=0.78, post=2.7)
     # ── 귀빈동 옥상 한옥 ──────────────────────────────────────────
     # 클라이언트 도식(images/56) 아래 그림: 낱개 정자가 아니라 **한 덩어리로 이어진
     # ㄱ(4)자** — 깊이 방향 줄기 하나 + 아래쪽으로 뻗는 긴 가로 팔.
@@ -1004,15 +948,9 @@ def yeonsu_block():
     ye_ne.add(bevel_box(NX1 - NX0 - 3.8, 0.34, 7.8, 0.04),
               T((NX0 + NX1) / 2, GY + 0.17, ARM_Z), M['granite'], 1.5)
     STEM_X = NX0 + 8.0
-    # y0 를 가로 팔보다 1.2cm 올린다 — 두 채의 기단이 맞물리는 자리에서 윗면이 정확히
-    # 같은 높이라 z-fighting 이 났다. 이어 붙는 모양 자체는 옥상 한옥 다시 만들 때 정리.
-    hanok(ye_ne, STEM_X, ARM_Z - 9.6, 12.0, 5.6, ry=-PI / 2, y0=GY + 0.352,
+    hanok(ye_ne, STEM_X, ARM_Z - 9.6, 12.0, 5.6, ry=-PI / 2, y0=GY + 0.34,
           label='황룡헌', lamp=760, eave=1.3)                                # 깊이 방향 줄기
-    # 줄기 기단은 가로 팔 기단(z = ARM_Z ± 3.9) 앞에서 끊는다. 겹쳐 깔면 윗면·밑면이
-    # 두 장씩 같은 높이에 놓여 그대로 z-fighting 이 난다.
-    SZ1 = ARM_Z - 3.9
-    SZ0 = ARM_Z - 9.6 - 7.1
-    ye_ne.add(bevel_box(7.8, 0.34, SZ1 - SZ0, 0.04), T(STEM_X, GY + 0.17, (SZ0 + SZ1) / 2), M['granite'], 1.5)
+    ye_ne.add(bevel_box(7.8, 0.34, 14.2, 0.04), T(STEM_X, GY + 0.17, ARM_Z - 9.6), M['granite'], 1.5)
     for k in range(4):                                                       # 마당 쪽 분재 소나무
         ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 16.0 + k * 4.0, GY + 0.3, ARM_Z - 8.0), M['granite_clad'], 1)
         ye_ne.add(sphere(0.62, 2), T(NX0 + 16.0 + k * 4.0, GY + 0.85, ARM_Z - 8.0, sy=0.62), M['shrub'], 1)
