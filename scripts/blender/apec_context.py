@@ -703,9 +703,17 @@ ye_nw = Assembly('yeonsu_nw', C_STATIC)
 FLOOR = 4.0
 ROOF_Y = FLOOR * 3
 DEPTH = 0.45        # 기둥·띠가 몸체에서 나온 깊이
-M['granite_clad'] = mat('graniteClad', 'granite_tile_03', (0.86, 0.86, 0.84), 0.7)
+# 외벽 화강석 — 사진(016)에서 잰 벽면 색은 R:G:B = 1.00 : 0.967 : 0.976 으로 **중성 회색**이다.
+# granite_tile_03 텍스처 자체가 평균 (0.390, 0.353, 0.319) 로 갈색이라, 곱하는 색으로
+# 그 갈색기를 빼 준다 (전에는 (0.86,0.86,0.84) 라 더 누렇게 나왔다).
+# 타일 1.2m = 가로 3 x 세로 2 블록 -> 켜 높이 0.60m. 사진 실측 0.55~0.60m 과 맞는다.
+M['granite_clad'] = mat('graniteClad', 'granite_tile_03', (0.84, 0.90, 1.00), 0.7)
 M['winFrame'] = mat('winFrame', None, (0.030, 0.031, 0.034), 0.35, 0.75)      # 짙은 아노다이즈 알루미늄 창틀
 M['winGlass'] = mat('winGlass', None, (0.021, 0.026, 0.033), 0.08, 0.15)      # 짙은 복층유리
+# 연수동 아케이드 전용 — 사진에서 창틀은 짙은 색이 아니라 **밝은 회색 금속**이고,
+# 유리는 안쪽 커튼 때문에 짙은 갈색이다 (016 개구 안 평균 0.281/0.217/0.170 = 따뜻한 갈색).
+M['arcFrame'] = mat('arcFrame', None, (0.44, 0.45, 0.46), 0.40, 0.5)
+M['arcGlass'] = mat('arcGlass', None, (0.055, 0.042, 0.032), 0.10, 0.10)
 ROOMS = [mat(f'roomGlass_{t}', emit_image=f'{SHOTS}/apec_room_{t}.png', emit_strength=1.1, rough=0.1) for t in 'abc']
 
 
@@ -812,46 +820,77 @@ def _spandrel(cx, spr, rr, h1, half_w, depth, n=40):
     return build
 
 
-def yeonsu_front(asm, f, L, h1, arc0, pitch=4.6, ow_wide=2.54, ow_narrow=1.85, spr=2.46):
-    """연수동 잔디 쪽 아치 정면 — 결과물 09-00-43 013 에서 **사람(1.75m)을 자로 써서** 실측.
+def yeonsu_front(asm, f, L, h1, bays=6, pitch=6.85, ow=4.50, spr=2.65, ring=0.37):
+    """연수동 잔디 쪽 아치 정면 — 결과물 09-00-46 016 / 09-00-48 019 실측.
 
-    아케이드 앞에 선 사람 키 210px = 1.75m -> 120 px/m. 그 자로 잰 값:
-      개구 폭 305px = 2.54m / 기공선 295px = 2.46m / 꼭대기 435px = 3.63m (반지름 1.27)
-      개구 비례 1 : 1.43  (사진 49 만 보고 잰 '정사각형 0.97' 은 원근 때문에 틀린 값이었다)
-      베이 피치 550px = 4.6m -> 개구/피치 0.55, 피어 2.06m. 여섯 베이면 정면 27.6m
-      양 끝 베이는 개구가 좁다 (사진 49 의 폭/피치 0.46 : 0.63 -> 1.85m)
-      아치 꼭대기가 벽의 56% -> 벽 높이 약 6.5m
+    **자**: 아치 문턱 바로 앞·안에서 걸어 나오는 사람 셋을 머리~발로 재면
+      016 은 155~167px = 1.75m -> 91 px/m, 019 는 148px -> 85 px/m.
+      (전에 쓰던 120 px/m 은 카메라 쪽에 더 가까이 선 사람을 자로 삼은 값이라
+       아치가 통째로 1.5배쯤 작게 나왔다. 그래서 "너무 작고 가운데 몰려" 보였다.)
+
+    **평면**: 밝은(피어)·어두운(개구) 구간 자동 검출 (y = 기공선 바로 아래)
+      019  개구 408px / 피어 198px / 피치 606px  ->  4.80 / 2.33 / 7.13 m
+      016  개구 385px / 피어 215px / 피치 600px  ->  4.23 / 2.36 / 6.59 m
+      평균  **개구 4.50 · 피어 2.35 · 피치 6.85 m** (개구/피치 0.66)
+      여섯 베이 = 41.1m 로 정면 44m 를 거의 채운다 (전에는 27.6m — 가운데만 몰렸다)
+
+    **높이**: 꼭대기~문턱 442px(016) = 4.86m. 반원이므로 반지름 = 개구/2 = 2.25,
+      따라서 **기공선 2.65m · 꼭대기 4.90m**. 돌 아치테 두께 31px = 0.37m.
+      문턱~윗단 난간 밑 665px(019) = 7.8m 라 지금 벽 높이 8.0 과 맞는다.
+
+    **창 짜임** (019 확대 — scratchpad c3):
+      · 기공선에 가로 중간틀, 그 위가 부채창
+      · 부채창은 **반지름 절반 자리에 작은 반원**이 하나 더 있고, 그 바깥 고리에만
+        방사 살 다섯(30·60·90·120·150도). 안쪽 반원은 살 없는 민 유리
+      · 기공선 아래는 세로 멀리언 셋 -> 네 짝
+      · 창틀은 짙은 알루미늄이 아니라 **밝은 회색 금속**, 유리는 안쪽 커튼 때문에 짙은 갈색
     """
     NA = 26                                          # 아치테 분할. seg=6 이면 육각형으로 각진다
-    for k in range(6):
+    FW = 0.09                                        # 창틀·멀리언 두께 (7~8px = 0.09m)
+    arc0 = (L - bays * pitch) / 2
+    r_ = ow / 2
+    rr = r_ + ring                                   # 아치테 바깥 반지름
+    gi = r_ - 0.03                                   # 유리 반원 반지름
+    ri = r_ * 0.50                                   # 부채창 안쪽 반원 (실측 202/407 = 0.50)
+    for k in range(bays):
         cx_ = arc0 + (k + 0.5) * pitch
-        ow = ow_narrow if k in (0, 5) else ow_wide
-        r_ = ow / 2
-        rr = r_ + 0.34                               # 아치테 바깥 반지름
         # 개구 안: 유리는 표면에, 방 불빛은 그 뒤로 (표면에 발광 이미지를 붙이면 형광 줄무늬가 된다)
         glow.add(plane(ow, spr - 0.25), f @ T(cx_, (spr + 0.25) / 2, -0.85), random.choice(ROOMS), tile=None)
-        glow.add(ring_segment(0, r_ - 0.02, 0, PI, 0.04), f @ T(cx_, spr, -0.85, 0, -PI / 2), random.choice(ROOMS), tile=None)
-        asm.add(box(ow, spr - 0.25, 0.02), f @ T(cx_, (spr + 0.25) / 2, -0.26), M['winGlass'], 1)
-        asm.add(ring_segment(0, r_ - 0.02, 0, PI, 0.02), f @ T(cx_, spr, -0.26, 0, -PI / 2), M['winGlass'], 1)
-        for m in range(1, 3):                        # 유리문 세로 멀리언 (가늘게)
-            asm.add(box(0.05, spr - 0.25, 0.08), f @ T(cx_ - ow / 2 + m * ow / 3, (spr + 0.25) / 2, -0.24), M['winFrame'], 1)
-        for m in range(1, 4):                        # 반원 광창 방사 살
-            a_ = PI * m / 4
-            asm.add(box(0.045, r_ - 0.03, 0.08),
-                    f @ T(cx_ + math.cos(a_) * (r_ - 0.03) / 2, spr + math.sin(a_) * (r_ - 0.03) / 2,
-                          -0.24, 0, 0, a_ - PI / 2), M['winFrame'], 1)
-        asm.add(box(ow, 0.07, 0.08), f @ T(cx_, spr, -0.24), M['winFrame'], 1)
-        # 흰 돌 아치테 (촘촘히) + 문설주
-        asm.add(ring_segment(r_, rr, 0, PI, DEPTH, seg=NA), f @ T(cx_, spr, -DEPTH, 0, -PI / 2), M['granite_clad'], 1.2)
+        glow.add(ring_segment(0, gi, 0, PI, 0.04), f @ T(cx_, spr, -0.85, 0, -PI / 2), random.choice(ROOMS), tile=None)
+        asm.add(box(ow, spr - 0.25, 0.02), f @ T(cx_, (spr + 0.25) / 2, -0.26), M['arcGlass'], 1)
+        asm.add(ring_segment(0, gi, 0, PI, 0.02), f @ T(cx_, spr, -0.25, 0, -PI / 2), M['arcGlass'], 1)
+        # ring_segment 은 **기준면에서 뒤로** h 만큼 자란다 (rx=-PI/2 가 +y 를 -z 로 보낸다).
+        # 창살 아치는 -0.22 에 걸어 유리(앞면 -0.25)보다 앞에 오게 한다. 전에 -0.30 에
+        # 걸었더니 통째로 유리 뒤에 묻혀서 부채창 안쪽 반원이 아예 안 보였다.
+        # 창 둘레 틀 (문설주 + 아치 곡선) · 기공선 가로 중간틀
+        asm.add(ring_segment(r_ - FW, r_, 0, PI, 0.10, seg=NA), f @ T(cx_, spr, -0.22, 0, -PI / 2), M['arcFrame'], 1)
         for sx_ in (-1, 1):
-            asm.add(box(0.34, spr, DEPTH), f @ T(cx_ + sx_ * (ow + 0.34) / 2, spr / 2, -DEPTH / 2), M['granite_clad'], 1.2)
-            asm.add(box((pitch - 2 * rr) / 2, h1, DEPTH),                              # 아치 옆 피어 (아치테 바깥부터)
-                    f @ T(cx_ + sx_ * (pitch + 2 * rr) / 4, h1 / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+            asm.add(box(FW, spr - 0.22, 0.10), f @ T(cx_ + sx_ * (ow - FW) / 2, (spr + 0.22) / 2, -0.27), M['arcFrame'], 1)
+        asm.add(box(ow, 0.11, 0.10), f @ T(cx_, spr, -0.27), M['arcFrame'], 1)
+        # 부채창 — 안쪽 작은 반원 + 그 바깥 고리에만 방사 살 다섯
+        asm.add(ring_segment(ri - FW / 2, ri + FW / 2, 0, PI, 0.10, seg=NA),
+                f @ T(cx_, spr, -0.22, 0, -PI / 2), M['arcFrame'], 1)
+        for m in range(1, 6):
+            a_ = PI * m / 6
+            rm = (ri + r_) / 2
+            asm.add(box(FW, r_ - ri, 0.10),
+                    f @ T(cx_ + math.cos(a_) * rm, spr + math.sin(a_) * rm, -0.27, 0, 0, a_ - PI / 2), M['arcFrame'], 1)
+        for m in range(1, 4):                        # 기공선 아래 세로 멀리언 셋 -> 네 짝
+            asm.add(box(FW, spr - 0.22, 0.10), f @ T(cx_ - ow / 2 + m * ow / 4, (spr + 0.22) / 2, -0.27), M['arcFrame'], 1)
+        # 돌 아치테 — 벽면에서 3cm 튀어나오게. 전에는 -DEPTH 에 걸어서 벽 뒤 0.45~0.90 에
+        # 묻혀 있었고, 그래서 밝은 돌 테가 아니라 시커먼 홈으로 보였다.
+        asm.add(ring_segment(r_, rr, 0, PI, DEPTH, seg=NA), f @ T(cx_, spr, 0.03, 0, -PI / 2), M['granite_clad'], 1.2)
+        for sx_ in (-1, 1):
+            asm.add(box(ring, spr, DEPTH), f @ T(cx_ + sx_ * (ow + ring) / 2, spr / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+            # 아치 옆 피어 — **기공선까지만**. 그 위는 스팬드럴이 이미 덮는데, 피어를 h1 까지
+            # 올리면 둘이 같은 면에서 겹쳐 z-fighting 이 난다.
+            asm.add(box((pitch - 2 * rr) / 2, spr, DEPTH),
+                    f @ T(cx_ + sx_ * (pitch + 2 * rr) / 4, spr / 2, -DEPTH / 2), M['granite_clad'], 1.2)
         # 스팬드럴 — 아치 바깥선을 따라가는 한 장의 면.
         # 상자를 층층이 쌓으면 계단처럼 각지고 모서리마다 세로 줄이 생긴다.
         asm.add(_spandrel(cx_, spr, rr, h1, pitch / 2, DEPTH), f @ T(0, 0, -DEPTH), M['granite_clad'], 1.2)
         asm.add(box(ow + 0.5, 0.22, 0.45), f @ T(cx_, 0.11, -0.24), M['granite'], 1.5)    # 디딤돌
-    for (a_, b_) in ((0.0, arc0), (arc0 + 6 * pitch, L)):                                 # 아치 열 밖은 민 벽
+    for (a_, b_) in ((0.0, arc0), (arc0 + bays * pitch, L)):                              # 아치 열 밖은 민 벽
         if b_ - a_ > 0.05:
             asm.add(box(b_ - a_, h1, DEPTH), f @ T((a_ + b_) / 2, h1 / 2, -DEPTH / 2), M['granite_clad'], 1.2)
     asm.add(box(L + 0.40, 0.34, DEPTH + 0.36), f @ T(L / 2, h1 - 0.17, -(DEPTH + 0.36) / 2), M['granite_clad'], 1.2)
@@ -992,8 +1031,10 @@ def yeonsu_block():
     # 그 면에 큰 창이 줄지어 붙어 난간도 두 줄이 됐다 -> 한 덩어리로 되돌린다.
     HL, HU = 8.0, 0.0
     block(ye_nw, EX0, EX1, EZ0, EZ1, HL, 1, parapet=0.95, arcade='W')
-    yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, HL, arc0=(EZ1 - EZ0 - 27.6) / 2)
-    balustrade(ye_nw, [(EX0 + 0.6, HL + 0.95, EZ0 + 0.8), (EX0 + 0.6, HL + 0.95, EZ1 - 0.8)], h=0.82, post=2.4)
+    yeonsu_front(ye_nw, T(EX0, 0, EZ0, -PI / 2), EZ1 - EZ0, HL)
+    # 옥상 돌난간: 019 에서 난간 높이 40px / 그 깊이의 축척 44px/m = 0.90m,
+    # 동자기둥 사이 100px = 2.3m
+    balustrade(ye_nw, [(EX0 + 0.6, HL + 0.95, EZ0 + 0.8), (EX0 + 0.6, HL + 0.95, EZ1 - 0.8)], h=0.90, post=2.3)
     YBACK = EX1 - 1.4                                   # 채들이 붙는 뒤쪽 선
     # 클라이언트 도식(images/62)을 픽셀로 재서 비율 그대로.
     #   데크 180 x 288 / 양옆 138 x 60 (깊이 77%, 길이 21%) / 가운데 108 x 110 (정사각)
