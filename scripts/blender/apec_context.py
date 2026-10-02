@@ -360,17 +360,32 @@ pagoda.add(sphere(0.55, 2), T(PX, ty + 13.2, PZ), M['gold'])
 pagoda.add(sphere(0.42, 2), T(PX, ty + 14.6, PZ), M['gold'])
 pagoda.add(sphere(0.3, 2), T(PX, ty + 15.8, PZ), M['gold'])
 pagoda.build(smooth=False)
-TOP = ty + 16.1
-print('pagoda top', round(TOP, 1))
+# ── 중도타워 축척 보정 ────────────────────────────────────────────
+# 지금까지 쌓은 탑은 전체 높이 86.8m / 1층 처마 폭 36.85m 였는데 둘 다 너무 크다.
+#   · 공식 제원: **높이 68m, 지상 9층** (황룡사 9층목탑을 현대 건축으로 재현)
+#   · 결과물 09-00-12 029 에서 탑 기단 앞에 선 사람(1.75m = 57px -> 32.6 px/m)을
+#     자로 재면 **1층 처마 폭 925px = 28.4m**
+# 두 자가 따로 주는 배율이 68/86.8 = 0.783, 28.4/36.85 = 0.771 로 1.5% 안에서 일치한다.
+# -> 탑 전체(기단·돌난간·계단·석등·처마 조명까지)를 **0.78 배**로 같이 줄인다.
+PAG_S = 0.78
+_pag = bpy.data.objects['pagoda']
+_pag.scale = (PAG_S,) * 3
+_pag.location = (PX * (1 - PAG_S), -PZ * (1 - PAG_S), 0.0)      # 기단 중심을 고정점으로
+def pag_pt(x, y, z):                                             # 탑에 매달린 것도 같은 배율로
+    return (PX + (x - PX) * PAG_S, y * PAG_S, PZ + (z - PZ) * PAG_S)
+
+
+TOP = (ty + 16.1) * PAG_S
+print('pagoda top', round(TOP, 1), '(x%.2f)' % PAG_S)
 
 # 처마 조명 (광원은 잔디 쪽 두 귀만 — 베이크 시간)
 for n, p in enumerate(eave_points):
     if p[0] > PX:
-        light(C_LIGHT, f'pagoda_lamp_{n}', 'POINT', (p[0], p[1] - 0.3, p[2]), energy=110, color=(1.0, 0.96, 0.9), size=0.2)
+        light(C_LIGHT, f'pagoda_lamp_{n}', 'POINT', pag_pt(p[0], p[1] - 0.3, p[2]), energy=110, color=(1.0, 0.96, 0.9), size=0.2)
 # 현장 사진: 타워를 비추는 업라이트는 없다. 불 켜진 창(발광 창호)과 처마 네 귀 점조명만으로 보이고,
 # 지붕·몸체는 거의 검은 실루엣. 1층만 실내 조명으로 따뜻하게 밝다.
-light(C_LIGHT, 'pagoda_1f', 'AREA', (PX + 17.2, BASE_Y + 4.5, PZ), (PX + 30, BASE_Y, PZ), energy=2500,
-      color=(1.0, 0.74, 0.45), size=24)
+light(C_LIGHT, 'pagoda_1f', 'AREA', pag_pt(PX + 17.2, BASE_Y + 4.5, PZ), pag_pt(PX + 30, BASE_Y, PZ),
+      energy=2500, color=(1.0, 0.74, 0.45), size=24 * PAG_S)
 
 
 # ── 한옥 부재 ─────────────────────────────────────────────────
