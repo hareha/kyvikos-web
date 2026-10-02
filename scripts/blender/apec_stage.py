@@ -121,7 +121,9 @@ glass = Assembly('glass', C_DYNAMIC)
 # ── 잔디 · 디딤돌 ─────────────────────────────────────────────
 ground = Assembly('ground', C_STATIC)
 LAWN = (-25, 35, -33, 17)                       # x0, x1, z0, z1 (위성 실측)
-TOWER_C, TOWER_R = (-43, -11), 27.5             # 중도타워 원형 동선
+# 중도타워를 실제 제원(높이 68m)대로 0.78 배로 줄였으므로 원형 동선도 같이 줄어든다
+# (27.5 -> 21.45). 이 값으로 디딤돌을 비우니 안 맞으면 탑 밑에 디딤돌이 깔린다.
+TOWER_C, TOWER_R = (-43, -11), 21.45            # 중도타워 원형 동선 (apec_context.py PAG_S 와 같이)
 ground.add(box(LAWN[1] - LAWN[0], 0.12, LAWN[3] - LAWN[2]),
            T((LAWN[0] + LAWN[1]) / 2, 0.06, (LAWN[2] + LAWN[3]) / 2), M['lawn'], tile=2.5)
 MED = (6, -7.4)  # 무대 앞 원 중심 — 테이블 쪽으로 당겨서 무대(앞선 -11.5)에 안 깔리게
