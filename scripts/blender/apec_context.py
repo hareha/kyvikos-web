@@ -985,6 +985,26 @@ def roof_hanok(asm, units, y0, axis, front, back, span0, span, eave=1.15, lamp0=
                 T(gx, y0 + 0.06, gz), M['terrace'], 1.6)
 
 
+def cloister(asm, cx, cz, length, width, ry, y0):
+    """두 채를 잇는 **맞배 복도** — 기단 + 둥근 돌기둥 + 맞배 기와.
+    로컬 x = 길이 방향. roof_hanok 안에 있던 복도 코드를 따로 뺀 것."""
+    cf = T(cx, 0, cz, ry)
+    asm.add(bevel_box(length, 0.34, width, 0.04), cf @ T(0, y0 + 0.17, 0), M['granite'], 1.5)
+    n = max(2, round(length / 3.0))
+    for k in range(n + 1):
+        px = -length / 2 + k * length / n
+        for pz in (-width / 2 + 0.45, width / 2 - 0.45):
+            asm.add(cyl(0.16, 0.18, 2.5, 12), cf @ T(px, y0 + 0.34 + 1.25, pz), M['pillarStone'], 1)
+    for pz in (-width / 2 + 0.45, width / 2 - 0.45):
+        asm.add(box(length + 0.2, 0.34, 0.24), cf @ T(0, y0 + 2.96, pz), M['rafter'], 1)
+    gb = y0 + 3.13
+    half = (width + 1.9) / 2
+    rafters(asm, cf, length, width / 2, half - 0.25,
+            lambda r: gb + 1.25 * (1 - r / half) - 0.1 * math.sin(PI * r / half), step=0.5)
+    asm.add(gable_roof(length, width + 1.9, 1.25, sag=0.1), cf @ T(0, gb, 0), M['tileGrey'], 1.4)
+    ridge(asm, cf, length - 0.4, gb + 1.25)
+
+
 def yeonsu_block():
     """연수동 — 결과물 폴더 09-00-43 013 / 09-00-46 016 / 09-00-49 020 을 보고 다시.
 
@@ -998,7 +1018,11 @@ def yeonsu_block():
     """
     # 귀빈동(북동동, 잔디 북쪽 / data.js 의 '귀빈동 테라스' 카메라가 이 옥상이다) 과
     # 연수동(북서동, 잔디 동쪽)은 서로 다른 동이다. 아치 정면은 **연수동** 것이다.
-    NX0, NX1, NZ0, NZ1 = 23.0, 53.0, 20.0, 48.0
+    # 위성사진(사용자 사진 69 / site_skyview_kakao)에서 귀빈동은 잔디와 나란한 쪽이
+    # 긴 **가로로 긴 상자**다. 사용자가 단순화해 준 옥상 도식(images/68)의 바탕
+    # 직사각형 비가 613 : 363 = **1.69 : 1** 이라 그 비로 맞춘다.
+    # 전에는 30 x 28 이라 거의 정육면체였다.
+    NX0, NX1, NZ0, NZ1 = 23.0, 53.4, 20.0, 38.0      # 30.4 x 18.0 (= 1.69 : 1)
     H1, H2 = 5.3, 3.2                  # 아래단(아치 벽) / 물러앉은 윗단(유리층) — 사진 실측
     HG = 9.6                           # 귀빈동 몸체 (사진 013/020: 2층 리본창)
     HE = H1 + H2                       # 연수동 = 아래단 + 물러앉은 윗단
@@ -1037,27 +1061,39 @@ def yeonsu_block():
     balustrade(ye_ne, [(NX0 + BRC + 0.5, HG + PRP, NZ1 - 0.5), (NX0 + BRC + 0.5, HG + PRP, NZ0 + 0.5),
                        (NX1 - 0.5, HG + PRP, NZ0 + 0.5), (NX1 - 0.5, HG + PRP, NZ1 - 0.5)],
                 h=0.95, post=2.5)
-    # ── 귀빈동 옥상 한옥 ──────────────────────────────────────────
-    # 클라이언트 도식(images/56) 아래 그림: 낱개 정자가 아니라 **한 덩어리로 이어진
-    # ㄱ(4)자** — 깊이 방향 줄기 하나 + 아래쪽으로 뻗는 긴 가로 팔.
+    # ── 귀빈동 옥상 한옥 — 이어 붙은 소문자 h 자 ───────────────────
+    # 사용자가 단순화해 준 도식(images/68)을 픽셀로 재서 **비율 그대로** 옮긴다.
+    # 바탕(옥상 데크) 613 x 363 안에서 어두운 덩어리 셋:
+    #   C(긴 바)   x 0.199~0.906, y 0.595~0.912   <- 데크 긴 쪽을 따라 길게
+    #   B(잇는 복도) x 0.369~0.563, y 0.386~0.592
+    #   A(머리)    x 0.199~0.563, y 0.088~0.383   <- C 와 나란하고 더 짧다
+    # y=1 쪽(C 가 붙은 변)이 잔디(-z) 쪽이다.
     GY = YG
-    ARM_Z = NZ1 - 4.2
-    hanok(ye_ne, (NX0 + 3.0 + NX1 - 3.0) / 2, ARM_Z, NX1 - NX0 - 6.0, 5.6,
-          ry=PI, y0=GY + 0.34, label='행복재', lamp=660, eave=1.3)          # 긴 가로 팔
-    ye_ne.add(bevel_box(NX1 - NX0 - 3.8, 0.34, 7.8, 0.04),
-              T((NX0 + NX1) / 2, GY + 0.17, ARM_Z), M['granite'], 1.5)
-    STEM_X = NX0 + 8.0
-    # y0 를 가로 팔보다 1.2cm 올린다 — 두 채의 기단 윗면이 정확히 같은 높이라
-    # 맞물리는 자리가 깜빡였다. 이어 붙는 모양 자체는 옥상 한옥 다시 만들 때 정리.
-    hanok(ye_ne, STEM_X, ARM_Z - 9.6, 12.0, 5.6, ry=-PI / 2, y0=GY + 0.352,
-          label='황룡헌', lamp=760, eave=1.3)                                # 깊이 방향 줄기
-    # 줄기 기단은 가로 팔 기단(z = ARM_Z ± 3.9) 앞에서 끊는다. 겹쳐 깔면 윗면·밑면이
-    # 두 장씩 같은 높이에 놓여 그대로 z-fighting 이 난다.
-    SZ1, SZ0 = ARM_Z - 3.9, ARM_Z - 9.6 - 7.1
-    ye_ne.add(bevel_box(7.8, 0.34, SZ1 - SZ0, 0.04), T(STEM_X, GY + 0.17, (SZ0 + SZ1) / 2), M['granite'], 1.5)
+    DX0, DX1 = NX0 + BRC, NX1                      # 2단 옥상 데크 (단만큼 물러나 있다)
+    DZ0, DZ1 = NZ0, NZ1
+    DL, DD = DX1 - DX0, DZ1 - DZ0
+
+    def place(u0, u1, v0, v1):
+        """도식 비율 -> 월드 사각형 (x0, x1, z0, z1)"""
+        return (DX0 + u0 * DL, DX0 + u1 * DL, DZ1 - v1 * DD, DZ1 - v0 * DD)
+
+    CX0, CX1, CZ0, CZ1 = place(0.199, 0.906, 0.595, 0.912)      # 긴 바
+    AX0, AX1, AZ0, AZ1 = place(0.199, 0.563, 0.088, 0.383)      # 머리
+    BX0, BX1, BZ0, BZ1 = place(0.369, 0.563, 0.386, 0.592)      # 잇는 복도
+    for (x0_, x1_, z0_, z1_, label, lamp, dy) in (
+            (CX0, CX1, CZ0, CZ1, '행복재', 660, 0.0),
+            (AX0, AX1, AZ0, AZ1, '황룡헌', 760, 0.012)):        # 기단 윗면이 같은 높이면 깜빡인다
+        cx_, cz_ = (x0_ + x1_) / 2, (z0_ + z1_) / 2
+        ye_ne.add(bevel_box(x1_ - x0_ + 1.6, 0.34, z1_ - z0_ + 1.6, 0.04),
+                  T(cx_, GY + 0.17 + dy, cz_), M['granite'], 1.5)
+        # veranda=False: 툇마루·계자난간을 달면 잔디 쪽으로 2.1m 더 나가 옥상을 넘는다.
+        # 위성사진에도 지붕만 보인다. 잔디 쪽은 열린 대청으로 둔다.
+        hanok(ye_ne, cx_, cz_, x1_ - x0_, z1_ - z0_, ry=PI, y0=GY + 0.34 + dy,
+              label=label, lamp=lamp, eave=1.2, veranda=False, open_front=True)
+    cloister(ye_ne, (BX0 + BX1) / 2, (BZ0 + BZ1) / 2, BZ1 - BZ0, BX1 - BX0, PI / 2, GY)
     for k in range(4):                                                       # 마당 쪽 분재 소나무
-        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(NX0 + 16.0 + k * 4.0, GY + 0.3, ARM_Z - 8.0), M['granite_clad'], 1)
-        ye_ne.add(sphere(0.62, 2), T(NX0 + 16.0 + k * 4.0, GY + 0.85, ARM_Z - 8.0, sy=0.62), M['shrub'], 1)
+        ye_ne.add(cyl(0.55, 0.45, 0.6, 16), T(CX1 + 1.4, GY + 0.3, DZ0 + 3.0 + k * 3.4), M['granite_clad'], 1)
+        ye_ne.add(sphere(0.62, 2), T(CX1 + 1.4, GY + 0.85, DZ0 + 3.0 + k * 3.4, sy=0.62), M['shrub'], 1)
 
     # ── 두 동 사이 통유리 연결부 (사진 013 가운데 유리 띠) ────────────────
     LX0, LX1, LZ0, LZ1 = 44.0, 50.0, 13.6, 20.0
@@ -1073,16 +1109,16 @@ def yeonsu_block():
         ye_ne.add(box(w_, 0.14, 0.18), g @ T(0, HG * 0.5, 0), M['winFrame'], 1)   # 중간 가로틀
         ye_ne.add(box(w_ + 0.3, 0.30, 0.34), g @ T(0, HG + 0.15, 0), M['granite_clad'], 1.2)   # 상부 돌띠
 
-    # ── 옥상 천창 ────────────────────────────────────────────────────
-    ye_ne.add(box(6.5, 0.25, 10.0), T(46, YG + 0.12, 40), M['granite_clad'], 1.2)
-    glass_roof.add(box(6.1, 1.1, 9.6), T(46, YG + 0.80, 40), M['skylight'])
+    # ── 옥상 천창 — h 자 안쪽(복도 오른쪽 빈자리) ─────────────────────
+    ye_ne.add(box(5.0, 0.25, 7.0), T(BX1 + 5.0, YG + 0.12, (AZ0 + AZ1) / 2), M['granite_clad'], 1.2)
+    glass_roof.add(box(4.6, 1.1, 6.6), T(BX1 + 5.0, YG + 0.80, (AZ0 + AZ1) / 2), M['skylight'])
 
-    # ── 옥상 테라스 가구 ─────────────────────────────────────────────
+    # ── 옥상 테라스 가구 — h 자 왼쪽 빈 데크 ─────────────────────────
     # 두 프롭 모두 원점이 밑바닥이라 옥상 바닥 높이에 그대로 얹는다 (전에 공중에 떴었다)
-    for k, (x, z) in enumerate(((27.0, 42), (33.0, 44), (39.0, 42), (45.0, 44.5))):
+    for k, (x, z) in enumerate(((27.0, 24.0), (27.6, 30.0), (28.2, 35.0), (33.0, 35.6))):
         ye_ne.add(mesh_source(SRC_TABLESET), T(x, YG, z, k * 0.7), list(SRC_TABLESET.data.materials))
         ye_ne.add(mesh_source(SRC_PARASOL), T(x, YG, z), list(SRC_PARASOL.data.materials))
-    light(C_LIGHT, 'site_terrace', 'POINT', (34.0, YG + 2.6, 43), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
+    light(C_LIGHT, 'site_terrace', 'POINT', (28.5, YG + 2.6, 30), energy=160, color=(1.0, 0.78, 0.5), size=0.3)
 
     # ── 북서동 (잔디 동쪽) : 아케이드가 잔디(-x)를 본다 ──────────────────
     # 연수동 — 실측(사람 1.75m 기준): 베이 4.6 x 6 = 정면 27.6, 벽 6.5,
@@ -1132,9 +1168,13 @@ def yeonsu_block():
     # 처마까지: 양옆 9.6+2.4 = 12.0 -> 잔디 쪽 1.8 / 뒤 0.6 여유
     #           가운데 6.6+2.8 = 9.4 -> 가운데가 더 뒤로 물러나 잔디 쪽에 홈이 생긴다
     # ry=0 이면 로컬 x = 월드 x 라 잔디(-x)는 로컬 -x, ry=PI 면 뒤집혀 로컬 +x 다.
-    SPEC = ((ZMID - 12.6, 9.6, 4.4, 0.0, '평안재2', 520, -1),
-            (ZMID, 6.6, 6.6, -PI / 2, '대청', 720, 0),
-            (ZMID + 12.6, 9.6, 4.4, PI, '평안재1', 460, +1))
+    # 위성사진(사용자 사진 69): 양옆 두 채는 건물 **거의 양 끝**에 붙어 있고,
+    # 가운데 채는 정사각이 아니라 **길이 방향(z)으로 조금 퍼진** 형태다.
+    #   양옆 중심 ZMID +-12.6 -> +-16.4 (처마까지 끝에서 2.0 남는다)
+    #   가운데 6.6 x 6.6 -> 6.6(깊이) x 9.0(길이)
+    SPEC = ((ZMID - 16.4, 9.6, 4.4, 0.0, '평안재2', 520, -1),
+            (ZMID, 6.6, 9.0, -PI / 2, '대청', 720, 0),
+            (ZMID + 16.4, 9.6, 4.4, PI, '평안재1', 460, +1))
     for (cz, deep, along, rk, label, lamp, oe) in SPEC:
         ridge_len, dep = (deep, along) if abs(rk) != PI / 2 else (along, deep)
         cx = YBACK - deep / 2
