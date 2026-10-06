@@ -186,7 +186,11 @@ function applyEnv(env) {
     u.uZenith.value.set(env.sky.zenith);
     u.uHorizon.value.set(env.sky.horizon);
     u.uMoon.value = env.sky.moon ? 1 : 0;
-    if (env.sky.moon) u.uMoonDir.value.set(...env.sky.moon).normalize();
+    if (env.sky.moon) {
+      u.uMoonDir.value.set(...env.sky.moon).normalize();
+      if (env.sky.moonLimb) u.uMoonLimb.value.set(...env.sky.moonLimb).normalize();
+      if (env.sky.moonPhase !== undefined) u.uMoonK.value = env.sky.moonPhase;
+    }
     scene.fog.color.set(env.sky.horizon);
   } else {
     scene.fog.color.set(env.builtBg);

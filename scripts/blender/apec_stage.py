@@ -213,16 +213,24 @@ stage.add(bevel_box(18.2, TOP - 0.04, 9, 0.02), T(CX, (TOP - 0.04) / 2, CZ), M['
 # 발광이 아니라 빛 받는 인쇄물로 바꿨으니 EMISSIVE 가 아니라 stage 에 넣어야 라이트맵을 받는다
 stage.add(plane(18.0, TOP - 0.06), T(CX, (TOP - 0.06) / 2 + 0.02, FRONT + 0.006), M['fascia'], tile=None)
 emit.add(box(17.6, 0.035, 0.03), T(CX, 0.07, FRONT + 0.02), M['redStrip'])
-stage.add(box(18.2, 0.05, 9), T(CX, TOP - 0.025, CZ), M['deckCarpet'], 2)         # 연회색 카펫 갑판
-# 좌우 계단 (단 높이 0.3m, 앞끝에 흰 LED 라인)
+# 갑판은 몸체(모서리 0.02 깎임)보다 **안쪽**이어야 한다. 같은 18.2 x 9 로 깔아서
+# 사방으로 2cm 처마처럼 튀어나와 있었다.
+stage.add(box(18.14, 0.05, 8.94), T(CX, TOP - 0.025, CZ), M['deckCarpet'], 2)    # 카펫 갑판
+GND = 0.11                                                                        # 마당 포장 윗면
+# 좌우 계단 — 포장(0.11)에서 갑판(0.55)까지 0.44 를 3 등분, 맨 윗단이 갑판과 수평.
+# 전에는 y=0 에서 쌓아 올려 맨 아랫단이 포장에 10cm 파묻히고(단높이 0.103 vs 0.183)
+# 맨 윗단은 갑판보다 3cm 솟아 있었다.
+RISE = (TOP - GND) / 3
+
+
 def step_unit(cx_, cz_, w_, ry_=0.0):
-    """3단 계단 (남색 챌판 + 연회색 카펫 디딤판, 난간 없음) — layout_v2 rear_stairs"""
+    """3단 계단 (남색 챌판 + 디딤판). 단높이 균일, 윗단이 갑판과 수평"""
     f = T(cx_, 0, cz_, ry_)
     for k in (3, 2, 1):
-        h = TOP * k / 3
+        top_k = GND + RISE * k
         zc = 0.3 * (4 - k) - 0.15
-        stage.add(box(w_, h, 0.3), f @ T(0, h / 2, zc), M['stairBlue'], 1)
-        stage.add(box(w_, 0.03, 0.3), f @ T(0, h + 0.015, zc), M['stairTread'], 1)
+        stage.add(box(w_, top_k - 0.03, 0.3), f @ T(0, (top_k - 0.03) / 2, zc), M['stairBlue'], 1)
+        stage.add(box(w_, 0.03, 0.3), f @ T(0, top_k - 0.015, zc), M['stairTread'], 1)
 
 
 # 무대 앞 — 클라이언트 지시 그대로: 가운데가 경사면이고 그 양옆에 계단이 붙는다.

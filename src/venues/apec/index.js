@@ -11,12 +11,17 @@ export { build } from './scene.js';
 //   y = sin h = 0.581
 export const env = {
   height: 90,
-  sky: { zenith: '#02030a', horizon: '#070a14', moon: [-0.587, 0.581, -0.565] },
+  // 달의 밝은 가장자리는 태양 쪽 — 같은 시각 태양은 고도 -18.8° / 방위 266.1° 라
+  // 달 방향에 직교하는 성분이 [0.541, -0.238, -0.807] (오른쪽 아래, 서쪽).
+  sky: {
+    zenith: '#010207', horizon: '#060911',
+    moon: [-0.587, 0.581, -0.565], moonLimb: [0.541, -0.238, -0.807], moonPhase: 0.58,
+  },
   stars: true,
   fog: 0.0026,
-  exposure: 1.35,
+  exposure: 1.15,
   hdri: 'moonless_golf',
-  envIntensity: 0.35,
+  envIntensity: 0.5,
   // Blender(AgX)에서 베이크한 장면
   toneMapping: 'agx',
   bloomThreshold: 2.6,
