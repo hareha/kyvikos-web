@@ -55,7 +55,12 @@ C_SRC.hide_viewport = True
 M = {
     'lawn': material('lawn', 'leafy_grass', (0.115, 0.215, 0.075), 0.95),     # 초록 잔디 (마른 갈색으로 잘못 깔아 뒀었다)
     # 디딤돌이 잔디보다 밝아서 하얀 덩어리로 떠 보였다. 사진에서는 잔디보다 어두운 회색 석재다.
-    'paver': material('paver', 'rock_tile_floor_02', (1.55, 1.55, 1.52), 0.92, normal=0.45),  # 밝은 회색 판석 (텍스처가 갈색이라 틴트를 올린다)
+    # 연석·디딤돌·마당 포장 — **패턴 없는 민 회색 화강석 판**이다.
+    # rock_tile_floor_02 은 줄눈이 뚜렷한 벽돌 바닥 텍스처라, 0.5 x 1.3m 디딤돌 한 장에
+    # 0.55m 간격으로 반복시키니 돌마다 벽돌 격자가 또 그려졌다.
+    # concrete_floor_01 의 휘도만 남기고 중성 회색(1.000:0.967:0.976)으로 입힌
+    # stone_grey (평균 0.573/0.555/0.560) — 격자 없이 화강석 같은 잔 알갱이만 남는다.
+    'paver': material('paver', 'stone_grey', (1, 1, 1), 0.9, normal=0.35),
     'plaza': material('plaza', 'asphalt_02', (0.35, 0.36, 0.38), 0.9),
     'stageFloor': material('stageFloor', image_base=f'{SHOTS}/apec_stage_floor.png', rough=0.25, coat=0.3),
     'stageBody': material('stageBody', None, (0.017, 0.026, 0.100), 0.7),             # 남색 치마 (#232A55)

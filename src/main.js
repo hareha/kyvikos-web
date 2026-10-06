@@ -75,7 +75,11 @@ const composer = new EffectComposer(
   }),
 );
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(stageSize().w / 2, stageSize().h / 2), 0.55, 0.3, 0.55);
+// 블룸 임계값 0.55 -> 1.1. 창호·블라인더 렌즈 같은 발광체는 투어 거리에서 1~2픽셀인데
+// 블룸 버퍼가 화면 절반 해상도라, 카메라가 움직이면 그 점이 반해상도 텍셀을 들락날락하며
+// 후광이 켜졌다 꺼졌다 했다. 임계값을 올려 작은 점광을 블룸에서 빼고, baked.js 의
+// glowFactor 상한(2.2)과 같이 쓰면 임계 초과 에너지가 2.99 -> 1.1 로 줄어 깜빡임이 가라앉는다.
+const bloom = new UnrealBloomPass(new THREE.Vector2(stageSize().w / 2, stageSize().h / 2), 0.55, 0.3, 1.1);
 composer.addPass(bloom);
 const grain = createGrainPass();
 composer.addPass(grain);

@@ -40,8 +40,15 @@ const library = (id) => texture(`${BASE}assets/textures/${id}_diff.webp`, { repe
 const graphic = (file) => texture(`${BASE}assets/graphics/${file.replace(/\.png$/, '.webp')}${V}`);
 
 /** Blender 발광 세기 → 웹 밝기 배율 (블룸 임계값 0.85 기준) */
+// 발광 밝기 상한 2.2 — 전에는 상한이 없어 블라인더 렌즈(emit_strength 130)가 3.54 까지 갔다.
+// toneMapped:false 라 톤매핑도 안 거치고 그대로 블룸에 들어가서, 화면상 1~2픽셀짜리 점이
+// 반해상도 블룸 버퍼를 들락날락할 때마다 후광이 확 켜졌다 꺼졌다 했다.
+const GLOW_MAX = 2.2;
 const glowFactor = (strength, isImage) =>
-  isImage ? 1 + Math.log10(Math.max(strength, 1)) * 0.15 : 1 + Math.log10(Math.max(strength, 1)) * 1.2;
+  Math.min(
+    GLOW_MAX,
+    isImage ? 1 + Math.log10(Math.max(strength, 1)) * 0.15 : 1 + Math.log10(Math.max(strength, 1)) * 1.2,
+  );
 
 /** 부모를 거슬러 올라가 매니페스트에 있는 오브젝트 이름을 찾는다 */
 function ownerName(object, names) {
