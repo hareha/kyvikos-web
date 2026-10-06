@@ -190,6 +190,7 @@ function applyEnv(env) {
       u.uMoonDir.value.set(...env.sky.moon).normalize();
       if (env.sky.moonLimb) u.uMoonLimb.value.set(...env.sky.moonLimb).normalize();
       if (env.sky.moonPhase !== undefined) u.uMoonK.value = env.sky.moonPhase;
+      if (env.sky.moonSize !== undefined) u.uMoonR.value = env.sky.moonSize;
     }
     scene.fog.color.set(env.sky.horizon);
   } else {

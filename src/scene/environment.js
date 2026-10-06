@@ -12,6 +12,7 @@ export function createSky() {
       uMoonDir: { value: new THREE.Vector3(-0.45, 0.32, -0.83).normalize() },
       uMoonLimb: { value: new THREE.Vector3(1, 0, 0) },   // 밝은 가장자리 방향 (달 방향과 직교)
       uMoonK: { value: 0.58 },                            // 조명률 0~1
+      uMoonR: { value: 0.030 },                           // 화면상 반지름(rad) — 아래 주석 참고
       uMoon: { value: 1 },
     },
     vertexShader: /* glsl */ `
@@ -24,7 +25,7 @@ export function createSky() {
     fragmentShader: /* glsl */ `
       uniform float uBuilt;
       uniform vec3 uWire, uZenith, uHorizon, uMoonDir, uMoonLimb;
-      uniform float uMoon, uMoonK;
+      uniform float uMoon, uMoonK, uMoonR;
       varying vec3 vDir;
       void main() {
         vec3 dir = normalize(vDir);
@@ -32,9 +33,11 @@ export function createSky() {
         vec3 sky = mix(uHorizon, uZenith, pow(h, 0.45));
 
         // ── 달 ──────────────────────────────────────────────
-        // 겉보기 반지름 0.258° = 0.0045 rad. dot(dir, moon) 은 1 에 붙어 있어 float 정밀도가
-        // 날아가므로 각거리를 **현(chord)** 으로 잰다 (작은 각에서 |dir-moon| ≈ 각(rad)).
-        const float R = 0.0045;
+        // 실제 겉보기 반지름은 0.258°(0.0045rad) 인데, 그대로 그리면 1080p 60° 화각에서
+        // 지름 10px 짜리 점이라 아무것도 안 보인다. 사진·영화가 늘 그러듯 키워 그린다 —
+        // uMoonR 기본 0.030rad(지름 3.4°, 실제의 약 6.7배). 위치·위상·기울기는 실측 그대로.
+        // dot(dir, moon) 은 1 에 붙어 float 정밀도가 날아가므로 각거리를 **현(chord)** 으로 잰다.
+        float R = uMoonR;
         vec3 off = dir - uMoonDir;
         float a = length(off);
         vec3 up2 = normalize(cross(uMoonDir, uMoonLimb));
@@ -55,7 +58,7 @@ export function createSky() {
         sea -= 0.14 * (1.0 - smoothstep(0.0, 0.30, length(vec2(px + 0.34, py - 0.20))));
         sea -= 0.11 * (1.0 - smoothstep(0.0, 0.26, length(vec2(px - 0.04, py - 0.42))));
         vec3 body = vec3(1.9, 1.86, 1.72) * ld * sea * (lit + 0.035);  // 0.035 = 지구조(어두운 쪽)
-        float halo = exp(-a / 0.055) * 0.16 + exp(-a / 0.22) * 0.035;  // 달무리
+        float halo = exp(-a / (R * 1.9)) * 0.16 + exp(-a / (R * 7.5)) * 0.035;   // 달무리
         sky += uMoon * (disc * body + halo * vec3(0.72, 0.78, 1.0));
 
         gl_FragColor = vec4(mix(uWire, sky, uBuilt), 1.0);
