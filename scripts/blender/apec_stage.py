@@ -64,14 +64,16 @@ M = {
     'plaza': material('plaza', 'asphalt_02', (0.35, 0.36, 0.38), 0.9),
     'stageFloor': material('stageFloor', image_base=f'{SHOTS}/apec_stage_floor.png', rough=0.25, coat=0.3),
     'stageBody': material('stageBody', None, (0.017, 0.026, 0.100), 0.7),             # 남색 치마 (#232A55)
-    'deckCarpet': material('deckCarpet', None, (0.055, 0.115, 0.335), 0.85),          # 파란 니들펀치 갑판 (행사 사진)
+    # 무대 파랑은 전부 사이드 타워 래핑(cladNavy #2E3C6B = 0.026/0.038/0.125) 을 기준색으로 맞춘다.
+    # 전에는 갑판 0.335, 계단 챌판 0.38, 디딤판 0.62 로 래핑보다 3~5배 밝은 파랑이었다.
+    'deckCarpet': material('deckCarpet', None, (0.032, 0.046, 0.150), 0.85),          # 파란 니들펀치 갑판
     'redStrip': material('redStrip', None, (1, 0.1, 0.1), 0.4, emit=(1.0, 0.08, 0.06), emit_strength=3),
     'scafTube': material('scafTube', None, (0.6, 0.61, 0.59), 0.45, 0.7),        # 시스템 비계 파이프
     'screenWood': material('screenWood', None, (0.052, 0.030, 0.019), 0.55),    # 병풍·연설대 호두나무 (사진 확대)
     'hanjiPaper': material('hanjiPaper', image_base=f'{SHOTS}/apec_hanji.png', rough=0.88),   # 병풍 배접 한지
     'plinthRed': material('plinthRed', 'cotton_jersey', (0.32, 0.03, 0.04), 0.9),  # 붉은 천 좌대
-    'stairBlue': material('stairBlue', None, (0.05, 0.11, 0.38), 0.55),         # 계단 챌판 (중청)
-    'stairTread': material('stairTread', None, (0.26, 0.34, 0.62), 0.7),        # 계단 디딤판 (연청, 사진)
+    'stairBlue': material('stairBlue', None, (0.026, 0.038, 0.125), 0.55),      # 계단 챌판 — 래핑과 같은 색
+    'stairTread': material('stairTread', None, (0.060, 0.078, 0.175), 0.7),     # 계단 디딤판 — 단 지게 살짝만 밝게
     'rampLogo': material('rampLogo', image_base=f'{SHOTS}/apec_ramp_logo.png', rough=0.6),   # 경사면 가운데 로고 한 벌
     'nosing': material('nosing', None, (0.8, 0.9, 1), emit=(0.7, 0.85, 1.0), emit_strength=6),
     'fascia': material('fascia', emit_image=f'{SHOTS}/apec_real_fascia.png', emit_strength=1.3, rough=0.4),
@@ -185,7 +187,8 @@ while x <= 34:
 for i in range(3):                                     # 세 갈래 도넛
     a0 = i * 2 * PI / 3 + 0.09
     a1 = (i + 1) * 2 * PI / 3 - 0.09
-    ground.add(ring_segment(0.80, 1.28, a0, a1, 0.12), T(MED[0], 0.075, MED[1]), M['paver'], 1.2)
+    # 두께 0.12 를 0.075 에 걸어 윗면이 0.195 — 다른 연석(윗면 0.135)보다 6cm 솟아 있었다.
+    ground.add(ring_segment(0.80, 1.28, a0, a1, 0.05), T(MED[0], 0.085, MED[1]), M['paver'], 1.2)
 for i in range(20):                                    # 둘레의 방사형 직사각형 판
     a = 2 * PI * i / 20 + PI / 20
     ground.add(bevel_box(0.90, 0.05, 0.34, 0.01),
@@ -506,7 +509,7 @@ line_array(T(X1 - 1.2, 0, FRONT - 1.0))
 M['cladNavy'] = material('apCladNavy', None, (0.026, 0.038, 0.125), 0.72)   # 남색 클래딩 (#2E3C6B, cladtower_8)
 
 
-M['benchBlue'] = material('apBenchBlue', None, (0.024, 0.068, 0.328), 0.72)   # 코발트 청색 스커트 (#2B4A9B)
+M['benchBlue'] = material('apBenchBlue', None, (0.026, 0.040, 0.130), 0.72)   # 스커트 — 래핑과 같은 색
 M['caseAlu'] = material('apCaseAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8)
 
 
