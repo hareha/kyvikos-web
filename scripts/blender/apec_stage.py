@@ -72,11 +72,15 @@ M = {
     'screenWood': material('screenWood', None, (0.052, 0.030, 0.019), 0.55),    # 병풍·연설대 호두나무 (사진 확대)
     'hanjiPaper': material('hanjiPaper', image_base=f'{SHOTS}/apec_hanji.png', rough=0.88),   # 병풍 배접 한지
     'plinthRed': material('plinthRed', 'cotton_jersey', (0.32, 0.03, 0.04), 0.9),  # 붉은 천 좌대
-    'stairBlue': material('stairBlue', None, (0.026, 0.038, 0.125), 0.55),      # 계단 챌판 — 래핑과 같은 색
-    'stairTread': material('stairTread', None, (0.060, 0.078, 0.175), 0.7),     # 계단 디딤판 — 단 지게 살짝만 밝게
+    # 거칠기 0.55/0.7 이면 계단면이 하늘을 그대로 비춰서 남색이 아니라 회색으로 보였다.
+    # 갑판 카펫(0.85)과 같게 맞춘다.
+    'stairBlue': material('stairBlue', None, (0.026, 0.038, 0.125), 0.85),      # 계단 챌판 — 래핑과 같은 색
+    'stairTread': material('stairTread', None, (0.060, 0.078, 0.175), 0.85),    # 계단 디딤판 — 단 지게 살짝만 밝게
     'rampLogo': material('rampLogo', image_base=f'{SHOTS}/apec_ramp_logo.png', rough=0.6),   # 경사면 가운데 로고 한 벌
     'nosing': material('nosing', None, (0.8, 0.9, 1), emit=(0.7, 0.85, 1.0), emit_strength=6),
-    'fascia': material('fascia', emit_image=f'{SHOTS}/apec_real_fascia.png', emit_strength=1.3, rough=0.4),
+    # 치마 로고 띠는 **인쇄 현수막**이지 조명이 아니다. 발광으로 두니 MeshBasicMaterial 로
+    # 빛을 안 받고 늘 최대 밝기라, 주변 남색과 따로 놀며 혼자 환한 파랑으로 떴다.
+    'fascia': material('fascia', image_base=f'{SHOTS}/apec_real_fascia.png', rough=0.6),
     'led': material('led', emit_image=f'{SHOTS}/apec_real_led.png', emit_strength=1.8, rough=0.25),
     'ledFrame': material('ledFrame', None, (0.015, 0.015, 0.02), 0.5),
     'roofSkin': material('roofSkin', None, (0.88, 0.89, 0.88), 0.85),            # 흰 막지붕 (현장 사진)
@@ -206,7 +210,8 @@ stage = Assembly('stage', C_STATIC)
 stage.add(bevel_box(18.2, TOP - 0.04, 9, 0.02), T(CX, (TOP - 0.04) / 2, CZ), M['stageBody'])
 # 치마의 APEC·경상북도 로고 띠. fascia 판이 1.1m 짜리라 갑판(0.55m) 위로 0.58m 솟아 있었고,
 # 무대 위에서는 그 뒷면이 보여 글씨가 거울상으로 뒤집혀 나왔다. 치마 높이에 맞춰 눕힌다.
-emit.add(plane(18.0, TOP - 0.06), T(CX, (TOP - 0.06) / 2 + 0.02, FRONT + 0.006), M['fascia'], tile=None)
+# 발광이 아니라 빛 받는 인쇄물로 바꿨으니 EMISSIVE 가 아니라 stage 에 넣어야 라이트맵을 받는다
+stage.add(plane(18.0, TOP - 0.06), T(CX, (TOP - 0.06) / 2 + 0.02, FRONT + 0.006), M['fascia'], tile=None)
 emit.add(box(17.6, 0.035, 0.03), T(CX, 0.07, FRONT + 0.02), M['redStrip'])
 stage.add(box(18.2, 0.05, 9), T(CX, TOP - 0.025, CZ), M['deckCarpet'], 2)         # 연회색 카펫 갑판
 # 좌우 계단 (단 높이 0.3m, 앞끝에 흰 LED 라인)

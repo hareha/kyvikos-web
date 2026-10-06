@@ -1,12 +1,20 @@
 export { project, views } from './data.js';
 export { build } from './scene.js';
 
+// 행사 당일 하늘 — 사진 EXIF 로 날짜·시각을 확인했다.
+//   결과물 폴더 233장 중 야간 컷이 **2025-10-30 18:00~20:00 KST** 에 몰려 있다.
+// 황룡원(35.846N, 129.278E) 2025-10-30 19:00 KST 의 달 (Meeus 저정밀 해로 계산):
+//   고도 35.5° / 방위 178.9° (정남) / 거리 386,118km / 겉보기지름 0.516° / 위상 58% 상현 지나 밤
+// 씬 축: +x = 북서(315°), +z = 북동(45°) 이므로
+//   x = cos h · 0.7071 · (cosA - sinA) = -0.587
+//   z = cos h · 0.7071 · (cosA + sinA) = -0.565
+//   y = sin h = 0.581
 export const env = {
   height: 90,
-  sky: { zenith: '#000000', horizon: '#04050a' },   // 현장 사진: 달·별 없는 검은 하늘
-  stars: false,
+  sky: { zenith: '#02030a', horizon: '#070a14', moon: [-0.587, 0.581, -0.565] },
+  stars: true,
   fog: 0.0026,
-  exposure: 1,
+  exposure: 1.35,
   hdri: 'moonless_golf',
   envIntensity: 0.35,
   // Blender(AgX)에서 베이크한 장면
