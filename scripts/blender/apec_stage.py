@@ -121,6 +121,11 @@ SRC_SPEAKER = props.load('f3209a6a45b844df92560099f982a508', 'src_speaker', heig
 SRC_LANTERN = props.load('4e674d91b33a450781aebd9c490b0f05', 'src_lantern', height=1.9, coll=C_SRC)
 SRC_MOVER = props.load('3f838303f817454e9be539e244d039ac', 'src_mover', height=0.42, parts=[0, 5, 6, 7], coll=C_SRC)
 SRC_WASH = props.load('3f838303f817454e9be539e244d039ac', 'src_wash', width=0.36, parts=[1, 2], coll=C_SRC)
+# 중계카메라 — 상자·원통으로 깎아 만들던 것을 실제 모델로 교체 (CREDITS.md)
+SRC_TRIPOD = props.load('bd4c17d17c394c688cea2294bafc7594', 'src_tripod', height=1.45, coll=C_SRC)
+# Object_4(인덱스 15) 는 모델에 딸려 온 2.13m 바닥판이라 뺀다
+SRC_CAM = props.load('e1fec87c8ae0487f964d20de2559aa62', 'src_cam', width=0.46,
+                     parts=[i for i in range(42) if i != 15], coll=C_SRC)
 PLATE_H = max(v.co.z for v in SRC_PLATE.data.vertices)
 # 조명기 렌즈 재질을 발광으로 (워시: 따뜻한 흰빛, 무빙: 파랑)
 for src, lens in ((SRC_WASH, M['washLens']), (SRC_MOVER, M['blueLens'])):
@@ -463,17 +468,10 @@ def line_array(f, n=4):
 
 
 def tripod_cam(f, h=1.45):
-    """잔디에 세운 중계카메라 (삼각대 + ENG 카메라) — onsite_090013_030 에 무대 정면으로 두 대"""
-    for k in range(3):
-        g, m = tube(f @ V((0, h, 0)), f @ V((math.sin(k * 2.094) * 0.62, 0.02, math.cos(k * 2.094) * 0.62)), 0.019, 6)
-        boh.add(g, m, M['black'])
-    boh.add(cyl(0.045, 0.045, 0.5, 10), f @ T(0, h + 0.18, 0), M['black'], 1)     # 엘리베이터 컬럼
-    boh.add(box(0.2, 0.09, 0.3), f @ T(0, h + 0.47, 0), M['black'], 1)            # 헤드
-    cf = f @ T(0, h + 0.66, 0)
-    boh.add(bevel_box(0.27, 0.26, 0.68, 0.02), cf, M['black'], 1)                 # 본체
-    boh.add(cyl(0.095, 0.105, 0.36, 16), cf @ T(0, 0.02, 0.48, 0, PI / 2), M['black'], 1)   # 렌즈 후드
-    boh.add(box(0.19, 0.13, 0.02), cf @ T(0.19, 0.07, -0.12, 0, 0, 0.25), M['black'], 1)    # 뷰파인더
-    boh.add(box(0.1, 0.1, 0.26), cf @ T(0, 0.19, -0.2), M['black'], 1)            # 위 무선 송신기
+    """잔디에 세운 중계카메라 — onsite_090013_030 에 무대 정면으로 두 대.
+    상자·원통으로 깎아 만들던 것을 **내려받은 실제 모델**(삼각대 + 시네마 카메라)로 바꿨다."""
+    boh.add(mesh_source(SRC_TRIPOD), f, list(SRC_TRIPOD.data.materials))
+    boh.add(mesh_source(SRC_CAM), f @ T(0, h + 0.05, 0), list(SRC_CAM.data.materials))
 
 
 def camera_tower(f, h=2.6):
@@ -583,11 +581,7 @@ def side_tower(f, aim=None):
     cf = T(cp.x, 0, cp.z, math.atan2(tx_ - cp.x, tz_ - cp.z)) @ T(0, cp.y, 0, 0, pitch)
     boh.add(cyl(0.030, 0.034, 0.52, 10), f @ T(cx_, Y_TOP + 0.26, dzf - 0.06), M['scaffold'], 1)   # 가로대에서 올라오는 기둥
     boh.add(bevel_box(0.26, 0.10, 0.26, 0.02), f @ T(cx_, Y_TOP + 0.50, dzf - 0.06), M['black'], 1)  # 팬틸트 헤드
-    boh.add(bevel_box(0.34, 0.32, 0.50, 0.06), cf @ T(0, 0.14, -0.14), M['black'], 1)              # 레인커버 씌운 몸통
-    boh.add(bevel_box(0.28, 0.20, 0.26, 0.08), cf @ T(0.03, 0.34, -0.26), M['black'], 1)           # 커버 주름
-    boh.add(cyl(0.085, 0.10, 0.54, 14), cf @ T(0, 0.10, 0.30, 0, PI / 2), M['black'], 1)           # 긴 렌즈
-    boh.add(cyl(0.115, 0.115, 0.10, 14), cf @ T(0, 0.10, 0.60, 0, PI / 2), M['black'], 1)          # 후드
-    boh.add(bevel_box(0.15, 0.12, 0.13, 0.02), cf @ T(0.17, 0.26, -0.16), M['black'], 1)           # 뷰파인더
+    boh.add(mesh_source(SRC_CAM), cf @ T(0, 0.05, 0), list(SRC_CAM.data.materials))                # 내려받은 카메라 본체
 
 
 

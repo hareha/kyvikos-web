@@ -9,6 +9,8 @@
 - "Stage Speaker - black" by Sousinho — https://sketchfab.com/3d-models/stage-speaker-black-f3209a6a45b844df92560099f982a508 — CC Attribution (무대 스피커)
 - "Stone Lantern" by Jamie McFarlane — https://sketchfab.com/3d-models/stone-lantern-4e674d91b33a450781aebd9c490b0f05 — CC Attribution (석등)
 - "stage light" by danartri — https://sketchfab.com/3d-models/stage-light-3f838303f817454e9be539e244d039ac — CC Attribution (무빙헤드·워시 조명)
+- "Camera Tripod Slik 38T4" by ... — https://sketchfab.com/3d-models/bd4c17d17c394c688cea2294bafc7594 — CC Attribution (중계카메라 삼각대)
+- "Cinema Camera" by ... — https://sketchfab.com/3d-models/e1fec87c8ae0487f964d20de2559aa62 — CC Attribution (중계카메라 본체)
 - "12-channel audio mixer" by nofnol — https://sketchfab.com/3d-models/12-channel-audio-mixer-d3995c11393d439da2fe205db7caeb44 — CC Attribution (오디오 믹서)
 - "Laptop" by Aullwen — https://sketchfab.com/3d-models/laptop-7d870e900889481395b4a575b9fa8c3e — CC Attribution (노트북)
 - "White outdoor Umbrella" by Ngo.Phuoc.Truong — https://sketchfab.com/3d-models/white-outdoor-umbrella-d6c9705a4f8e421ea473196ab9910088 — CC Attribution (파라솔)
