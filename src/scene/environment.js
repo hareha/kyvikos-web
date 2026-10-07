@@ -27,6 +27,7 @@ export function createSky() {
       uniform vec3 uWire, uZenith, uHorizon, uMoonDir, uMoonLimb;
       uniform float uMoon, uMoonK, uMoonR;
       varying vec3 vDir;
+      float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       void main() {
         vec3 dir = normalize(vDir);
         float h = clamp(dir.y, 0.0, 1.0);
@@ -50,14 +51,30 @@ export function createSky() {
         float term = (1.0 - 2.0 * uMoonK) * sqrt(max(0.0, 1.0 - py * py));
         float lit = smoothstep(-0.05, 0.05, px - term);
         float mu = sqrt(max(0.0, 1.0 - min(r, 1.0) * min(r, 1.0)));
-        float ld = 0.82 + 0.18 * pow(mu, 0.35);                      // 가장자리만 살짝 어둡게
-        // 바다(어두운 현무암 평원) — 보름달 사진의 큰 얼룩 네 덩이
+        float ld = 0.74 + 0.26 * pow(mu, 0.45);                      // 가장자리 감광
+
+        // 바다(어두운 현무암 평원) — 지구에서 보는 앞면 배치 그대로.
+        // 전에는 본체를 1.9 로 띄워 놔서 톤매핑에서 전부 흰색으로 뭉개져 민 원으로 보였다.
+        // 밝기를 1.08 로 내리고 바다 대비를 키워야 무늬가 산다.
         float sea = 1.0;
-        sea -= 0.20 * (1.0 - smoothstep(0.0, 0.42, length(vec2(px + 0.10, py + 0.30))));
-        sea -= 0.16 * (1.0 - smoothstep(0.0, 0.34, length(vec2(px - 0.26, py + 0.06))));
-        sea -= 0.14 * (1.0 - smoothstep(0.0, 0.30, length(vec2(px + 0.34, py - 0.20))));
-        sea -= 0.11 * (1.0 - smoothstep(0.0, 0.26, length(vec2(px - 0.04, py - 0.42))));
-        vec3 body = vec3(1.9, 1.86, 1.72) * ld * sea * (lit + 0.035);  // 0.035 = 지구조(어두운 쪽)
+        sea -= 0.34 * (1.0 - smoothstep(0.180, 0.40, length(vec2(px + 0.30, py - 0.34))));  // 비의 바다
+        sea -= 0.30 * (1.0 - smoothstep(0.117, 0.26, length(vec2(px - 0.04, py - 0.30))));  // 맑음의 바다
+        sea -= 0.32 * (1.0 - smoothstep(0.135, 0.30, length(vec2(px - 0.22, py - 0.02))));  // 고요의 바다
+        sea -= 0.26 * (1.0 - smoothstep(0.077, 0.17, length(vec2(px - 0.52, py + 0.16))));  // 풍요·감로
+        sea -= 0.24 * (1.0 - smoothstep(0.059, 0.13, length(vec2(px - 0.62, py - 0.34))));  // 위난의 바다
+        sea -= 0.34 * (1.0 - smoothstep(0.198, 0.44, length(vec2(px + 0.56, py + 0.06))));  // 폭풍의 대양
+        sea -= 0.26 * (1.0 - smoothstep(0.117, 0.26, length(vec2(px + 0.26, py + 0.36))));  // 구름·습기의 바다
+        sea = clamp(sea, 0.30, 1.0);
+        // 잔 크레이터 얼룩 + 티코 광조
+        float n = hash21(vec2(px, py) * 7.3) * 0.5 + hash21(vec2(py, px) * 19.7) * 0.5;
+        sea *= 0.92 + 0.16 * n;
+        float td = length(vec2(px + 0.10, py + 0.62));
+        sea += 0.26 * (1.0 - smoothstep(0.0, 0.07, td))
+             + 0.12 * max(0.0, 1.0 - abs(td - 0.32) / 0.32) * 0.5;
+
+        // 본체 밝기 — 전에 1.9 로 띄워 놔서 톤매핑 어깨에서 전부 흰색으로 뭉개졌다.
+        // 0.72 로 내리면 톤매핑 뒤 밝은 면이 0.56~0.91 로 퍼져 바다 무늬가 그대로 산다.
+        vec3 body = vec3(0.72, 0.70, 0.655) * ld * sea * (lit + 0.030);  // 0.030 = 지구조(어두운 쪽)
         float halo = exp(-a / (R * 1.9)) * 0.16 + exp(-a / (R * 7.5)) * 0.035;   // 달무리
         sky += uMoon * (disc * body + halo * vec3(0.72, 0.78, 1.0));
 
