@@ -122,9 +122,9 @@ SRC_LANTERN = props.load('4e674d91b33a450781aebd9c490b0f05', 'src_lantern', heig
 SRC_MOVER = props.load('3f838303f817454e9be539e244d039ac', 'src_mover', height=0.42, parts=[0, 5, 6, 7], coll=C_SRC)
 SRC_WASH = props.load('3f838303f817454e9be539e244d039ac', 'src_wash', width=0.36, parts=[1, 2], coll=C_SRC)
 # 중계카메라 — 상자·원통으로 깎아 만들던 것을 실제 모델로 교체 (CREDITS.md)
-SRC_TRIPOD = props.load('bd4c17d17c394c688cea2294bafc7594', 'src_tripod', height=1.45, coll=C_SRC)
+SRC_TRIPOD = props.load('bd4c17d17c394c688cea2294bafc7594', 'src_tripod', height=1.45, decimate=0.30, coll=C_SRC)
 # Object_4(인덱스 15) 는 모델에 딸려 온 2.13m 바닥판이라 뺀다
-SRC_CAM = props.load('e1fec87c8ae0487f964d20de2559aa62', 'src_cam', width=0.46,
+SRC_CAM = props.load('e1fec87c8ae0487f964d20de2559aa62', 'src_cam', width=0.46, decimate=0.22,
                      parts=[i for i in range(42) if i != 15], coll=C_SRC)
 PLATE_H = max(v.co.z for v in SRC_PLATE.data.vertices)
 # 조명기 렌즈 재질을 발광으로 (워시: 따뜻한 흰빛, 무빙: 파랑)
