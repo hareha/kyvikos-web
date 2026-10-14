@@ -38,7 +38,7 @@ import bpy  # noqa: E402
 from mathutils import Vector as V  # noqa: E402
 
 import gallery  # noqa: E402
-import rooms as roomkit  # noqa: E402
+import partitions as roomkit  # noqa: E402
 importlib.reload(gallery)
 importlib.reload(roomkit)
 from gallery import srgb  # noqa: E402
@@ -221,13 +221,12 @@ for k in range(-7, 8):
 #    17개 구역(817m²)·18개 문·67점·거치물 16개. 모두 hall1_outline_v2 안에 들어가도록 검증됨.
 #    v1 과의 큰 차이: 가벽 기본 3.0m(특수벽 4.4~4.8m), 가벽은 천장까지 닿지 않고 위가 비어 있다,
 #    보이는 천장(소핏) 4.6m, 작품 중심 1.45~1.50m, 차단봉은 0.4m 기둥 + 바닥 레일.
-LAY = json.load(open(f'{REFS}/layout_v2.json'))
+LAY = json.load(open(f'{REFS}/layout_v3.json'))
 GL = LAY['globals']
 W = M
 WALL_T = GL['wall_thickness']
 SOFFIT = GL['visible_soffit_h']
-ROOMS = {z['id']: {'rect': tuple(z['rect']), 'color': W[z['walls']['n']],
-                   'sides': {k: W[v] for k, v in z['walls'].items()}, 'h': z['wall_h']} for z in LAY['zones']}
+ROOMS = {z['id']: {'rect': tuple(z['rect']), 'h': z['wall_h']} for z in LAY['zones']}
 ROOM_FLOOR = {z['id']: z['floor'] for z in LAY['zones']}
 ZONE = {z['id']: z for z in LAY['zones']}
 for rid, r in ROOMS.items():                                # 구역 바닥 (에폭시 위 카펫 8mm)
@@ -286,9 +285,12 @@ def disp_of(s):
 # projections_v3.md: 아시아 인터뷰 영상은 액자가 아니라 바닥부터 천장까지 벽 전체를 덮는
 #   맨벽 프로젝션이다 (5.0 x 4.2, 밑단 0, 가로세로 1.19:1). layout_v2 의 3.9 x 2.4 는 너무 작다.
 PROJ_OVERRIDE = {'interview_projection': dict(u=2.7, y=2.1, w=5.0, h=4.2)}
+HANDMADE = {'masonic_lodge'}
 DECALS, ART, FREE, PROJ = [], [], [], []
 for w_ in LAY['works']:
     if w_['zone'] not in ROOMS:
+        continue
+    if w_['slug'] in HANDMADE:          # 아래에서 따로 세우는 작품 (두 번 걸리면 z-fighting)
         continue
     slug, d = ALIAS.get(w_['slug'], w_['slug']), w_['display']
     if w_['slug'] in PROJ_OVERRIDE:
@@ -308,7 +310,7 @@ DECALS.append(('phooey', 'n', (_fg['a'][0] + _fg['b'][0]) / 2 - ROOMS['phooey'][
                1.55, abs(_fg['b'][0] - _fg['a'][0]), 2.9, gmat('fun_gallery_photo_mural')))
 print('zones', len(ROOMS), 'doors', len(DOORS), 'art', len(ART), 'decals', len(DECALS))
 
-WALLS = roomkit.build(walls, ROOMS, DOORS, DECALS, GL['wall_h_standard'], WALL_T, W['white'])
+WALLS = roomkit.build(walls, LAY, DECALS, W)
 
 # ── 작품 걸기 + 캡션 + 조명 ─────────────────────────────────────
 spots = []
@@ -403,6 +405,17 @@ gallery.extrude_card(works, rb @ T(0, q['base'][2] - 0.035 * q['size'][2], 0), c
 spots.append((rb @ T(0, 0, 0.8), 1.5, 1.9, 1.1, 0.0))
 gallery.stanchion_line(works, [(q['centre'][0] - 1.1, q['centre'][1] + 1.0), (q['centre'][0] + 1.1, q['centre'][1] + 1.0)], M)
 
+# Warriors 흰 방 남쪽 끝: 검은 상자 (개구부 6.4 x 3.2, 깊이 1.6, 자기 천장 + 헤더 + 낮은 단)
+#   03warriors_white_room_black_endwall_1.jpg — 흰 옆벽이 앞으로 나오고 그 사이가 검게 들어가 있다.
+#   사진에서 읽은 개구부는 7.0m 인데 벽 전체가 8.8m 이고 복도 입구가 들어가야 해서 6.4m 로 맞췄다.
+BBX0, BBX1, BBZ0, BBZ1, BBH, BBF = -19.7, -13.3, 1.8, 3.4, 3.2, 0.4
+for _sx in (BBX0, BBX1):                                           # 검은 옆 귀
+    walls.add(box(0.12, BBH, BBZ1 - BBZ0), T(_sx, BBH / 2, (BBZ0 + BBZ1) / 2), W['black'], 1)
+walls.add(plane(BBX1 - BBX0, BBZ1 - BBZ0), T((BBX0 + BBX1) / 2, BBH, (BBZ0 + BBZ1) / 2, 0, PI / 2), W['black'], 1)
+walls.add(box(BBX1 - BBX0 + 0.24, BBF, 0.3), T((BBX0 + BBX1) / 2, BBH + BBF / 2, BBZ0 + 0.15), W['black'], 1)
+walls.add(box(BBX1 - BBX0, 0.15, BBZ1 - BBZ0), T((BBX0 + BBX1) / 2, 0.075, (BBZ0 + BBZ1) / 2), W['black'], 1)
+spots.append((T((BBX0 + BBX1) / 2, 0, BBZ1 - 1.3, PI), 2.6, 3.1, 1.5, 0.0))
+
 # 빨간 방: 무신도 8폭 병풍 벽장 (붉은 속, 유리 앞, 아래 조명)
 vf = face('red', 'e', 3.8)
 for sx in (-1, 1):
@@ -433,6 +446,18 @@ gallery.stanchion_line(works, [(q['centre'][0] - 1.6, q['centre'][1] + 1.3), (q[
 q = fs('cartoons', 'partition')
 free_wall(q['a'], q['b'], q['height'], q['thickness'], W['coal'])
 hang(T((q['a'][0] + q['b'][0]) / 2, 0, q['a'][1] - q['thickness'] / 2, PI), 2.3, 1.648, 1.45, 'bombero', 'unframed_stretcher')
+
+# Cartoons 북쪽 구석: 백오브하우스로 들어가는 흰 커튼 서비스문 + 녹색 비상구등
+#   05cartoons_room_wide_2.jpg — 동선은 아니지만 와이드 샷에 늘 걸린다. 이 문이
+#   홀 한가운데 136㎡ 짜리 서비스 코어가 있다는 근거다.
+_sd = next(d for d in LAY['doors'] if d['zone'] == 'cartoons' and d['face'] == 'n')
+_cx0, _cx1, _cz0, _cz1 = ROOMS['cartoons']['rect']
+for k in range(24):
+    works.add(box((_sd['u1'] - _sd['u0']) / 24 + 0.02, _sd['h'], 0.12),
+              T(_cx0 + _sd['u0'] + (k + 0.5) * (_sd['u1'] - _sd['u0']) / 24, _sd['h'] / 2,
+                _cz0 + WALL_T / 2 + (0.04 if k % 2 else -0.04)), M['plinth'], 1)
+emit.add(box(0.5, 0.18, 0.02), T(_cx0 + (_sd['u0'] + _sd['u1']) / 2, _sd['h'] + 0.3, _cz0 + WALL_T / 2 + 0.03),
+         gmat('exit_sign_board', 0.6))
 
 # Museum Security: 벽 아래 밝은 단 + Masonic Lodge 를 깊은 상자 안에
 lg = fs('msec', 'ledge')
@@ -505,8 +530,9 @@ def pleated_curtain(x0, x1, z0, z1, h=3.4):
             works.add(box(0.13, h, L / n + 0.02), T((x0 + x1) / 2 + off, h / 2, min(z0, z1) + t_ * L), M['curtain'], 1)
 
 
-for _frm in ('msec', 'temple'):
-    _d = next(d for d in LAY['doors'] if d['frm'] == _frm)
+for _d in [d for d in LAY['doors'] if 'CURTAIN' in d['kind'].upper() or '커튼' in d['kind']]:
+    if _d['zone'] == 'epilogue':                 # 출구 커튼은 아래에서 따로
+        continue
     _x0, _x1, _z0, _z1 = ROOMS[_d['zone']]['rect']
     if _d['face'] == 's':
         pleated_curtain(_x1 - _d['u1'], _x1 - _d['u0'], _z1, _z1, _d['h'] + 0.2)
