@@ -144,7 +144,19 @@ if CFG.get('export_only'):
 else:
     manifest = {'groups': {}, 'materials': {}, 'objects': {}}
     for name, (names, size) in GROUPS.items():
-        objs = [bpy.data.objects[n] for n in names if n in bpy.data.objects]
+        # 빈 메시(면이 0개)는 unwrap·bake 가 RuntimeError 를 낸다. apec 의 extra_kit 처럼
+        # 어셈블리에 아무것도 안 담긴 경우가 생긴다 — 그룹에서 빼고 간다.
+        objs = [o for n in names if n in bpy.data.objects
+                for o in [bpy.data.objects[n]]
+                if o.type == 'MESH' and len(o.data.polygons) > 0]
+        skipped = [n for n in names if n in bpy.data.objects
+                   and (bpy.data.objects[n].type != 'MESH'
+                        or len(bpy.data.objects[n].data.polygons) == 0)]
+        if skipped:
+            print('  (빈 오브젝트 건너뜀:', skipped, ')')
+        if not objs:
+            print('  (그룹', name, '에 면 있는 오브젝트가 없다 — 건너뜀)')
+            continue
         unwrap(objs)
         manifest['groups'][name] = bake_group(name, objs, size)
         for o in objs:
