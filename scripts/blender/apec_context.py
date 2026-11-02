@@ -215,7 +215,7 @@ def window_band(cx, y, cz, half, h, bay=1.3):
     for k in range(n):
         off = -half + w * (k + 0.5)
         for ry, (px, pz) in ((0, (off, half)), (PI, (-off, -half)), (PI / 2, (half, -off)), (-PI / 2, (-half, off))):
-            glow.add(plane(w - 0.05, h), T(cx + px, y, cz + pz, ry), M['windowGlow'], tile=None)
+            pagoda_glow.add(plane(w - 0.05, h), T(cx + px, y, cz + pz, ry), M['windowGlow'], tile=None)
 
 
 def balustrade(asm, points, h=1.0, post=2.0):
@@ -238,6 +238,11 @@ def balustrade(asm, points, h=1.0, post=2.0):
 PX, PZ = -43, -11
 BASE_Y = 1.6
 pagoda = Assembly('pagoda', C_STATIC)
+# 탑의 발광체(불 켜진 창호·석등 불빛)는 공용 glow 가 아니라 **탑 전용** 어셈블리에 담는다.
+# 탑은 아래에서 오브젝트째로 0.78 배가 되는데, 공용 glow 는 다른 것들과 한 덩어리라
+# 같이 줄일 수가 없다. 그래서 창호가 몸체보다 넓게 삐져나오고 층 사이 허공에 떠 있었다.
+pagoda_glow = Assembly('pagoda_glow', C_EMIT)
+stone_lamp_pts = []                     # 석등 점조명은 배율을 안 뒤에 세운다
 
 # 흰 원형 동선 (위성사진의 흰 고리, 반지름 27.5) + 기단 주변 포장
 pagoda.add(cyl(27.5, 27.5, 0.2, 96), T(PX, 0.1, PZ), M['granite'], 1.5)   # 윗면 0.2 (잔디 0.12, 계단 첫 단 0.27)
@@ -273,12 +278,12 @@ def stone_lamp(x, z, s_=1.0):
     for i in range(4):
         a = OCT + i * PI / 2
         pagoda.add(box(0.20, 0.40, 0.05), f @ T(0.24 * math.sin(a), 1.50, 0.24 * math.cos(a), a), M['granite'], 1.2)
-    glow.add(cyl(0.18, 0.18, 0.34, 8), f @ T(0, 1.50, 0, OCT), M['lanternGlow'] if 'lanternGlow' in M else M['hanji'], 1)
+    pagoda_glow.add(cyl(0.18, 0.18, 0.34, 8), f @ T(0, 1.50, 0, OCT),
+                    M['lanternGlow'] if 'lanternGlow' in M else M['hanji'], 1)
     pagoda.add(cyl(0.52, 0.50, 0.07, 8), f @ T(0, 1.74, 0, OCT), M['granite'], 1.2)      # 옥개석 처마
     pagoda.add(cyl(0.16, 0.50, 0.20, 8), f @ T(0, 1.87, 0, OCT), M['granite'], 1.2)
     pagoda.add(sphere(0.09, 3), f @ T(0, 2.02, 0), M['granite'])
-    light(C_LIGHT, f'pagoda_lamp_s{round(x)}_{round(z)}', 'POINT', (x, 1.5 * s_, z),
-          energy=60, color=(1.0, 0.80, 0.52), size=0.16)
+    stone_lamp_pts.append((x, 1.5 * s_, z))      # 조명은 pag_pt 를 안 뒤에 (아래 축척 보정부)
 
 
 for lz in (-14.5, -8.0, 8.0, 14.5):                     # 기단 잔디 쪽 가장자리를 따라
@@ -343,7 +348,7 @@ for i in range(9):
     # 처마 네 귀 흰 조명
     for (sx, sz) in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
         p = (PX + sx * (hb - 0.1), eave + (1.1 if top else 0.9) - 0.1, PZ + sz * (hb - 0.1))
-        glow.add(sphere(0.24, 2), T(*p), M['eaveLamp'])
+        pagoda_glow.add(sphere(0.24, 2), T(*p), M['eaveLamp'])    # 탑과 같이 0.78 배
         eave_points.append(p)
     y += H
 
@@ -374,6 +379,14 @@ _pag.location = (PX * (1 - PAG_S), -PZ * (1 - PAG_S), 0.0)      # 기단 중심�
 def pag_pt(x, y, z):                                             # 탑에 매달린 것도 같은 배율로
     return (PX + (x - PX) * PAG_S, y * PAG_S, PZ + (z - PZ) * PAG_S)
 
+
+pagoda_glow.build(smooth=False)                                   # 탑 발광체도 같은 변환을 받는다
+_pg = bpy.data.objects['pagoda_glow']
+_pg.scale = _pag.scale
+_pg.location = _pag.location
+for _i, (_lx, _ly, _lz) in enumerate(stone_lamp_pts):            # 석등 점조명
+    light(C_LIGHT, f'pagoda_lamp_s{_i}', 'POINT', pag_pt(_lx, _ly, _lz),
+          energy=60 * PAG_S ** 2, color=(1.0, 0.80, 0.52), size=0.16 * PAG_S)
 
 TOP = (ty + 16.1) * PAG_S
 print('pagoda top', round(TOP, 1), '(x%.2f)' % PAG_S)
