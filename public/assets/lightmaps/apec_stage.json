@@ -143,6 +143,7 @@
     "lanterns": "objects",
     "backstage": "objects",
     "stage_kit": "objects",
+    "extra_kit": "objects",
     "foh_corridor": "objects",
     "site_stones": "objects",
     "pagoda": "pagoda",

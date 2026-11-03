@@ -32,8 +32,8 @@ import json
 import math
 import sys
 
-from shapely.geometry import Polygon, box as sbox
-from shapely.ops import unary_union
+from shapely.geometry import LineString, Point, Polygon, box as sbox
+from shapely.ops import triangulate as delaunay, unary_union
 
 ROOT = '/Users/hare/Documents/큐비크스홈페이지'
 REFS = f'{ROOT}/assets-src/refs/basquiat'
@@ -236,7 +236,32 @@ def derive_walls(polys):
                 shared.append((a, b, ln))
                 touch[a].append(ln)
                 touch[b].append(ln)
-    runs = [(a, b, ln) for (a, b, ln) in shared]
+    # 공유 구간은 "두 구역 경계가 닿았다"는 것뿐이라, hidden 처럼 **다른 구역 안에 박힌**
+    # 구역이 있으면 같은 선 위에 hidden-anatomy / anatomy-asia / hidden-asia 가 세 겹으로
+    # 나온다 (벽 79㎡ z-fighting 의 원인). 선 양쪽을 **찔러 보고** 실제로 붙어 있는 구역
+    # 한 쌍만 남긴다. 한 점이 여러 구역에 들면 가장 작은 구역이 진짜 그 방이다.
+    def side_zone(px, py):
+        hits = [z for z in ids if polys[z].contains(Point(px, py))]
+        return min(hits, key=lambda z: polys[z].area) if hits else None
+
+    runs, seen_lines = [], set()
+    for (a, b, ln) in shared:
+        m = ln.interpolate(0.5, normalized=True)
+        cs = list(ln.coords)
+        dx, dy = cs[-1][0] - cs[0][0], cs[-1][1] - cs[0][1]
+        n_ = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / n_, dx / n_
+        za2 = side_zone(m.x + nx * 0.15, m.y + ny * 0.15)
+        zb2 = side_zone(m.x - nx * 0.15, m.y - ny * 0.15)
+        if za2 is None and zb2 is None:
+            continue
+        if za2 is None:
+            za2, zb2 = zb2, None
+        key = (round(m.x, 2), round(m.y, 2), round(ln.length, 2))
+        if key in seen_lines:                 # 같은 자리에 이미 한 장 섰다
+            continue
+        seen_lines.add(key)
+        runs.append((za2, zb2, ln))
     for z in ids:
         bnd = polys[z].boundary
         if touch[z]:
@@ -245,6 +270,7 @@ def derive_walls(polys):
             runs.append((z, None, ln))
 
     walls = []
+    laid = {}            # (축, 그 선의 좌표) → 이미 벽이 선 구간들. 같은 자리에 두 번 안 세운다
     for (a, b, ln) in runs:
         if b == 'hidden' or (a == 'hidden' and b == 'anatomy'):
             a, b = 'hidden', (a if a != 'hidden' else b)
@@ -256,6 +282,34 @@ def derive_walls(polys):
             fb = face_of(b, p, q) if b else None
             if (a, fa) in OPEN and (b is None or (b, fb) in OPEN):
                 continue
+            # 같은 선 위에 이미 벽이 섰으면 그만큼 **잘라내고** 남은 부분만 세운다
+            ax_ = 0 if abs(q[0] - p[0]) >= abs(q[1] - p[1]) else 1
+            key = (ax_, round((p[1 - ax_] + q[1 - ax_]) / 2, 2))
+            lo_, hi_ = sorted((p[ax_], q[ax_]))
+            free = [(lo_, hi_)]
+            for (l2, h2) in laid.get(key, []):
+                nxt = []
+                for (c0, c1) in free:
+                    if h2 <= c0 or l2 >= c1:
+                        nxt.append((c0, c1))
+                        continue
+                    if l2 > c0:
+                        nxt.append((c0, l2))
+                    if h2 < c1:
+                        nxt.append((h2, c1))
+                free = nxt
+            free = [(c0, c1) for (c0, c1) in free if c1 - c0 > 0.05]
+            if not free:
+                continue
+            lo_, hi_ = max(free, key=lambda c: c[1] - c[0])
+            laid.setdefault(key, []).append((lo_, hi_))
+            span = q[ax_] - p[ax_]
+            if abs(span) > 1e-6:                     # 남은 구간만큼 선분을 다시 잡는다
+                ta = (lo_ - p[ax_]) / span
+                tb = (hi_ - p[ax_]) / span
+                ta, tb = sorted((max(0.0, min(1.0, ta)), max(0.0, min(1.0, tb))))
+                p, q = ([p[0] + (q[0] - p[0]) * ta, p[1] + (q[1] - p[1]) * ta],
+                        [p[0] + (q[0] - p[0]) * tb, p[1] + (q[1] - p[1]) * tb])
             h = max([face_h(a, fa)] + ([face_h(b, fb)] if b else []))
             ma, mb = face_mat(a, fa), (face_mat(b, fb) if b else 'white')
             if 'hidden' in (a, b):      # 전면 검정 방 — 바깥면도 검정으로 읽힌다
@@ -278,6 +332,50 @@ def big(g):
     if g.is_empty:
         return g
     return max(g.geoms, key=lambda q: q.area) if g.geom_type == 'MultiPolygon' else g
+
+
+def _densify(poly, step=0.5):
+    """들로네 삼각분할이 오목한 곳을 메우지 않도록 경계에 점을 더 찍는다"""
+    def ring(cs):
+        out = []
+        for a, b in zip(cs, cs[1:]):
+            ln = LineString([a, b])
+            n = max(1, int(ln.length / step))
+            out += [ln.interpolate(k / n, normalized=True).coords[0] for k in range(n)]
+        return out + [cs[-1]]
+    return Polygon(ring(list(poly.exterior.coords)),
+                   [ring(list(r.coords)) for r in poly.interiors])
+
+
+def tris_of(geom):
+    """폴리곤(구멍 포함, 멀티 가능) → 삼각형 목록. 바닥을 겹치지 않게 깔기 위한 것."""
+    out = []
+    for g in (geom.geoms if geom.geom_type.startswith('Multi') else [geom]):
+        if g.is_empty or g.area < 0.02:
+            continue
+        d = _densify(g)
+        for t in delaunay(d):
+            if d.contains(Point(t.centroid)) and t.area > 1e-4:
+                out.append([[round(x, 3), round(y, 3)] for x, y in list(t.exterior.coords)[:3]])
+    return out
+
+
+def floor_patches(polys):
+    """바닥을 **겹치지 않게** 조각낸다.
+
+    v4 에서 홀 전체 에폭시 한 장 위에 구역 바닥 19장을 8mm 띄워 얹었더니
+    1,180㎡ 가 z-fighting 으로 잡혔다. 여기서 미리 빼서 내보낸다:
+      - anatomy 에서 그 안에 박힌 hidden 을 뺀다
+      - 홀 에폭시는 **구역이 안 덮은 자투리에만** 깐다
+    """
+    zp = {z: polys[z] for z in polys}
+    zp['anatomy'] = zp['anatomy'].difference(zp['hidden'])
+    rest = HALL.difference(unary_union(list(zp.values())))
+    patches = [{'mat': Z[z][4], 'zone': z, 'tris': tris_of(zp[z])} for z in zp]
+    patches.append({'mat': 'epoxy', 'zone': '_hall_rest', 'tris': tris_of(rest)})
+    n = sum(len(p['tris']) for p in patches)
+    print(f'   바닥 조각 {n}개 (구역 {len(zp)} + 자투리 {rest.area:.0f}㎡), 겹침 없음')
+    return patches
 
 
 def main():
@@ -333,6 +431,7 @@ def main():
                      'front': f, 'back': bk, 'why': w}
                     for (i, zz, a, b, t, h, f, bk, w) in ISLANDS],
         'temple_wedge': TEMPLE_WEDGE,
+        'floor_patches': floor_patches(polys),
         'walls': walls,
         'doors': [{'zone': z, 'face': sd, 'u0': u0, 'u1': u1, 'h': h, 'kind': k, 'conf': c,
                    'frm': FRM.get((z, sd), z), 'to': TO.get((z, sd), '')}

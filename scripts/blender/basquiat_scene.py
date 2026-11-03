@@ -147,7 +147,19 @@ def poly_face(asm, pts, y, mat, down=False, tile=2.0):
     asm.add(build, T(0, y, 0), mat, tile)
 
 
-poly_face(floor, OUTLINE, 0.0, M['epoxy'], tile=3)                      # 홀 맨바닥은 흰 유광 에폭시
+def tri_soup(asm, tris, y, mat, tile=3.0):
+    """겹치지 않게 미리 잘라 둔 삼각형 목록을 한 겹으로 깐다 (layout_v4 의 floor_patches)"""
+    def build(bm):
+        for t in tris:
+            vs = [bm.verts.new((x, 0, z)) for x, z in t]
+            f = bm.faces.new(vs)
+            f.normal_update()
+            if f.normal.y < 0:
+                f.normal_flip()
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+    asm.add(build, T(0, y, 0), mat, tile)
+
+
 COVE = 0.9
 for i in range(N):
     (x1, z1), (x2, z2) = OUTLINE[i], OUTLINE[(i + 1) % N]
@@ -231,8 +243,32 @@ SOFFIT = GL['visible_soffit_h']
 ROOMS = {z['id']: {'rect': tuple(z['rect']), 'h': z['wall_h']} for z in LAY['zones']}
 ROOM_FLOOR = {z['id']: z['floor'] for z in LAY['zones']}
 ZONE = {z['id']: z for z in LAY['zones']}
-for _z in LAY['zones']:                                     # 구역 바닥 (에폭시 위 카펫 8mm)
-    poly_face(floor, _z['poly'], 0.008, M[_z['floor']], down=False, tile=3)
+# 바닥: 예전에는 홀 전체 에폭시 한 장 위에 구역 바닥 19장을 8mm 띄워 얹었는데,
+# 그 겹침만으로 z-fighting 이 1,180㎡ 였다. 이제 생성기가 **겹치지 않게 미리 잘라** 주므로
+# 전부 같은 높이(y=0)에 한 겹으로 깐다 (홀 에폭시는 구역이 안 덮은 자투리에만).
+for _p in LAY['floor_patches']:
+    tri_soup(floor, _p['tris'], 0.0, M[_p['mat']], tile=3)
+
+
+_RUNS = {}
+for _w in LAY['walls']:                      # (구역, 면) → 그 면에 실제로 선 벽 구간들
+    for (_zk, _fk) in (('za', 'fa'), ('zb', 'fb')):
+        _z0, _f0 = _w[_zk], _w[_fk]
+        if not _z0 or not _f0:
+            continue
+        _a = 0 if _f0 in 'ns' else 1
+        _RUNS.setdefault((_z0, _f0), []).append(sorted((_w['p'][_a], _w['q'][_a])))
+
+
+def on_wall(room, side, u, half):
+    """그 자리에 실제로 벽이 있나 (작품을 허공에 걸지 않기 위한 검사)"""
+    x0, x1, z0, z1 = ROOMS[room]['rect']
+    uu = U(room, side, u)
+    g = (x0 + uu) if side in 'ns' else (z0 + uu)
+    segs = _RUNS.get((room, side), [])
+    a, b = g - half, g + half
+    cov = sum(max(0.0, min(b, hi) - max(a, lo)) for lo, hi in segs)
+    return cov / max(1e-6, b - a) > 0.95
 
 
 def U(room, side, u):
@@ -312,8 +348,14 @@ def hang(frame, w, h, y, slug, display, spot=True, cap=True):
         spots.append((frame, w, h, y, depth))
 
 
+SKIPPED = []
 for (room, side, u, y, w, h, slug, disp) in ART:
+    if not on_wall(room, side, u, w / 2):      # 벽이 없는 자리면 걸지 않는다 — 허공에 뜨느니 빠지는 게 낫다
+        SKIPPED.append((room, side, u, slug))
+        continue
     hang(face(room, side, u), w, h, y, slug, disp)
+if SKIPPED:
+    print('벽이 없어 못 건 작품:', SKIPPED)
 
 # 프로젝션: 화면만 발광시키면 방이 어둡다 -> 화면 앞 면광원 + 천장 프로젝터 본체
 for i, (room, side, u, y, w_, h_, slug) in enumerate(PROJ):
@@ -490,6 +532,8 @@ ROW_Y = (1.07, 1.61, 2.15, 2.69)
 def notebook_grid(room, side, u0, cols):
     """흰 박스 액자 0.36 × 0.44, 피치 0.44 × 0.54, 4줄 (layout_v2 temple/grid)"""
     for c in range(cols):
+        if not on_wall(room, side, u0 + c * 0.44, 0.22):   # 벽이 없으면 건너뛴다 (허공 액자 방지)
+            continue
         for r, yy in enumerate(ROW_Y):
             f = face(room, side, u0 + c * 0.44) @ T(0, yy, 0)
             gallery._moulding(works, f, 0.36, 0.44, 0.04, 0.03, M['frameWhite'])
@@ -605,12 +649,26 @@ works.add(cyl(0.015, 0.015, 1.1, 8), sg @ T(0, 0.57, 0), M['rig'], 1)
 gallery.slab_art(works, sg @ T(0, 1.24, 0.012, 0, -0.2), 0.42, 0.3, 0.02, gmat('exit_sign_board'), M['rig'])
 
 # 구역 위 보이는 소핏 (아래를 보는 한 겹). 홀의 8.8m 천장은 가운데 열린 곳에만 보인다.
-for rid, r in ROOMS.items():
-    x0, x1, z0, z1 = r['rect']
+#   예전에는 구역 사각형을 0.6m 키운 판을 깔아서, 천장 높이가 같은 이웃끼리 겹쳐 z-fighting 이 났다.
+#   바닥과 같은 **겹치지 않는 조각**을 뒤집어 쓴다.
+_PATCH = {p['zone']: p['tris'] for p in LAY['floor_patches']}
+for rid in ROOMS:
     cg = ZONE[rid].get('ceiling', {})
     ch = cg.get('h', SOFFIT)
     cm = M['slot'] if cg.get('type') == 'dark_painted' else M['ceiling']
-    ceil.add(plane(x1 - x0 + 0.6, z1 - z0 + 0.6), T((x0 + x1) / 2, ch, (z0 + z1) / 2, 0, PI / 2), cm, 2)
+    tris = _PATCH.get(rid)
+    if not tris:
+        continue
+
+    def _down(bm, _t=tris):
+        for t in _t:
+            vs = [bm.verts.new((x, 0, z)) for x, z in t]
+            f = bm.faces.new(vs)
+            f.normal_update()
+            if f.normal.y > 0:
+                f.normal_flip()
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+    ceil.add(_down, T(0, ch, 0), cm, 2)
 
 # ── projections_v3: 남색 매입 모니터 세 대 + 숨겨진 상징 UV 헤일로 ────────────
 def navy_monitor(room, side, u, bottom, sw, sh, slug, reveal=0.07):
@@ -737,7 +795,7 @@ for i in range(N):
 # 소개서 아트샵 렌더·현장 사진: 흰 접힌 벽(약 12m, 높이 2.9m) 하단 1m 버건디 띠, 벽 글자, 걸린 후디·티셔츠,
 # 카운터(버건디 하부·흰 윗판), 사진 기둥 4개, 검은 원형 테이블, 둥근 모서리의 기울어진 사진 판
 SH_PTS = [(-6.0, 20.2), (0.0, 20.6), (6.0, 21.2), (12.0, 20.6)]
-foyer.add(box(22.0, 0.1, 5.2), T(3.0, -0.08, 19.8), M['foyerFloor'], 2)
+foyer.add(box(22.0, 0.1, 4.0), T(3.0, -0.08, 20.4), M['foyerFloor'], 2)   # 홀 바닥(z<18.4)과 안 겹치게
 for k, ((xa, za), (xb, zb)) in enumerate(zip(SH_PTS, SH_PTS[1:])):
     slug = 'shop_title_wall_left' if k == 0 else 'shop_title_wall_right' if k == 1 else None
     L = math.hypot(xb - xa, zb - za)

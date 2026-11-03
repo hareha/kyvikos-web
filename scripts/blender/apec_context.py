@@ -43,11 +43,19 @@ C_LIGHT = bpy.data.collections['LIGHTS']
 C_CAM = bpy.data.collections['CAMERAS']
 # 이 목록에서 빠진 어셈블리는 실행할 때마다 .001 .002 로 중복 생성돼 쌓인다
 # (site_stones / foh_corridor 가 그랬다 — 파일 용량도 같이 불었다).
-for name in ('pagoda', 'halls', 'garden', 'yeonsu', 'yeonsu_ne', 'yeonsu_nw', 'pines', 'pine_needles',
+for name in ('pagoda', 'pagoda_glow', 'halls', 'garden', 'yeonsu', 'yeonsu_ne', 'yeonsu_nw',
+             'pines', 'pine_needles',
              'tree_leaves', 'backstage', 'context_emissive', 'context_glass',
              'foh_corridor', 'foh_emissive', 'site_stones', 'site_stones_emissive'):
     if name in bpy.data.objects:
         bpy.data.objects.remove(bpy.data.objects[name], do_unlink=True)
+# .001 .002 로 이미 쌓인 사본도 치운다 (pagoda_glow 가 목록에 없어 11/02 이후 복제되고 있었다)
+for o in [o for o in bpy.data.objects
+          if o.type == 'MESH' and '.' in o.name and o.name.rsplit('.', 1)[-1].isdigit()
+          and o.name.rsplit('.', 1)[0] in ('pagoda', 'pagoda_glow', 'halls', 'garden', 'yeonsu',
+                                           'yeonsu_ne', 'yeonsu_nw', 'context_emissive', 'context_glass',
+                                           'foh_corridor', 'foh_emissive', 'site_stones')]:
+    bpy.data.objects.remove(o, do_unlink=True)
 for o in [o for o in C_LIGHT.objects if o.name.startswith(('pagoda_', 'hall_', 'site_'))]:
     bpy.data.objects.remove(o, do_unlink=True)
 for o in [o for o in C_CAM.objects if o.name in ('cam_terrace', 'cam_console')]:
@@ -66,9 +74,9 @@ M = {
     'wallWood': mat('wallWood', 'dark_wooden_planks', (0.058, 0.030, 0.021), 0.78),
     'goldRail': mat('goldRail', image_base=f'{SHOTS}/apec_rail.png', rough=0.4),
     'deck': mat('deckWood', 'dark_wooden_planks', (0.085, 0.048, 0.030), 0.75),
-    'gold': mat('finialGold', None, (0.85, 0.62, 0.25), 0.3, 1.0),
+    'gold': mat('finialGold', None, (0.85, 0.62, 0.25), 0.3, 1.0, bump='metal_plate', bump_strength=0.30, bump_rough=0.05),
     'windowGlow': mat('windowGlow', emit_image=f'{SHOTS}/apec_windows.png', emit_strength=2.2, rough=0.5),
-    'eaveLamp': mat('eaveLamp', None, (1, 1, 1), emit=(1.0, 0.97, 0.9), emit_strength=80),
+    'eaveLamp': mat('eaveLamp', None, (1, 1, 1), emit=(1.0, 0.97, 0.9), emit_strength=80, bump='painted_plaster_wall', bump_strength=0.25, bump_rough=0.03),
     # 석재
     'granite': mat('granite', 'rock_tile_floor_02', (0.86, 0.86, 0.84), 0.8),
     'balustrade': mat('balustrade', 'marble_01', (0.92, 0.92, 0.9), 0.6),
@@ -79,16 +87,16 @@ M = {
     'door': mat('gateDoor', 'dark_wooden_planks', (0.62, 0.3, 0.16), 0.7),
     'fret': mat('fretRail', image_base=f'{SHOTS}/apec_fret.png', rough=0.6),
     'hanji': mat('hanji', emit_image=f'{SHOTS}/apec_hanji.png', emit_strength=1.6, rough=0.8),
-    'plaque': mat('plaque', None, (0.08, 0.05, 0.04), 0.5),
+    'plaque': mat('plaque', None, (0.08, 0.05, 0.04), 0.5, bump='metal_plate', bump_strength=0.30, bump_rough=0.05),
     # 연수동
     'stoneWall': mat('stoneWall', 'painted_plaster_wall', (0.8, 0.8, 0.77), 0.8),
     'terrace': mat('terraceStone', 'rock_tile_floor_02', (0.7, 0.7, 0.68), 0.75),
     'steelRail': mat('steelRail', None, (0.35, 0.36, 0.38), 0.4, 0.8),
-    'parasol': mat('parasol', None, (0.9, 0.88, 0.82), 0.8),
+    'parasol': mat('parasol', None, (0.9, 0.88, 0.82), 0.8, bump='cotton_jersey', bump_strength=0.5, bump_rough=0.06),
     # 정원
-    'water': mat('pond', None, (0.02, 0.035, 0.04), 0.08),
+    'water': mat('pond', None, (0.02, 0.035, 0.04), 0.08, wave=9.0, wave_strength=0.30),
     'rock': mat('gardenRock', 'rock_tile_floor_02', (0.45, 0.43, 0.4), 0.9),
-    'shrub': mat('shrub', None, (0.03, 0.07, 0.03), 0.95, sheen=0.2),
+    'shrub': mat('shrub', None, (0.03, 0.07, 0.03), 0.95, sheen=0.2, bump='forest_leaves_03', bump_strength=0.9, bump_rough=0.10),
     'pineNeedle': mat('pineNeedle', None, (0.012, 0.03, 0.015), 0.95, sheen=0.2),
     'pineBark': mat('pineBark', 'dark_wooden_planks', (0.42, 0.22, 0.14), 0.9),
     'pineLeaf': mat('pineLeaf', 'leafy_grass', (0.16, 0.26, 0.12), 0.9, normal=1.4),
@@ -97,18 +105,18 @@ M = {
     'leaves': mat('treeLeaves', image_base=f'{SHOTS}/apec_leaves.png', color=(0.62, 0.7, 0.58), rough=0.8, alpha=True),
     'treeBark': mat('treeBark', 'dark_wooden_planks', (0.3, 0.26, 0.22), 0.9),
     'path': mat('pathStone', 'rock_tile_floor_02', (0.8, 0.79, 0.76), 0.8),
-    'skylight': mat('skylight', None, (0.55, 0.75, 0.8), 0.05, transmission=1.0),
+    'skylight': mat('skylight', None, (0.55, 0.75, 0.8), 0.05, transmission=1.0, bump='painted_plaster_wall', bump_strength=0.06, bump_rough=0.02),
     # 무대 뒤 · 콘솔
     'tank': mat('ballastTank', 'cotton_jersey', (0.03, 0.03, 0.035), 0.7, normal=0.6),
     'tent': mat('tentWhite', 'cotton_jersey', (0.9, 0.9, 0.88), 0.8, normal=0.4),
     'drape': mat('drapeGreen', 'cotton_jersey', (0.28, 0.34, 0.12), 0.9, normal=0.6),
-    'case': mat('roadCase', None, (0.03, 0.03, 0.035), 0.5),
-    'alu': mat('tentAlu', None, (0.8, 0.8, 0.82), 0.35, 1.0),
+    'case': mat('roadCase', None, (0.03, 0.03, 0.035), 0.5, bump='metal_plate_02', bump_strength=0.5, bump_rough=0.07),
+    'alu': mat('tentAlu', None, (0.8, 0.8, 0.82), 0.35, 1.0, bump='metal_plate', bump_strength=0.30, bump_rough=0.05),
     'uiLight': mat('uiLight', emit_image=f'{SHOTS}/apec_ui_light.png', emit_strength=2.0, rough=0.3),
     'uiAudio': mat('uiAudio', emit_image=f'{SHOTS}/apec_ui_audio.png', emit_strength=2.0, rough=0.3),
     'uiVideo': mat('uiVideo', emit_image=f'{SHOTS}/apec_ui_video.png', emit_strength=2.0, rough=0.3),
     'clipLamp': mat('clipLamp', None, (1, 1, 1), emit=(1.0, 0.92, 0.78), emit_strength=40),
-    'consoleBody': mat('consoleBody', None, (0.035, 0.037, 0.042), 0.45, 0.2),
+    'consoleBody': mat('consoleBody', None, (0.035, 0.037, 0.042), 0.45, 0.2, bump='metal_plate_02', bump_strength=0.4, bump_rough=0.06),
     'keyGrey': mat('keyGrey', None, (0.12, 0.12, 0.13), 0.5),
     'keyAmber': mat('keyAmber', None, (1, 0.6, 0.2), emit=(1.0, 0.55, 0.15), emit_strength=6),
     'keyWhite': mat('keyWhite', None, (1, 1, 1), emit=(0.9, 0.92, 1.0), emit_strength=5),
@@ -733,18 +741,22 @@ ye_nw = Assembly('yeonsu_nw', C_STATIC)
 FLOOR = 4.0
 ROOF_Y = FLOOR * 3
 DEPTH = 0.45        # 기둥·띠가 몸체에서 나온 깊이
+# 벽면 패널(창 위아래 메움·스팬드럴·아치 위 벽)은 띠·기둥보다 **8cm 안쪽**으로 물린다.
+# 전에는 전부 같은 깊이라 앞면이 정확히 같은 평면에 겹쳐(간격 0.0) 웹에서 지글거렸다.
+# 실제 석재 외장도 수평 띠가 벽면보다 나와 있는 단차가 있다.
+PANEL = DEPTH - 0.16
 # 외벽 화강석 — 사진(016)의 벽면은 R:G:B = 1.00 : 0.967 : 0.976 인 **중성 회색**이다.
 # 폴리헤이븐 granite_tile_03 은 평균 (0.390, 0.353, 0.319) 짜리 갈색이라 곱색으로는
 # 갈색기가 안 빠졌다. 그 텍스처의 휘도만 남기고 사진에서 잰 색조로 다시 입힌
 # granite_grey (평균 0.615/0.595/0.600) 를 따로 만들어 쓴다.
 # 타일 1.2m = 가로 3 x 세로 2 블록 -> 켜 높이 0.60m. 사진 실측 0.55~0.60m 과 맞는다.
 M['granite_clad'] = mat('graniteClad', 'granite_grey', (1.0, 1.0, 1.0), 0.7)
-M['winFrame'] = mat('winFrame', None, (0.030, 0.031, 0.034), 0.35, 0.75)      # 짙은 아노다이즈 알루미늄 창틀
-M['winGlass'] = mat('winGlass', None, (0.021, 0.026, 0.033), 0.08, 0.15)      # 짙은 복층유리
+M['winFrame'] = mat('winFrame', None, (0.030, 0.031, 0.034), 0.35, 0.75, bump='metal_plate', bump_strength=0.35, bump_rough=0.06)      # 짙은 아노다이즈 알루미늄 창틀
+M['winGlass'] = mat('winGlass', None, (0.021, 0.026, 0.033), 0.08, 0.15, bump='painted_plaster_wall', bump_strength=0.08, bump_rough=0.02)      # 짙은 복층유리
 # 연수동 아케이드 전용 — 사진에서 창틀은 짙은 색이 아니라 **밝은 회색 금속**이고,
 # 유리는 안쪽 커튼 때문에 짙은 갈색이다 (016 개구 안 평균 0.281/0.217/0.170 = 따뜻한 갈색).
-M['arcFrame'] = mat('arcFrame', None, (0.44, 0.45, 0.46), 0.40, 0.5)
-M['arcGlass'] = mat('arcGlass', None, (0.055, 0.042, 0.032), 0.10, 0.10)
+M['arcFrame'] = mat('arcFrame', None, (0.44, 0.45, 0.46), 0.40, 0.5, bump='metal_plate', bump_strength=0.35, bump_rough=0.06)
+M['arcGlass'] = mat('arcGlass', None, (0.055, 0.042, 0.032), 0.10, 0.10, bump='painted_plaster_wall', bump_strength=0.08, bump_rough=0.02)
 ROOMS = [mat(f'roomGlass_{t}', emit_image=f'{SHOTS}/apec_room_{t}.png', emit_strength=1.1, rough=0.1) for t in 'abc']
 
 
@@ -764,7 +776,9 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=N
     xs = [0.9 + k * w for k in range(n + 1)]
     # 층 띠 (바닥 띠 + 층 사이 띠 + 난간벽)
     bands = [(0.0, base)] + [(k * fh - 0.45, k * fh + 0.85) for k in range(1, floors)] + [(h - 0.45, h + parapet)]
-    for y0, y1 in bands:
+    # 아케이드가 있는 면은 1층을 아치 기둥·스팬드럴이 통째로 채운다. 그 위에 바닥 돌띠를
+    # 한 장 더 깔면 **같은 평면에 두 겹**이 되어 1층 위가 지글거린다 (연수동 232㎡).
+    for y0, y1 in (bands[1:] if arcade else bands):
         asm.add(box(L - 1.8, y1 - y0, DEPTH), f @ T(L / 2, (y0 + y1) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
     # 1층은 창이 아니라 둥근 아치 열이다 (클라이언트 사진: 연수동 잔디 쪽 1층이 아케이드).
     # 아치 베이는 창 베이(7.6m)와 다르다 — 그 폭을 그대로 쓰면 반지름 3.2m 아치가
@@ -782,17 +796,24 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=N
             glow.add(plane(ow, spr - 0.18), f @ T(cx_, (spr + 0.18) / 2, -0.40), random.choice(ROOMS), tile=None)
             glow.add(ring_segment(0, r, 0, PI, 0.04), f @ T(cx_, spr, -0.40, 0, -PI / 2), random.choice(ROOMS), tile=None)
             asm.add(ring_segment(r, r + 0.45, 0, PI, DEPTH), f @ T(cx_, spr, -DEPTH, 0, -PI / 2), M['granite_clad'], 1.2)
-            asm.add(box(wa - 0.02, hb - top - 0.45, DEPTH),               # 아치 위 벽
-                    f @ T(cx_, (top + 0.45 + hb) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+            asm.add(box(wa - 0.02, hb - top - 0.45, PANEL),               # 아치 위 벽 (띠보다 8cm 안쪽)
+                    f @ T(cx_, (top + 0.45 + hb) / 2, -0.16 - PANEL / 2), M['granite_clad'], 1.2)
             for sx_ in (-1, 1):                                          # 아치 옆 스팬드럴 (반원 밖 모서리)
-                asm.add(box((wa - ow) / 2 - 0.01, top - spr + 0.45, DEPTH),
-                        f @ T(cx_ + sx_ * (ow + wa) / 4, (spr + top + 0.45) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+                asm.add(box((wa - ow) / 2 - 0.01, top - spr + 0.45, PANEL),
+                        f @ T(cx_ + sx_ * (ow + wa) / 4, (spr + top + 0.45) / 2, -0.16 - PANEL / 2), M['granite_clad'], 1.2)
                 asm.add(box((wa - ow) / 2 - 0.01, spr, DEPTH),            # 아치 사이 피어
                         f @ T(cx_ + sx_ * (ow + wa) / 4, spr / 2, -DEPTH / 2), M['granite_clad'], 1.2)
             asm.add(box(ow + 0.55, 0.12, DEPTH + 0.16), f @ T(cx_, spr, -DEPTH / 2 - 0.08), M['granite_clad'], 1.2)   # 기공선 돌띠
             asm.add(box(ow, 0.22, 0.55), f @ T(cx_, 0.11, -0.28), M['granite'], 1.5)                                 # 아치 아래 디딤돌
-        for sx_ in (0.8, 0.8 + na * wa):                                 # 양 끝 마구리 벽
-            asm.add(box(0.8, hb, DEPTH), f @ T(sx_ - 0.4 if sx_ > L / 2 else sx_ - 0.4, hb / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+        # 양 끝 마구리 벽 — 아치 열 **바깥**만 채운다. 전에는 오른쪽 벽이 왼쪽과 같은 식으로
+        # 놓여 아치 열 안으로 0.7m 물려 들어가 돌띠와 겹쳤다.
+        for sx_ in (0.8, 0.8 + na * wa):
+            if sx_ < L / 2:
+                cxe, we = sx_ / 2, sx_
+            else:
+                cxe, we = (sx_ + L) / 2, L - sx_
+            if we > 0.02:
+                asm.add(box(we, hb, DEPTH), f @ T(cxe, hb / 2, -DEPTH / 2), M['granite_clad'], 1.2)
     # 창: 기둥·띠 사이 구멍마다 안쪽 유리(방 불빛) + 창살
     for fl in range(1 if arcade else 0, floors):
         ya = base if fl == 0 else fl * fh + 0.85
@@ -801,7 +822,7 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=N
             wa_, wb_ = win[fl]
             for (fa, fb) in ((ya, wa_), (wb_, yb)):
                 if fb - fa > 0.02:
-                    asm.add(box(L - 1.8, fb - fa, DEPTH), f @ T(L / 2, (fa + fb) / 2, -DEPTH / 2), M['granite_clad'], 1.2)
+                    asm.add(box(L - 1.8, fb - fa, PANEL), f @ T(L / 2, (fa + fb) / 2, -0.16 - PANEL / 2), M['granite_clad'], 1.2)
             ya, yb = wa_, wb_
         if ribbon and fl == floors - 1:
             # 귀빈동 2층: 중간에 돌기둥이 하나도 없고 가는 멀리언만 선 통창이다
@@ -810,9 +831,9 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=N
             ow, oh = xb - xa, yb - ya
             cx_, cy_, zz = (xa + xb) / 2, (ya + yb) / 2, -recess
             glow.add(plane(ow, oh), f @ T(cx_, cy_, zz - 0.34), random.choice(ROOMS), tile=None)
-            asm.add(box(ow, oh, 0.012), f @ T(cx_, cy_, zz - 0.20), M['winGlass'], 1)
+            asm.add(box(ow, oh, 0.012), f @ T(cx_, cy_, zz - 0.245), M['winGlass'], 1)
             for by_ in (ya - 0.03, yb + 0.03):
-                asm.add(box(ow + 0.12, 0.11, 0.11), f @ T(cx_, by_, zz - 0.15), M['winFrame'], 1)
+                asm.add(box(ow + 0.12, 0.11, 0.11), f @ T(cx_, by_, zz - 0.135), M['winFrame'], 1)
             nm = max(2, round(ow / 2.3))
             for j in range(1, nm):
                 asm.add(box(0.08, oh, 0.12), f @ T(xa + j * ow / nm, cy_, zz - 0.155), M['winFrame'], 1)
@@ -824,7 +845,7 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=N
                     asm.add(box(0.9, oh + 0.9, d1 - 0.9), f @ T(sx_, cy_ + 0.45, -(0.9 + d1) / 2), M['granite_clad'], 1.2)
                 asm.add(box(ow + 0.9, 0.45, d1 - DEPTH), f @ T(cx_, yb + 0.22, -(DEPTH + d1) / 2), M['granite_clad'], 1.2)
             else:   # 창대는 벽면보다 2cm 나오게 (벽면과 같은 평면이면 z-fighting)
-                asm.add(box(ow + 0.2, 0.09, 0.38), f @ T(cx_, ya - 0.10, -0.17), M['granite_clad'], 1.2)
+                asm.add(box(ow + 0.2, 0.09, 0.44), f @ T(cx_, ya + 0.045, -0.14), M['granite_clad'], 1.2)
             continue
         # 칸 기둥은 띠와 띠 사이 구간에만 (띠와 같은 바깥면에서 겹치지 않게 → z-fighting 없음)
         for x in xs[1:-1]:
@@ -837,15 +858,15 @@ def wall(asm, sx, sz, L, ry, h, floors, parapet=1.3, arcade=False, y0=0.0, win=N
             glow.add(plane(ow, oh), f @ T(cx_, cy_, -0.34), random.choice(ROOMS), tile=None)
             # 전에는 발광 판 하나 + 창대뿐이라 멀리서 보면 납작한 네모 불빛이었다.
             # 실제 연수동은 짙은 알루미늄 창틀에 중간 멀리언·가로 창틀이 들어간 커튼월이다.
-            asm.add(box(ow, oh, 0.012), f @ T(cx_, cy_, -0.20), M['winGlass'], 1)          # 유리면
+            asm.add(box(ow, oh, 0.012), f @ T(cx_, cy_, -0.245), M['winGlass'], 1)        # 유리면 (창틀 뒤로 4cm)
             for (bw, bh, by) in ((ow + 0.12, 0.11, ya - 0.03), (ow + 0.12, 0.11, yb + 0.03)):
-                asm.add(box(bw, bh, 0.11), f @ T(cx_, by, -0.15), M['winFrame'], 1)        # 상·하 창틀
+                asm.add(box(bw, bh, 0.11), f @ T(cx_, by, -0.135), M['winFrame'], 1)       # 상·하 창틀 (벽면 -0.0 과 패널 -0.16 사이)
             for sx_ in (xa - 0.05, xb + 0.05):
-                asm.add(box(0.1, oh + 0.16, 0.11), f @ T(sx_, cy_, -0.15), M['winFrame'], 1)   # 좌·우 선틀
+                asm.add(box(0.11, oh + 0.16, 0.11), f @ T(sx_, cy_, -0.135), M['winFrame'], 1) # 좌·우 선틀
             for j in range(1, max(2, round(ow / 1.35))):                                   # 세로 멀리언
                 asm.add(box(0.07, oh, 0.10), f @ T(xa + j * ow / max(2, round(ow / 1.35)), cy_, -0.155), M['winFrame'], 1)
             asm.add(box(ow, 0.07, 0.10), f @ T(cx_, ya + oh * 0.62, -0.155), M['winFrame'], 1)   # 가로 창틀
-            asm.add(box(ow + 0.2, 0.09, 0.34), f @ T(cx_, ya - 0.10, -0.17), M['granite_clad'], 1.2)   # 석재 창대
+            asm.add(box(ow + 0.2, 0.09, 0.40), f @ T(cx_, ya + 0.045, -0.14), M['granite_clad'], 1.2)  # 석재 창대 (개구부 밑단에 얹음)
 
 
 def block(asm, x0, x1, z0, z1, h, floors, parapet=1.3, terrace=True, arcade=None, y0=0.0, win=None, rail=True,
@@ -930,8 +951,8 @@ def yeonsu_front(asm, f, L, h1, bays=6, pitch=6.85, ow=4.50, spr=2.65, ring=0.37
         # 개구 안: 유리는 표면에, 방 불빛은 그 뒤로 (표면에 발광 이미지를 붙이면 형광 줄무늬가 된다)
         glow.add(plane(ow, spr - 0.25), f @ T(cx_, (spr + 0.25) / 2, -0.85), random.choice(ROOMS), tile=None)
         glow.add(ring_segment(0, gi, 0, PI, 0.04), f @ T(cx_, spr, -0.85, 0, -PI / 2), random.choice(ROOMS), tile=None)
-        asm.add(box(ow, spr - 0.25, 0.02), f @ T(cx_, (spr + 0.25) / 2, -0.26), M['arcGlass'], 1)
-        asm.add(ring_segment(0, gi, 0, PI, 0.02), f @ T(cx_, spr, -0.25, 0, -PI / 2), M['arcGlass'], 1)
+        asm.add(box(ow, spr - 0.25, 0.02), f @ T(cx_, (spr + 0.25) / 2, -0.33), M['arcGlass'], 1)
+        asm.add(ring_segment(0, gi, 0, PI, 0.02), f @ T(cx_, spr, -0.32, 0, -PI / 2), M['arcGlass'], 1)
         # ring_segment 은 **기준면에서 뒤로** h 만큼 자란다 (rx=-PI/2 가 +y 를 -z 로 보낸다).
         # 창살 아치는 -0.22 에 걸어 유리(앞면 -0.25)보다 앞에 오게 한다. 전에 -0.30 에
         # 걸었더니 통째로 유리 뒤에 묻혀서 부채창 안쪽 반원이 아예 안 보였다.
@@ -961,9 +982,9 @@ def yeonsu_front(asm, f, L, h1, bays=6, pitch=6.85, ow=4.50, spr=2.65, ring=0.37
                     f @ T(cx_ + sx_ * (pitch + 2 * rr) / 4, spr / 2, -DEPTH / 2), M['granite_clad'], 1.2)
         # 스팬드럴 — 아치 바깥선을 따라가는 한 장의 면.
         # 상자를 층층이 쌓으면 계단처럼 각지고 모서리마다 세로 줄이 생긴다.
-        asm.add(_spandrel(cx_, spr, rr, h1, pitch / 2, DEPTH), f @ T(0, 0, -DEPTH), M['granite_clad'], 1.2)
+        asm.add(_spandrel(cx_, spr, rr, h1 - 0.34, pitch / 2, DEPTH), f @ T(0, 0, -DEPTH), M['granite_clad'], 1.2)
         asm.add(box(ow + 0.5, 0.22, 0.45), f @ T(cx_, 0.11, -0.24), M['granite'], 1.5)    # 디딤돌
-    for (a_, b_) in ((0.0, arc0), (arc0 + bays * pitch, L)):                              # 아치 열 밖은 민 벽
+    for (a_, b_) in ((0.9, arc0), (arc0 + bays * pitch, L - 0.9)):                        # 아치 열 밖은 민 벽 (모서리 기둥 피해서)
         if b_ - a_ > 0.05:
             asm.add(box(b_ - a_, h1, DEPTH), f @ T((a_ + b_) / 2, h1 / 2, -DEPTH / 2), M['granite_clad'], 1.2)
     asm.add(box(L + 0.40, 0.34, DEPTH + 0.36), f @ T(L / 2, h1 - 0.17, -(DEPTH + 0.36) / 2), M['granite_clad'], 1.2)
@@ -1505,9 +1526,9 @@ FOH_X, FOH_Z, FOH_Y = -5.5, 19.4, 0.45
 # 그 위 전구 줄 + 플라이트 케이스에 올린 조명 콘솔 + 스탠드 PGM 모니터 +
 # 노트북 올린 접이 테이블 + 쌓아 둔 랙 케이스 + 접이 의자다.
 M_OLIVE = mat('fohOlive', 'cotton_jersey', (0.115, 0.135, 0.075), 0.92, normal=0.5)
-M_ALU = mat('fohAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8)
-M_DESK = mat('fohDesk', None, (0.08, 0.08, 0.085), 0.5)
-M_TABLE = mat('fohTable', None, (0.62, 0.60, 0.56), 0.6)
+M_ALU = mat('fohAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8, bump='metal_plate', bump_strength=0.30, bump_rough=0.05)
+M_DESK = mat('fohDesk', None, (0.08, 0.08, 0.085), 0.5, bump='painted_plaster_wall', bump_strength=0.4, bump_rough=0.06)
+M_TABLE = mat('fohTable', None, (0.62, 0.60, 0.56), 0.6, bump='painted_plaster_wall', bump_strength=0.4, bump_rough=0.06)
 M_BULB = mat('fohBulb', None, (1.0, 0.86, 0.6), 0.3, emit=(1.0, 0.82, 0.52), emit_strength=22)
 
 
@@ -1579,9 +1600,9 @@ stones = Assembly('site_stones', C_STATIC)
 stones_glow = Assembly('site_stones_emissive', C_EMIT)
 # 새하얗게 떠 보여서 사진의 화강암 회색으로 낮추고 석재 결을 넣었다
 M_STONE = mat('siteGranite', 'granite_tile_03', (0.30, 0.295, 0.275), 0.92, normal=0.6)
-M_GOLD = mat('siteGold', None, (0.66, 0.5, 0.18), 0.35, 0.85)
+M_GOLD = mat('siteGold', None, (0.66, 0.5, 0.18), 0.35, 0.85, bump='metal_plate', bump_strength=0.30, bump_rough=0.05)
 M_REDBAR = mat('siteRedBar', None, (0.42, 0.07, 0.06), 0.8)
-M_LGLOW = mat('siteLanternGlow', None, (1, 0.8, 0.55), 0.5, emit=(1.0, 0.75, 0.45), emit_strength=4)
+M_LGLOW = mat('siteLanternGlow', None, (1, 0.8, 0.55), 0.5, emit=(1.0, 0.75, 0.45), emit_strength=4, bump='cotton_jersey', bump_strength=0.3, bump_rough=0.03)
 
 
 def lion_lantern(x, z, h=3.1):
@@ -1673,9 +1694,9 @@ def danggan_marker(x, z, ry=0.0, h=2.0):
 def gold_dragon_pool(x, z):
     """북동 모서리 반사 연못 위 검은 화강석 대 + 금룡 (약 4m)"""
     f = T(x, 0, z, 0.5)
-    stones.add(box(7.0, 0.2, 4.2), f @ T(0, 0.1, 0), mat('poolEdge', None, (0.3, 0.3, 0.29), 0.7), 1)
-    stones.add(box(6.4, 0.06, 3.6), f @ T(0, 0.19, 0), mat('poolWater', None, (0.06, 0.09, 0.1), 0.05, 0.2), 1)
-    stones.add(bevel_box(2.2, 0.55, 1.1, 0.03), f @ T(0, 0.35, 0), mat('poolBlock', None, (0.09, 0.09, 0.1), 0.5), 1)
+    stones.add(box(7.0, 0.2, 4.2), f @ T(0, 0.1, 0), mat('poolEdge', None, (0.3, 0.3, 0.29), 0.7, bump='stone_wall', bump_strength=0.8, bump_rough=0.10), 1)
+    stones.add(box(6.4, 0.06, 3.6), f @ T(0, 0.19, 0), mat('poolWater', None, (0.06, 0.09, 0.1), 0.05, 0.2, wave=14.0, wave_strength=0.25), 1)
+    stones.add(bevel_box(2.2, 0.55, 1.1, 0.03), f @ T(0, 0.35, 0), mat('poolBlock', None, (0.09, 0.09, 0.1), 0.5, bump='stone_wall', bump_strength=0.8, bump_rough=0.10), 1)
     prev = None
     for k in range(13):                                                              # 굽이치는 금룡 몸통
         t_ = k / 12
@@ -1920,4 +1941,5 @@ MUST = ('ground', 'stage', 'truss', 'roof', 'stage_kit', 'tables', 'heaters', 's
 missing = [n for n in MUST if n not in bpy.data.objects]
 if missing:
     raise SystemExit(f'apec_stage.py 의 객체가 사라졌다 (이름 충돌?): {missing}')
+lib.texturize_all()    # 단색으로 남은 재질이 하나도 없게 마감 (외부 모델 재질 포함)
 print('context built | stage objects ok')

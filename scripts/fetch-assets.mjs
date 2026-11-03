@@ -33,6 +33,18 @@ const TEXTURES = {
   concrete_floor_01: 1024,
   corrugated_iron_02: 512,
   granite_tile_03: 1024,
+  // 무대·트러스·난로가 전부 단색이라 짜쳐 보인다는 지적(11/03)으로 추가
+  metal_plate: 1024,          // 트러스·비계·스테인리스·난로 몸체
+  metal_plate_02: 512,        // LED 프레임·검정 금속
+  dirty_carpet: 1024,         // 무대 바닥 카펫
+  black_painted_planks: 1024, // 무대 몸체(검게 칠한 합판)
+  plywood: 512,               // IBC 팔레트·케이스
+  painted_metal_shutter: 512, // 네이비 클래딩·파란 계단
+  rusty_metal_grid: 512,      // 그레이팅
+  anti_skid_tiles: 512,       // 계단 디딤판
+  forest_leaves_03: 512,      // 관목·수목 덩어리
+  blue_metal_plate: 512,      // 칠한 금속 (파란 벤치·계단)
+  stone_wall: 512,            // 연못 테두리·석물
 };
 
 // 모델 id → 폴리곤 유지 비율 (1 = 축소 안 함)

@@ -62,12 +62,24 @@ def wall_face(zid, side, u, lay, t=None):
     rect = next(z['rect'] for z in lay['zones'] if z['id'] == zid)
     ax = _axis_of(side)
     g = u_world(rect, side, u)
-    cand = []
+    # 작품 u 는 **원래 사각형** 기준으로 적혀 있는데, 구역이 껍데기 쪽으로 늘어나면서
+    # 같은 'e'/'s' 면 벽이 사각형에서 몇 m 씩 떨어진 곳까지 이어진다. 그대로 두면
+    # 가장 가까운 구간을 고른다는 규칙이 작품을 엉뚱한 벽(또는 허공)으로 보낸다.
+    # → 사각형의 그 면 선에서 LINE_TOL 안에 있는 구간만 후보로 본다.
+    LINE_TOL = 0.8
+    pax = 1 - ax
+    x0, x1, z0, z1 = rect
+    line = {'n': z0, 's': z1, 'w': x0, 'e': x1}[side]
+    cand, far = [], []
     for w in lay['walls']:
         for (zk, fk) in (('za', 'fa'), ('zb', 'fb')):
             if w[zk] == zid and w[fk] == side:
                 lo, hi = sorted((w['p'][ax], w['q'][ax]))
-                cand.append((w, lo, hi, abs((lo + hi) / 2 - g)))
+                c = (w, lo, hi, abs((lo + hi) / 2 - g))
+                mid_p = (w['p'][pax] + w['q'][pax]) / 2
+                (cand if abs(mid_p - line) <= LINE_TOL else far).append(c)
+    if not cand and far:
+        cand = far
     if not cand:
         x0, x1, z0, z1 = rect
         return {'n': T(x0 + u, 0, z0, 0), 's': T(x0 + u, 0, z1, PI),
@@ -153,6 +165,13 @@ def build(asm, lay, decals, matmap, tile=2.0):
             def decs(zid, fc, side_sign):
                 out = []
                 if not zid or zid not in rects:
+                    return out
+                # wall_face 와 같은 이유: 데칼 u 도 원래 사각형 기준이다. 늘어난 구역의
+                # 멀리 떨어진 같은-이름 면에까지 그리면 프로젝션이 온 벽에 번진다.
+                rx0, rx1, rz0, rz1 = rects[zid]
+                lineq = {'n': rz0, 's': rz1, 'w': rx0, 'e': rx1}[fc]
+                midq = (w['p'][1 - ax] + w['q'][1 - ax]) / 2
+                if abs(midq - lineq) > 0.8:
                     return out
                 for (rm, sd, u, y, dw, dh, mt) in decals:
                     if rm != zid or sd != fc:

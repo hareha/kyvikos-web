@@ -59,8 +59,16 @@ def image(path, colorspace='sRGB'):
 
 def material(name, tex=None, color=(1, 1, 1), rough=0.8, metal=0.0, normal=1.0,
              emit=None, emit_strength=0.0, emit_image=None, image_base=None,
-             transmission=0.0, sheen=0.0, coat=0.0, alpha=False):
-    """Principled BSDF 재질. tex = Poly Haven 텍스처 id (디퓨즈 × color, 노멀)"""
+             transmission=0.0, sheen=0.0, coat=0.0, alpha=False, tex_mix=1.0,
+             bump=None, bump_strength=1.0, bump_rough=0.0, wave=0.0, wave_strength=0.25):
+    """Principled BSDF 재질. tex = Poly Haven 텍스처 id (디퓨즈 × color, 노멀)
+
+    tex_mix < 1 이면 **색이 주인공이고 텍스처는 얼룩만** 더한다 (1.0 이면 예전과 같다).
+
+    bump = 텍스처 id 를 주면 **노멀(요철)만** 쓰고 색은 건드리지 않는다. 칠한 합판·
+    카펫·금속처럼 "색은 단색이 맞는데 표면이 너무 매끈해서 짜쳐 보이는" 면에 쓴다.
+    베이크가 그 요철의 음영을 담기 때문에 웹에서도 그대로 보인다. bump_rough 를 주면
+    거칠기도 같은 텍스처로 흔들어 반사가 균일하지 않게 한다."""
     m = bpy.data.materials.new(name)
     m.use_nodes = True
     nodes, links = m.node_tree.nodes, m.node_tree.links
@@ -68,15 +76,52 @@ def material(name, tex=None, color=(1, 1, 1), rough=0.8, metal=0.0, normal=1.0,
     bsdf.inputs['Roughness'].default_value = rough
     bsdf.inputs['Metallic'].default_value = metal
     base = (*color, 1)
+    if wave:
+        # 물결 — 폴리헤이븐에 물 텍스처가 없어서 절차적 파형을 노멀로 쓴다.
+        # 베이크가 이 잔물결의 음영·반사를 담으므로 웹에서도 평평해 보이지 않는다.
+        w1 = nodes.new('ShaderNodeTexWave')
+        w1.wave_type = 'BANDS'
+        w1.bands_direction = 'DIAGONAL'
+        w1.inputs['Scale'].default_value = wave
+        w1.inputs['Distortion'].default_value = 7.0
+        w1.inputs['Detail'].default_value = 3.0
+        bp = nodes.new('ShaderNodeBump')
+        bp.inputs['Strength'].default_value = wave_strength
+        bp.inputs['Distance'].default_value = 0.02
+        links.new(w1.outputs['Fac'], bp.inputs['Height'])
+        links.new(bp.outputs['Normal'], bsdf.inputs['Normal'])
+    if bump:
+        # 색은 그대로 두고 **요철만** 준다. 칠한 합판·카펫·금속처럼 색은 단색이 맞는데
+        # 표면이 너무 매끈해서 평평해 보이는 면용. 베이크가 이 음영을 담는다.
+        n = nodes.new('ShaderNodeTexImage')
+        n.image = image(f'{TEX}/{bump}_nor.jpg', 'Non-Color')
+        nm = nodes.new('ShaderNodeNormalMap')
+        nm.inputs['Strength'].default_value = bump_strength
+        links.new(n.outputs['Color'], nm.inputs['Color'])
+        links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+        if bump_rough:
+            d_ = nodes.new('ShaderNodeTexImage')
+            d_.image = image(f'{TEX}/{bump}_diff.jpg', 'Non-Color')
+            mr = nodes.new('ShaderNodeMapRange')
+            mr.inputs['To Min'].default_value = max(0.0, rough - bump_rough)
+            mr.inputs['To Max'].default_value = min(1.0, rough + bump_rough)
+            links.new(d_.outputs['Color'], mr.inputs['Value'])
+            links.new(mr.outputs['Result'], bsdf.inputs['Roughness'])
     if tex:
         t = nodes.new('ShaderNodeTexImage')
         t.image = image(f'{TEX}/{tex}_diff.jpg')
         mix = nodes.new('ShaderNodeMix')
         mix.data_type = 'RGBA'
         mix.blend_type = 'MULTIPLY'
-        mix.inputs['Factor'].default_value = 1.0
-        links.new(t.outputs['Color'], mix.inputs[6])
-        mix.inputs[7].default_value = base
+        mix.inputs['Factor'].default_value = tex_mix
+        # MULTIPLY 는 A*(1-f) + A*B*f 다. f=1 이면 어느 쪽이 A든 같지만, f<1 로 질감을
+        # 약하게 쓸 때는 **색이 A** 여야 색이 남는다 (텍스처가 A 면 색이 날아간다).
+        if tex_mix >= 1.0:
+            links.new(t.outputs['Color'], mix.inputs[6])
+            mix.inputs[7].default_value = base
+        else:
+            mix.inputs[6].default_value = base
+            links.new(t.outputs['Color'], mix.inputs[7])
         links.new(mix.outputs[2], bsdf.inputs['Base Color'])
         n = nodes.new('ShaderNodeTexImage')
         n.image = image(f'{TEX}/{tex}_nor.jpg', 'Non-Color')
@@ -352,3 +397,52 @@ def instance(src, coll, name, web_matrix):
     inst.matrix_world = TO_BL @ web_matrix @ TO_WEB @ src.matrix_world
     coll.objects.link(inst)
     return inst
+
+
+def texturize_all(default='metal_plate', strength=0.35, rough=0.06, skip=()):
+    """씬에 **텍스처가 하나도 안 붙은 재질**이 남지 않게 마감한다.
+
+    내려받은 외부 모델(glTF)의 재질처럼 우리가 material() 로 안 만든 것들은
+    단색으로 남아 평평해 보인다. 이미지든 절차적 노드든 아무 질감도 없는 재질에
+    노멀(요철)과 거칠기 흔들림을 채운다. 색은 건드리지 않는다.
+
+    씬 스크립트 **맨 끝**(어셈블리 build 뒤)에서 한 번 부른다.
+    """
+    TEXN = ('TEX_IMAGE', 'TEX_WAVE', 'TEX_NOISE', 'TEX_VORONOI', 'TEX_MUSGRAVE',
+            'TEX_MAGIC', 'TEX_CHECKER', 'TEX_BRICK', 'TEX_GRADIENT')
+    used = set()
+    for ob in bpy.data.objects:
+        if ob.type != 'MESH':
+            continue
+        for m in ob.data.materials:
+            if m:
+                used.add(m.name)
+    filled = []
+    for name in sorted(used):
+        m = bpy.data.materials.get(name)
+        if not m or not m.use_nodes or name in skip:
+            continue
+        nodes, links = m.node_tree.nodes, m.node_tree.links
+        if any(n.type in TEXN for n in nodes):
+            continue
+        bsdf = next((n for n in nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if not bsdf:
+            continue
+        n = nodes.new('ShaderNodeTexImage')
+        n.image = image(f'{TEX}/{default}_nor.jpg', 'Non-Color')
+        nm = nodes.new('ShaderNodeNormalMap')
+        nm.inputs['Strength'].default_value = strength
+        links.new(n.outputs['Color'], nm.inputs['Color'])
+        links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+        if rough and not bsdf.inputs['Roughness'].is_linked:
+            r0 = bsdf.inputs['Roughness'].default_value
+            d_ = nodes.new('ShaderNodeTexImage')
+            d_.image = image(f'{TEX}/{default}_diff.jpg', 'Non-Color')
+            mr = nodes.new('ShaderNodeMapRange')
+            mr.inputs['To Min'].default_value = max(0.0, r0 - rough)
+            mr.inputs['To Max'].default_value = min(1.0, r0 + rough)
+            links.new(d_.outputs['Color'], mr.inputs['Value'])
+            links.new(mr.outputs['Result'], bsdf.inputs['Roughness'])
+        filled.append(name)
+    print(f'texturize_all: 단색으로 남아 있던 재질 {len(filled)} 개 채움 {filled if filled else ""}')
+    return filled
