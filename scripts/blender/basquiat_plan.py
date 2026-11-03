@@ -17,7 +17,7 @@ V2 = '--v2' in sys.argv
 OUT = ARGS[0] if ARGS else f'{ROOT}/assets-src/renders/basquiat_plan.png'
 PX, MARGIN = 34.0, 70
 
-LAY = json.load(open(f'{REFS}/layout_v2.json' if V2 else f'{REFS}/layout_v3.json', encoding='utf-8'))
+LAY = json.load(open(f'{REFS}/layout_v2.json' if V2 else f'{REFS}/layout_v4.json', encoding='utf-8'))
 COL = LAY['palette']
 SHELL = LAY.get('shell') or json.load(open(f'{REFS}/hall1_outline_v2.json', encoding='utf-8'))['outline']
 FLOOR = {'carpetRed': '#7d4a4a', 'carpetGrey': '#55584f', 'floorPale': '#cfc8bb',

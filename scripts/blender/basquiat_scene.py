@@ -90,6 +90,8 @@ M.update({
     'curtain': material('bqCurtain', 'cotton_jersey', (0.012, 0.012, 0.014), 0.9, normal=0.5, sheen=0.3),
     'foyerFloor': material('bqFoyer', None, (0.86, 0.86, 0.86), 0.12, coat=0.8),
     'counterRed': material('bqCounterRed', None, (0.35, 0.03, 0.04), 0.5),
+    # 스튜디오 회색방 볼플레이어 가벽 서쪽 끝의 코발트 블루 귀 (v3_a4b4_78405_011)
+    'cobalt': material('bqCobalt', None, srgb('#2B3F8C'), 0.9),
 })
 
 
@@ -221,7 +223,7 @@ for k in range(-7, 8):
 #    17개 구역(817m²)·18개 문·67점·거치물 16개. 모두 hall1_outline_v2 안에 들어가도록 검증됨.
 #    v1 과의 큰 차이: 가벽 기본 3.0m(특수벽 4.4~4.8m), 가벽은 천장까지 닿지 않고 위가 비어 있다,
 #    보이는 천장(소핏) 4.6m, 작품 중심 1.45~1.50m, 차단봉은 0.4m 기둥 + 바닥 레일.
-LAY = json.load(open(f'{REFS}/layout_v3.json'))
+LAY = json.load(open(f'{REFS}/layout_v4.json'))
 GL = LAY['globals']
 W = M
 WALL_T = GL['wall_thickness']
@@ -229,9 +231,8 @@ SOFFIT = GL['visible_soffit_h']
 ROOMS = {z['id']: {'rect': tuple(z['rect']), 'h': z['wall_h']} for z in LAY['zones']}
 ROOM_FLOOR = {z['id']: z['floor'] for z in LAY['zones']}
 ZONE = {z['id']: z for z in LAY['zones']}
-for rid, r in ROOMS.items():                                # 구역 바닥 (에폭시 위 카펫 8mm)
-    x0, x1, z0, z1 = r['rect']
-    floor.add(plane(x1 - x0, z1 - z0), T((x0 + x1) / 2, 0.008, (z0 + z1) / 2, 0, PI / 2), M[ROOM_FLOOR[rid]], 3)
+for _z in LAY['zones']:                                     # 구역 바닥 (에폭시 위 카펫 8mm)
+    poly_face(floor, _z['poly'], 0.008, M[_z['floor']], down=False, tile=3)
 
 
 def U(room, side, u):
@@ -242,23 +243,10 @@ def U(room, side, u):
 
 
 def face(room, side, u):
-    return roomkit.wall_face(room, side, U(room, side, u), ROOMS, WALL_T)
+    return roomkit.wall_face(room, side, U(room, side, u), LAY)
 
 
-DOORS = []
-for d in LAY['doors']:
-    if d['zone'] not in ROOMS:
-        continue
-    x0, x1, z0, z1 = ROOMS[d['zone']]['rect']
-    u0, u1, sd = d['u0'], d['u1'], d['face']
-    if sd == 'n':
-        DOORS.append((x0 + u0, x0 + u1, z0 - WALL_T, z0 + WALL_T))
-    elif sd == 's':
-        DOORS.append((x1 - u1, x1 - u0, z1 - WALL_T, z1 + WALL_T))
-    elif sd == 'e':
-        DOORS.append((x1 - WALL_T, x1 + WALL_T, z0 + u0, z0 + u1))
-    else:
-        DOORS.append((x0 - WALL_T, x0 + WALL_T, z1 - u1, z1 - u0))
+DOORS = LAY['doors']
 
 # 작품: 벽에 그려 넣을 것(패널·텍스트·프로젝션)과 걸 것(액자·캔버스)을 나눈다
 FLAT = ('panel', 'wall_text', 'full_height_print', 'printed_vinyl', 'projection', 'wall_wash', 'ultra_matte')
@@ -305,10 +293,9 @@ for w_ in LAY['works']:
     else:
         ART.append((w_['zone'], w_['face'], w_['u'], w_['y'], w_['w'], w_['h'], slug, disp_of(d)))
 FS = {(f['zone'], f['kind']): f for f in LAY['freestanding']}
-_fg = FS[('phooey', 'panel')]                               # Fun Gallery 전면 사진은 복도 북쪽 벽면 그래픽으로
-DECALS.append(('phooey', 'n', (_fg['a'][0] + _fg['b'][0]) / 2 - ROOMS['phooey']['rect'][0],
-               1.55, abs(_fg['b'][0] - _fg['a'][0]), 2.9, gmat('fun_gallery_photo_mural')))
-print('zones', len(ROOMS), 'doors', len(DOORS), 'art', len(ART), 'decals', len(DECALS))
+# Fun Gallery 사진은 복도 북쪽 '벽'이 아니라 **자립 패널**이다 (흰 옆면이 보이고 뒤에 영상 벽감).
+#   복도 북쪽은 홀 외벽이라 가벽이 없다 — layout_v4 OPEN('phooey','n')
+print('zones', len(ROOMS), 'walls', len(LAY['walls']), 'doors', len(DOORS), 'art', len(ART), 'decals', len(DECALS))
 
 WALLS = roomkit.build(walls, LAY, DECALS, W)
 
@@ -358,6 +345,16 @@ def free_wall(a, b, h, t, mat):
     gallery.wall(walls, tuple(a), tuple(b), h, t, mat)
 
 
+ISL = {i['id']: i for i in LAY['islands']}
+
+
+def island(iid, decals_f=(), decals_b=()):
+    """사방이 트인 자립 가벽 — 치수는 a4b4 워크스루 사진에서 잰 값 (layout_v4.ISLANDS)"""
+    q = ISL[iid]
+    return roomkit.island(walls, q['a'], q['b'], q['h'], q['t'], q['front'], q['back'], W,
+                          decals_f=decals_f, decals_b=decals_b)
+
+
 # 회색 방: 낮은 흰 좌대 위 Fun Fridge + Vase (중심 6.8, -15.6 / 3.0 × 1.2 × 0.4)
 p = fs('studioGrey', 'plinth')
 PX, PZ = p['centre']
@@ -385,15 +382,29 @@ spots.append((T(PX, 0, PZ + 0.7), 3.0, 1.6, 1.0, 0.0))
 gallery.stanchion_line(works, [(PX - 1.8, PZ + 1.0), (PX + 1.8, PZ + 1.0)], M)
 
 # 회색 방 → Phooey: 검은 자립 가벽 (동쪽 면에 유명 야구 선수 초상)
-q = fs('studioGrey', 'partition')
-free_wall(q['a'], q['b'], q['height'], q['thickness'], W['black'])
-bp = T(q['a'][0] + q['thickness'] / 2, 0, (q['a'][1] + q['b'][1]) / 2, -PI / 2)
+_b = island('ballplayer')
+_q = ISL['ballplayer']
+# 그 서쪽 끝에 **코발트 블루 귀** — v2 가 "사진 한 장뿐"이라며 low 로 남겼던 것이
+# v3_a4b4_78405_011 왼쪽 끝에 그대로 찍혀 있다. 실재한다.
+walls.add(box(0.30, _q['h'], 1.6), T(_q['a'][0], _q['h'] / 2, _q['a'][1] - 0.8), M['cobalt'], 1)
+bp = T(_q['a'][0] + _q['t'] / 2, 0, (_q['a'][1] + _q['b'][1]) / 2, PI / 2)
 hang(bp, 1.105, 1.273, 1.50, 'famous_ballplayer', 'white_box_frame')
 
 # Phooey 복도: Fun Gallery 사진 벽(자립) + 네이비 벽 아래 낮은 단
 lg = fs('phooey', 'ledge')
 x0, x1, z0, z1 = ROOMS['phooey']['rect']
 walls.add(box(x1 - x0, lg['size'][2], lg['size'][1]), T((x0 + x1) / 2, lg['size'][2] / 2, z1 - WALL_T / 2 - lg['size'][1] / 2), W['navy'], 1)
+
+# Phooey 복도: Fun Gallery 전면 사진 **자립 패널** (흰 옆면, 뒤에 어두운 영상 벽감)
+_q = ISL['funGallery']
+island('funGallery', decals_f=[(0.0, 1.55, abs(_q['b'][0] - _q['a'][0]) - 0.2, 2.9,
+                                gmat('fun_gallery_photo_mural'))])
+
+# Warriors 흰 방: Blue Skies 자립 흰 가벽 (4.1 x 3.0 실측)
+_q = ISL['blueSkies']
+island('blueSkies')
+hang(T((_q['a'][0] + _q['b'][0]) / 2, 0, _q['a'][1] - _q['t'] / 2, PI), 2.10, 0.70, 1.55,
+     'blue_skies', 'black_box_frame')
 
 # Warriors 흰 방: 백남준 로봇 (자립, 흰 벽 앞)
 q = fs('warriorsWhite', 'sculpture')
@@ -443,9 +454,10 @@ gallery.slab_art(works, ea @ T(0, 0.95, 0.2, 0, -0.12), 1.07, 0.78, 0.03, gmat('
 works.add(box(1.2, 0.05, 0.12), ea @ T(0, 0.52, 0.26), M['batten'], 1)
 spots.append((EZ_ @ T(0, 0, 1.1), 1.1, 1.3, 1.0, 0.0))
 gallery.stanchion_line(works, [(q['centre'][0] - 1.6, q['centre'][1] + 1.3), (q['centre'][0] + 1.6, q['centre'][1] + 1.3)], M)
-q = fs('cartoons', 'partition')
-free_wall(q['a'], q['b'], q['height'], q['thickness'], W['coal'])
-hang(T((q['a'][0] + q['b'][0]) / 2, 0, q['a'][1] - q['thickness'] / 2, PI), 2.3, 1.648, 1.45, 'bombero', 'unframed_stretcher')
+_q = ISL['bombero']
+island('bombero')
+hang(T((_q['a'][0] + _q['b'][0]) / 2, 0, _q['a'][1] - _q['t'] / 2, PI), 2.3, 1.648, 1.45,
+     'bombero', 'unframed_stretcher')
 
 # Cartoons 북쪽 구석: 백오브하우스로 들어가는 흰 커튼 서비스문 + 녹색 비상구등
 #   05cartoons_room_wide_2.jpg — 동선은 아니지만 와이드 샷에 늘 걸린다. 이 문이
@@ -486,12 +498,37 @@ def notebook_grid(room, side, u0, cols):
                           [(0, 0.22, 0.247, 0.319, PAGE_MATS[(c * 4 + r) % len(PAGE_MATS)])], 1)
 
 
-for (sd, u0_, cols) in (('e', 0.6, 11), ('s', 1.0, 10), ('s', 6.2, 7), ('w', 0.8, 9)):
-    notebook_grid('temple', sd, u0_, cols)
-q = fs('temple', 'volume')                                         # 가운데 검은 볼륨 (주변 벽보다 높다)
-BX, BZ = q['centre']
-BW, BD, BH = q['size']
-walls.add(box(BW, BH, BD), T(BX, BH / 2, BZ), W['black'], 2)
+for (rm_, sd, u0_, cols) in (('temple', 'e', 0.8, 11), ('temple', 's', 1.0, 9),
+                             ('temple', 'n', 1.0, 7), ('templeW', 'n', 0.8, 10),
+                             ('templeW', 's', 1.0, 9), ('templeW', 'w', 0.8, 5)):
+    notebook_grid(rm_, sd, u0_, cols)
+# Temple 가운데 볼륨 — 평평한 상자가 아니라 **윗면이 한쪽으로 경사진 쐐기**이고
+# 한쪽 위 모서리에 세로 슬롯이 뚫려 있다 (v3_a4b4_78406_030 에 그대로 보인다).
+TW = LAY['temple_wedge']
+_pts = TW['poly']
+BX = sum(p[0] for p in _pts) / 4
+BZ = sum(p[1] for p in _pts) / 4
+BW = math.dist(_pts[0], _pts[1])
+BD = math.dist(_pts[1], _pts[2])
+BH = TW['h_high']
+
+
+def _wedge(bm):
+    import bmesh
+    lo, hi = TW['h_low'], TW['h_high']
+    vs = [bm.verts.new((p[0] - BX, p[1] - BZ, 0.0)) for p in _pts]
+    ts = [bm.verts.new((p[0] - BX, p[1] - BZ, hi if i < 2 else lo)) for i, p in enumerate(_pts)]
+    bm.faces.new(vs[::-1])
+    bm.faces.new(ts)
+    for i in range(4):
+        j = (i + 1) % 4
+        bm.faces.new((vs[i], vs[j], ts[j], ts[i]))
+
+
+walls.add(_wedge, T(BX, 0, BZ, 0, -PI / 2), W['black'], 2)
+_sx, _sy, _sw, _sh = TW['slot']                                     # 위 모서리의 세로 슬롯
+emit.add(plane(_sw, _sh), T(_pts[1][0] - 0.1, _sy + _sh / 2, _pts[1][1] + 0.6, PI / 2),
+         gmat('notebook_page_01', 0.4), tile=None)
 nf = T(BX + BW / 2, 0, BZ, PI / 2)                                  # 입구(동)쪽 면의 밝은 벽감
 works.add(box(0.72, 0.72, 0.3), nf @ T(0, 1.85, -0.15), M['frameBlack'], 1)
 works.add(plane(0.5, 0.54), nf @ T(0, 1.85, 0.005), gmat('notebook_cover_framed_front'), tile=None)
