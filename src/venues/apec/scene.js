@@ -74,6 +74,18 @@ function addLights(root) {
   led.lookAt(6, 4.3, 0);
   add(led, 8);
 
+  // 무대 트러스 조명 — Blender 쪽 light() 는 **베이크해야** 보인다. 베이크 전에는
+  // 기구만 매달린 '모형 조명'으로 보였다. 웹 씬에도 같은 자리에 실제 광원을 건다.
+  // (apec_stage.py: X0 -5.2 / X1 17.2 / ZF -10.6 / HT 7.5 / LT 5.95 / CX 6)
+  for (let i = 0; i < 8; i += 1) {
+    const lx = -3.8 + (i * 19.6) / 7;                       // 지붕 트러스 위 흰 블라인더
+    spot([lx, 7.84, -10.35], [lx * 0.8 + 1.2, 0, 6], 2600, '#fff0d6', 0.6);
+  }
+  for (let i = 0; i < 8; i += 1) {
+    const lx = -4.1 + (i * 20.2) / 7;                       // 그 아래 파란 무빙헤드
+    spot([lx, 5.13, -10.25], [lx + (i % 2 ? 2.4 : -2.4), 0.1, -4], 1700, '#4d7dff', 0.26);
+  }
+
   for (const { light } of list) light.intensity = 0;
   return list;
 }

@@ -74,7 +74,7 @@ M = {
     'wallWood': mat('wallWood', 'dark_wooden_planks', (0.058, 0.030, 0.021), 0.78),
     'goldRail': mat('goldRail', image_base=f'{SHOTS}/apec_rail.png', rough=0.4),
     'deck': mat('deckWood', 'dark_wooden_planks', (0.085, 0.048, 0.030), 0.75),
-    'gold': mat('finialGold', None, (0.85, 0.62, 0.25), 0.3, 1.0, bump='metal_plate', bump_strength=0.30, bump_rough=0.05),
+    'gold': mat('finialGold', None, (0.85, 0.62, 0.25), 0.3, 1.0, bump='painted_metal_shutter', bump_strength=0.30, bump_rough=0.05),
     'windowGlow': mat('windowGlow', emit_image=f'{SHOTS}/apec_windows.png', emit_strength=2.2, rough=0.5),
     'eaveLamp': mat('eaveLamp', None, (1, 1, 1), emit=(1.0, 0.97, 0.9), emit_strength=80, bump='painted_plaster_wall', bump_strength=0.25, bump_rough=0.03),
     # 석재
@@ -111,7 +111,7 @@ M = {
     'tent': mat('tentWhite', 'cotton_jersey', (0.9, 0.9, 0.88), 0.8, normal=0.4),
     'drape': mat('drapeGreen', 'cotton_jersey', (0.28, 0.34, 0.12), 0.9, normal=0.6),
     'case': mat('roadCase', None, (0.03, 0.03, 0.035), 0.5, bump='metal_plate_02', bump_strength=0.5, bump_rough=0.07),
-    'alu': mat('tentAlu', None, (0.8, 0.8, 0.82), 0.35, 1.0, bump='metal_plate', bump_strength=0.30, bump_rough=0.05),
+    'alu': mat('tentAlu', None, (0.8, 0.8, 0.82), 0.35, 1.0, bump='painted_metal_shutter', bump_strength=0.30, bump_rough=0.05),
     'uiLight': mat('uiLight', emit_image=f'{SHOTS}/apec_ui_light.png', emit_strength=2.0, rough=0.3),
     'uiAudio': mat('uiAudio', emit_image=f'{SHOTS}/apec_ui_audio.png', emit_strength=2.0, rough=0.3),
     'uiVideo': mat('uiVideo', emit_image=f'{SHOTS}/apec_ui_video.png', emit_strength=2.0, rough=0.3),
@@ -755,7 +755,7 @@ M['winFrame'] = mat('winFrame', None, (0.030, 0.031, 0.034), 0.35, 0.75, bump='m
 M['winGlass'] = mat('winGlass', None, (0.021, 0.026, 0.033), 0.08, 0.15, bump='painted_plaster_wall', bump_strength=0.08, bump_rough=0.02)      # 짙은 복층유리
 # 연수동 아케이드 전용 — 사진에서 창틀은 짙은 색이 아니라 **밝은 회색 금속**이고,
 # 유리는 안쪽 커튼 때문에 짙은 갈색이다 (016 개구 안 평균 0.281/0.217/0.170 = 따뜻한 갈색).
-M['arcFrame'] = mat('arcFrame', None, (0.44, 0.45, 0.46), 0.40, 0.5, bump='metal_plate', bump_strength=0.35, bump_rough=0.06)
+M['arcFrame'] = mat('arcFrame', None, (0.44, 0.45, 0.46), 0.40, 0.5, bump='painted_metal_shutter', bump_strength=0.35, bump_rough=0.06)
 M['arcGlass'] = mat('arcGlass', None, (0.055, 0.042, 0.032), 0.10, 0.10, bump='painted_plaster_wall', bump_strength=0.08, bump_rough=0.02)
 ROOMS = [mat(f'roomGlass_{t}', emit_image=f'{SHOTS}/apec_room_{t}.png', emit_strength=1.1, rough=0.1) for t in 'abc']
 
@@ -1526,7 +1526,7 @@ FOH_X, FOH_Z, FOH_Y = -5.5, 19.4, 0.45
 # 그 위 전구 줄 + 플라이트 케이스에 올린 조명 콘솔 + 스탠드 PGM 모니터 +
 # 노트북 올린 접이 테이블 + 쌓아 둔 랙 케이스 + 접이 의자다.
 M_OLIVE = mat('fohOlive', 'cotton_jersey', (0.115, 0.135, 0.075), 0.92, normal=0.5)
-M_ALU = mat('fohAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8, bump='metal_plate', bump_strength=0.30, bump_rough=0.05)
+M_ALU = mat('fohAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8, bump='painted_metal_shutter', bump_strength=0.30, bump_rough=0.05)
 M_DESK = mat('fohDesk', None, (0.08, 0.08, 0.085), 0.5, bump='painted_plaster_wall', bump_strength=0.4, bump_rough=0.06)
 M_TABLE = mat('fohTable', None, (0.62, 0.60, 0.56), 0.6, bump='painted_plaster_wall', bump_strength=0.4, bump_rough=0.06)
 M_BULB = mat('fohBulb', None, (1.0, 0.86, 0.6), 0.3, emit=(1.0, 0.82, 0.52), emit_strength=22)
@@ -1600,7 +1600,7 @@ stones = Assembly('site_stones', C_STATIC)
 stones_glow = Assembly('site_stones_emissive', C_EMIT)
 # 새하얗게 떠 보여서 사진의 화강암 회색으로 낮추고 석재 결을 넣었다
 M_STONE = mat('siteGranite', 'granite_tile_03', (0.30, 0.295, 0.275), 0.92, normal=0.6)
-M_GOLD = mat('siteGold', None, (0.66, 0.5, 0.18), 0.35, 0.85, bump='metal_plate', bump_strength=0.30, bump_rough=0.05)
+M_GOLD = mat('siteGold', None, (0.66, 0.5, 0.18), 0.35, 0.85, bump='painted_metal_shutter', bump_strength=0.30, bump_rough=0.05)
 M_REDBAR = mat('siteRedBar', None, (0.42, 0.07, 0.06), 0.8)
 M_LGLOW = mat('siteLanternGlow', None, (1, 0.8, 0.55), 0.5, emit=(1.0, 0.75, 0.45), emit_strength=4, bump='cotton_jersey', bump_strength=0.3, bump_rough=0.03)
 
@@ -1941,5 +1941,5 @@ MUST = ('ground', 'stage', 'truss', 'roof', 'stage_kit', 'tables', 'heaters', 's
 missing = [n for n in MUST if n not in bpy.data.objects]
 if missing:
     raise SystemExit(f'apec_stage.py 의 객체가 사라졌다 (이름 충돌?): {missing}')
-lib.texturize_all()    # 단색으로 남은 재질이 하나도 없게 마감 (외부 모델 재질 포함)
+lib.texturize_all('painted_metal_shutter')    # 단색으로 남은 재질이 하나도 없게 마감 (외부 모델 재질 포함)
 print('context built | stage objects ok')

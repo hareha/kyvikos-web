@@ -67,14 +67,14 @@ M = {
     # 무대 파랑은 전부 사이드 타워 래핑(cladNavy #2E3C6B = 0.026/0.038/0.125) 을 기준색으로 맞춘다.
     # 전에는 갑판 0.335, 계단 챌판 0.38, 디딤판 0.62 로 래핑보다 3~5배 밝은 파랑이었다.
     'deckCarpet': material('deckCarpet', None, (0.014, 0.020, 0.068), 0.88, bump='dirty_carpet', bump_strength=0.9, bump_rough=0.08),          # 파란 니들펀치 갑판
-    'redStrip': material('redStrip', None, (1, 0.1, 0.1), 0.4, emit=(1.0, 0.08, 0.06), emit_strength=3, bump='metal_plate_02', bump_strength=0.25, bump_rough=0.03),
-    'scafTube': material('scafTube', None, (0.6, 0.61, 0.59), 0.45, 0.7, bump='metal_plate', bump_strength=0.4, bump_rough=0.08),        # 시스템 비계 파이프
+    'redStrip': material('redStrip', None, (1, 0.1, 0.1), 0.4, emit=(1.0, 0.08, 0.06), emit_strength=3, bump='painted_plaster_wall', bump_strength=0.25, bump_rough=0.03),
+    'scafTube': material('scafTube', None, (0.6, 0.61, 0.59), 0.45, 0.7, bump='painted_metal_shutter', bump_strength=0.4, bump_rough=0.08),        # 시스템 비계 파이프
     'screenWood': material('screenWood', None, (0.052, 0.030, 0.019), 0.55),    # 병풍·연설대 호두나무 (사진 확대)
     'hanjiPaper': material('hanjiPaper', image_base=f'{SHOTS}/apec_hanji.png', rough=0.88),   # 병풍 배접 한지
     'plinthRed': material('plinthRed', 'cotton_jersey', (0.32, 0.03, 0.04), 0.9),  # 붉은 천 좌대
     # 거칠기 0.55/0.7 이면 계단면이 하늘을 그대로 비춰서 남색이 아니라 회색으로 보였다.
     # 갑판 카펫(0.85)과 같게 맞춘다.
-    'stairBlue': material('stairBlue', None, (0.026, 0.038, 0.125), 0.85, bump='black_painted_planks', bump_strength=0.6, bump_rough=0.08),      # 계단 챌판 — 래핑과 같은 색
+    'stairBlue': material('stairBlue', None, (0.026, 0.038, 0.125), 0.85, bump='painted_metal_shutter', bump_strength=0.6, bump_rough=0.08),      # 계단 챌판 — 래핑과 같은 색
     'stairTread': material('stairTread', None, (0.060, 0.078, 0.175), 0.85, bump='anti_skid_tiles', bump_strength=0.8, bump_rough=0.1),    # 계단 디딤판 — 단 지게 살짝만 밝게
     'rampLogo': material('rampLogo', image_base=f'{SHOTS}/apec_ramp_logo.png', rough=0.6),   # 경사면 가운데 로고 한 벌
     'nosing': material('nosing', None, (0.8, 0.9, 1), emit=(0.7, 0.85, 1.0), emit_strength=6),
@@ -90,11 +90,11 @@ M = {
     'lectern': material('lectern', None, (0.93, 0.94, 0.95), 0.3, coat=0.4, bump='painted_plaster_wall', bump_strength=0.35, bump_rough=0.05),
     'lecternPanel': material('lecternPanel', None, (0.86, 0.88, 0.92), 0.12, coat=0.7, bump='painted_plaster_wall', bump_strength=0.2, bump_rough=0.03),
     'roof': material('roof', None, (0.16, 0.17, 0.19), 0.55),
-    'aluminium': material('aluminium', None, (0.82, 0.84, 0.86), 0.3, 1.0, bump='metal_plate', bump_strength=0.35, bump_rough=0.07),
+    'aluminium': material('aluminium', None, (0.82, 0.84, 0.86), 0.3, 1.0, bump='painted_metal_shutter', bump_strength=0.35, bump_rough=0.07),
     'black': material('black', None, (0.012, 0.012, 0.015), 0.5, bump='metal_plate_02', bump_strength=0.4, bump_rough=0.06),
-    'washLens': material('washLens', None, (1, 0.9, 0.75), emit=(1.0, 0.86, 0.66), emit_strength=60, bump='metal_plate_02', bump_strength=0.25, bump_rough=0.03),
-    'blueLens': material('blueLens', None, (0.3, 0.5, 1), emit=(0.25, 0.45, 1.0), emit_strength=45, bump='metal_plate_02', bump_strength=0.25, bump_rough=0.03),
-    'blinderLens': material('blinderLens', None, (1, 0.95, 0.85), emit=(1.0, 0.90, 0.72), emit_strength=130, bump='metal_plate_02', bump_strength=0.25, bump_rough=0.03),
+    'washLens': material('washLens', None, (1, 0.9, 0.75), emit=(1.0, 0.86, 0.66), emit_strength=60, bump='painted_plaster_wall', bump_strength=0.25, bump_rough=0.03),
+    'blueLens': material('blueLens', None, (0.3, 0.5, 1), emit=(0.25, 0.45, 1.0), emit_strength=45, bump='painted_plaster_wall', bump_strength=0.25, bump_rough=0.03),
+    'blinderLens': material('blinderLens', None, (1, 0.95, 0.85), emit=(1.0, 0.90, 0.72), emit_strength=130, bump='painted_plaster_wall', bump_strength=0.25, bump_rough=0.03),
     'tableCloth': material('tableCloth', 'cotton_jersey', (0.022, 0.026, 0.05), 0.85, normal=0.7, sheen=0.4),
     'plate': material('plate', None, (0.7, 0.7, 0.68), 0.15, coat=0.6, bump='marble_01', bump_strength=0.25, bump_rough=0.03),
     'napkin': material('napkin', 'cotton_jersey', (0.95, 0.95, 0.93), 0.9, normal=0.4),
@@ -102,11 +102,11 @@ M = {
     'flower': material('flower', None, (0.92, 0.92, 0.95), 0.8, sheen=0.3),
     'chairBlack': material('chairBlack', 'cotton_jersey', (0.007, 0.007, 0.009), 0.75, normal=0.6, sheen=0.05),
     'chairGold': material('chairGold', 'cotton_jersey', (0.66, 0.47, 0.22), 0.28, 0.45, normal=0.25, sheen=0.6),
-    'stainless': material('stainless', None, (0.8, 0.81, 0.82), 0.22, 1.0, bump='metal_plate', bump_strength=0.3, bump_rough=0.05),
+    'stainless': material('stainless', None, (0.8, 0.81, 0.82), 0.22, 1.0, bump='painted_metal_shutter', bump_strength=0.3, bump_rough=0.05),
     'cladPanel': material('apCladPanel', image_base=f'{SHOTS}/apec_clad_panel.png', rough=0.72),   # 실제 사진에서 뜬 벽체 인쇄면
     'grating': material('grating', None, (0.045, 0.046, 0.05), 0.55, 0.7, bump='rusty_metal_grid', bump_strength=0.9, bump_rough=0.1),   # 발판 강재 그레이팅
     'heaterMesh': material('heaterMesh', None, (0.10, 0.10, 0.105), 0.55, 0.65, bump='rusty_metal_grid', bump_strength=0.7, bump_rough=0.08),   # 히터 철망 (밝은 크롬이 아니라 어두운 강선)
-    'heaterBody': material('heaterBody', None, (0.84, 0.81, 0.70), 0.42, bump='metal_plate', bump_strength=0.45, bump_rough=0.08),   # 히터 크림색 철판 (kakao 16)
+    'heaterBody': material('heaterBody', None, (0.84, 0.81, 0.70), 0.42, bump='painted_metal_shutter', bump_strength=0.45, bump_rough=0.08),   # 히터 크림색 철판 (kakao 16)
     'flame': material('flame', None, (1, 0.5, 0.15), emit=(1.0, 0.5, 0.15), emit_strength=70, bump='cotton_jersey', bump_strength=0.3, bump_rough=0.03),
     'sign': material('sign', emit_image=f'{SHOTS}/apec_real_sign.png', emit_strength=0.35, rough=0.5),
     'stone': material('stone', 'rock_tile_floor_02', (0.6, 0.61, 0.62), 0.9),
@@ -380,9 +380,9 @@ def podium(f, w=0.62, h=1.18, d=0.46):
     stage.add(bevel_box(w * 0.62, BASE_T, d * 0.70, 0.01), f @ T(0, BASE_T / 2, 0), M['lectern'], 1)  # 받침
     # 로고판은 **몸체 앞면**에 붙는다. 몸체가 기울어 있으므로 그 기울기만큼 돌린다.
     lean = math.atan2((d * 0.80 - d * 0.60) / 2, BH)
-    pw = w * 0.42
+    pw = w * 0.34                          # 실사진의 로고판은 연단 폭의 1/3 남짓, 몸체 한가운데
     stage.add(plane(pw, pw * 1152 / 1792),
-              f @ T(0, BASE_T + BH * 0.56, (d * 0.60 + (d * 0.80 - d * 0.60) * 0.56) / 2 + 0.006, 0, -lean),
+              f @ T(0, BASE_T + BH * 0.50, (d * 0.60 + (d * 0.80 - d * 0.60) * 0.50) / 2 + 0.006, 0, -lean),
               M['lecternPanel'], tile=None)
     stage.add(cyl(0.007, 0.007, 0.22, 8), f @ T(-0.15, h + 0.10, 0.06, 0, -0.55), M['black'], 1)   # 구즈넥
     stage.add(cyl(0.006, 0.006, 0.14, 8), f @ T(-0.15, h + 0.21, 0.16, 0, -1.15), M['black'], 1)
@@ -486,12 +486,12 @@ truss.build(smooth=True)
 #    지우는 목록(그 파일 44행)에 걸려 이 덩어리 전체가 삭제된다. 반드시 다른 이름으로.
 boh = Assembly('stage_kit', C_STATIC)
 M['ibc'] = material('apIbc', None, (0.86, 0.87, 0.84), 0.35, transmission=0.25, bump='painted_plaster_wall', bump_strength=0.30, bump_rough=0.05)
-M['ibcCage'] = material('apIbcCage', None, (0.55, 0.56, 0.58), 0.45, 0.7, bump='metal_plate', bump_strength=0.5, bump_rough=0.08)
+M['ibcCage'] = material('apIbcCage', None, (0.55, 0.56, 0.58), 0.45, 0.7, bump='painted_metal_shutter', bump_strength=0.5, bump_rough=0.08)
 M['ibcPallet'] = material('apIbcPallet', None, (0.45, 0.33, 0.2), 0.9, bump='plywood', bump_strength=0.8, bump_rough=0.1)
 M['speakerBox'] = material('apSpeaker', None, (0.045, 0.045, 0.05), 0.55, bump='black_painted_planks', bump_strength=0.5, bump_rough=0.07)
-M['scaffold'] = material('apScaffold', None, (0.62, 0.63, 0.6), 0.45, 0.7, bump='metal_plate', bump_strength=0.4, bump_rough=0.08)
+M['scaffold'] = material('apScaffold', None, (0.62, 0.63, 0.6), 0.45, 0.7, bump='painted_metal_shutter', bump_strength=0.4, bump_rough=0.08)
 M['tentFab'] = material('apTentFab', 'cotton_jersey', (0.9, 0.9, 0.88), 0.85, normal=0.4)
-M['tentAlu'] = material('apTentAlu', None, (0.72, 0.73, 0.75), 0.4, 0.8, bump='metal_plate', bump_strength=0.3, bump_rough=0.05)
+M['tentAlu'] = material('apTentAlu', None, (0.72, 0.73, 0.75), 0.4, 0.8, bump='painted_metal_shutter', bump_strength=0.3, bump_rough=0.05)
 
 
 def ibc_tote(f):
@@ -569,7 +569,7 @@ M['cladNavy'] = material('apCladNavy', None, (0.026, 0.038, 0.125), 0.72, bump='
 
 
 M['benchBlue'] = material('apBenchBlue', None, (0.026, 0.040, 0.130), 0.72, bump='painted_metal_shutter', bump_strength=0.5, bump_rough=0.07)   # 스커트 — 래핑과 같은 색
-M['caseAlu'] = material('apCaseAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8, bump='metal_plate', bump_strength=0.4, bump_rough=0.07)
+M['caseAlu'] = material('apCaseAlu', None, (0.52, 0.53, 0.55), 0.35, 0.8, bump='painted_metal_shutter', bump_strength=0.4, bump_rough=0.07)
 
 
 def side_tower(f, aim=None):
@@ -816,5 +816,5 @@ scene.render.resolution_y = 900
 scene.view_settings.view_transform = 'AgX'
 scene.view_settings.look = 'AgX - Medium High Contrast'
 
-lib.texturize_all()    # 단색으로 남은 재질이 하나도 없게 마감 (외부 모델 재질 포함)
+lib.texturize_all('painted_metal_shutter')    # 단색으로 남은 재질이 하나도 없게 마감 (외부 모델 재질 포함)
 print('scene built:', {c.name: len(c.objects) for c in (C_STATIC, C_DYNAMIC, C_EMIT, C_LIGHT, C_CAM)})

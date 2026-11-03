@@ -57,6 +57,25 @@ def image(path, colorspace='sRGB'):
     return img
 
 
+_TEX_MEAN = {}
+
+
+def tex_mean(tid):
+    """텍스처 디퓨즈의 **선형 평균 밝기**(RGB). 웹에서 색 x 텍스처로 곱할 때 보정에 쓴다."""
+    if tid in _TEX_MEAN:
+        return _TEX_MEAN[tid]
+    src = image(f'{TEX}/{tid}_diff.jpg')
+    c = src.copy()
+    c.scale(16, 16)
+    px = list(c.pixels)
+    n = len(px) // 4
+    m = tuple(sum(px[i * 4 + k] for i in range(n)) / n for k in range(3))
+    bpy.data.images.remove(c)
+    m = tuple(max(0.04, v) for v in m)
+    _TEX_MEAN[tid] = m
+    return m
+
+
 def material(name, tex=None, color=(1, 1, 1), rough=0.8, metal=0.0, normal=1.0,
              emit=None, emit_strength=0.0, emit_image=None, image_base=None,
              transmission=0.0, sheen=0.0, coat=0.0, alpha=False, tex_mix=1.0,
@@ -92,7 +111,12 @@ def material(name, tex=None, color=(1, 1, 1), rough=0.8, metal=0.0, normal=1.0,
         links.new(bp.outputs['Normal'], bsdf.inputs['Normal'])
     if bump:
         # 색은 그대로 두고 **요철만** 준다. 칠한 합판·카펫·금속처럼 색은 단색이 맞는데
-        # 표면이 너무 매끈해서 평평해 보이는 면용. 베이크가 이 음영을 담는다.
+        # 표면이 너무 매끈해서 평평해 보이는 면용.
+        #
+        # 주의: 노멀맵은 **베이크해야** 보인다. 베이크 전 웹에서는 아무 무늬도 안 나와
+        # 단색 그대로였다(11/03 지적). 그래서 웹에는 같은 텍스처의 **디퓨즈**를 넘기고,
+        # 웹이 색 x 텍스처로 곱하니 평균 밝기만큼 색을 미리 올려 둔다 — 그래야
+        # 블렌더에서 보던 색 그대로 나오면서 무늬가 보인다.
         n = nodes.new('ShaderNodeTexImage')
         n.image = image(f'{TEX}/{bump}_nor.jpg', 'Non-Color')
         nm = nodes.new('ShaderNodeNormalMap')
@@ -163,8 +187,25 @@ def material(name, tex=None, color=(1, 1, 1), rough=0.8, metal=0.0, normal=1.0,
         bsdf.inputs['Coat Weight'].default_value = coat
     # 웹으로 옮길 때 참고할 값 (glTF extras 로 나감)
     graphic = emit_image or image_base
+    # 웹은 라이트맵이 없을 때 color x map 으로만 그린다. bump 로 준 질감도 웹에는
+    # 디퓨즈로 넘겨야 보이고, 그때 색이 어두워지지 않게 평균 밝기로 나눠 둔다.
+    web_tex, web_color = tex or '', list(color)
+    if not tex and not bump and wave:
+        # 절차적 물결은 블렌더에서만 보인다. 웹에는 결이 비슷한 대리석 무늬를 넘겨
+        # 물이 단색 판으로 보이지 않게 한다.
+        web_tex = 'marble_01'
+        mu = tex_mean(web_tex)
+        lm = max(0.03, 0.2126 * mu[0] + 0.7152 * mu[1] + 0.0722 * mu[2])
+        web_color = [min(6.0, color[k] / lm) for k in range(3)]
+    if not tex and bump:
+        # 채널별로 나누면 텍스처 색조만큼 색이 틀어진다(갈색 금속판에 회색을 맞추면 파래진다).
+        # **밝기 한 값**으로만 나눠 원래 색조를 그대로 두고, 질감의 색조는 얹히게 한다.
+        web_tex = bump
+        mu = tex_mean(bump)
+        lum = max(0.03, 0.2126 * mu[0] + 0.7152 * mu[1] + 0.0722 * mu[2])
+        web_color = [min(6.0, color[k] / lum) for k in range(3)]
     m['web'] = {
-        'tex': tex or '', 'color': list(color), 'rough': rough, 'metal': metal,
+        'tex': web_tex, 'color': web_color, 'rough': rough, 'metal': metal,
         'emit': bool(emit or emit_image), 'emitColor': list(emit or (1, 1, 1)), 'emitStrength': emit_strength,
         'image': graphic.rsplit('/', 1)[-1] if graphic else '', 'transmission': transmission,
         'alpha': alpha,
@@ -443,6 +484,16 @@ def texturize_all(default='metal_plate', strength=0.35, rough=0.06, skip=()):
             mr.inputs['To Max'].default_value = min(1.0, r0 + rough)
             links.new(d_.outputs['Color'], mr.inputs['Value'])
             links.new(mr.outputs['Result'], bsdf.inputs['Roughness'])
+        # 웹도 라이트맵 없이 색만 쓰면 평평하다. 같은 텍스처를 디퓨즈로 넘기고
+        # 밝기만큼 색을 올려 둔다 (material() 의 bump 와 같은 규칙).
+        w = m.get('web')
+        if w is not None and not w.get('tex') and not w.get('image') and not w.get('keep'):
+            mu = tex_mean(default)
+            lm = max(0.03, 0.2126 * mu[0] + 0.7152 * mu[1] + 0.0722 * mu[2])
+            col = list(w.get('color') or [1, 1, 1])
+            w['tex'] = default
+            w['color'] = [min(6.0, c / lm) for c in col]
+            m['web'] = dict(w)
         filled.append(name)
     print(f'texturize_all: 단색으로 남아 있던 재질 {len(filled)} 개 채움 {filled if filled else ""}')
     return filled
