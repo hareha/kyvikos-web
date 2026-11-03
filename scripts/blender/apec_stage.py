@@ -467,11 +467,20 @@ for i in range(12):                                                    # 블라�
         truss.add(mesh_source(SRC_WASH), T(lx + s_, HT + 0.24, ZF, 0, PI / 2 + 0.30), list(SRC_WASH.data.materials))
     light(C_LIGHT, f'wash_{i}', 'SPOT', (lx, HT + 0.34, ZF + 0.25), (lx * 0.8 + CX * 0.2, 0, 8),
           energy=1100, color=(1.0, 0.94, 0.84), spot=0.75, blend=0.6, size=0.14)
-for i in range(14):                                                    # 파란 무빙헤드 (조명 트러스에 거꾸로)
+for i in range(14):                                                    # 파란 무빙헤드 (조명 트러스에 매달려 부채꼴로)
     lx = X0 + 1.1 + i * (X1 - X0 - 2.2) / 13
-    truss.add(mesh_source(SRC_MOVER), T(lx, LT - 0.28, ZF + 0.2, 0, PI), list(SRC_MOVER.data.materials))
-    light(C_LIGHT, f'mover_{i}', 'SPOT', (lx, LT - 0.82, ZF + 0.35),
-          (lx + random.uniform(-2, 2), 0.1, -5 + random.uniform(-2, 3)),
+    yoke = V((lx, LT - 0.28, ZF + 0.2))
+    # 좌우 대칭 부채꼴. 난수를 쓰면 돌릴 때마다 달라져 웹 빛줄기(src/venues/apec/scene.js
+    # stageBeams)와 어긋나므로 **같은 식**을 쓴다.
+    t = (i - 6.5) / 6.5
+    tgt = V((CX + t * 13.0, 0.1, -4.5 + abs(t) * 3.0))
+    d = (tgt - yoke).normalized()
+    # 머리를 빛줄기 방향으로 돌린다. 기본 자세가 +y 이므로 X 로 기울이고 Y 로 돌린다
+    # (T 는 Euler XYZ = Ry·Rx 순으로 적용된다).
+    truss.add(mesh_source(SRC_MOVER),
+              T(lx, LT - 0.28, ZF + 0.2, math.atan2(d.x, d.z), math.acos(max(-1.0, min(1.0, d.y)))),
+              list(SRC_MOVER.data.materials))
+    light(C_LIGHT, f'mover_{i}', 'SPOT', (yoke + d * 0.54)[:], tgt[:],
           energy=700, color=(0.3, 0.5, 1.0), spot=0.28, blend=0.35, size=0.04)
 for i in range(13):                                                    # 무빙 사이사이 흰 LED 바
     lx = X0 + 1.1 + (i + 0.5) * (X1 - X0 - 2.2) / 13
